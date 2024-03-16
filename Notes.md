@@ -29,8 +29,13 @@ OpenGL doesn't allow super granular control over this. When you write memory to 
 
 OpenGL will then create and manage the buffer accordingly to the use case. Dynamic draw may place the memory in a region that allows for faster writes for example.
 
-## Vertex array object
+## Vertex array object and vertex buffer object
 
 The vertex array object holds the bindings to all the buffers that we want to use as data for a draw call.
 The VAO remembers all the calls to bind buffers and VertexAttribPointer you make while it is bound.
 VAO binds attributes to locations for input variables in shader code.
+
+* Vertex array object contains one or more vertex buffer objects, and is designed to store the information for a complete rendered object.
+* Vertex buffer object is a memory buffer to hold information about vertices (coordinates, colors, normals, texcoords, etc etc)
+
+

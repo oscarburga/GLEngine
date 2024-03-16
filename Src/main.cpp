@@ -4,6 +4,9 @@
 #include <iostream>
 #include "Shader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -46,17 +49,53 @@ int main(int argc, char** argv)
 		-0.5f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f  // top left 
 	};
 
+	float texCoords[] = { // tex coords are measured with (0,0) being bottom left corner
+		1.f, 1.f, // top right
+		1.f, 0.f, // bot right
+		0.f, 0.f, // bot left
+		0.f, 1.f // top left
+	};
+
 	GLuint indices[] = {  // note that we start from 0!
 		0, 1, 3,   // first triangle
 		1, 2, 3    // second triangle
 	};  
 
+	// Textures
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, texBorderColor);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // downscale texture filtering: nearest
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // upscale texture filtering: linear interp
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); // Nearest mipmap, closest pixel.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR); // Take closest mipmap and linearly interpolate
+
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	int w, h, c;
+	if (stbi_uc* texData = stbi_load("Textures/container.jpg", &w, &h, &c, 0))
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		stbi_image_free(texData);
+	}
+	else
+	{
+		std::cerr << "failed to load texture\n";
+		std::abort();
+	}
+
 	// Vertex array objects store all the calls to glEnableVertexAttribArray or glDisableVertexAttribArray, glVertexAttribPointer, and also stores the buffer objects associated.
 	// Use them to not have to re-specify these attributes every time you want to use a certain buffer with a layout. 
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
-	GLuint VBO;
-	glGenBuffers(1, &VBO); // Create a buffer and get a handle to it
+	GLuint buffers[2];
+	glGenBuffers(2, buffers); // Create a buffer and get a handle to it
+	auto [VBO, texCoordBuffer] = buffers;
 	GLuint EBO; // Element buffer object
 	glGenBuffers(1, &EBO);
 
@@ -74,6 +113,11 @@ int main(int argc, char** argv)
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
+	glBindBuffer(GL_ARRAY_BUFFER, texCoordBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+	glEnableVertexAttribArray(2);
+
 	// Bind the element buffer object to draw the vertices by index
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -83,10 +127,10 @@ int main(int argc, char** argv)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-
 	Shader shader("Shaders/shader.vert", "Shaders/shader.frag");
 	shader.use();
 	glBindVertexArray(VAO);
+	glBindTexture(GL_TEXTURE_2D, texture);
 	// glPolygonMode(GL_BACK, GL_LINE);
 	while (!glfwWindowShouldClose(window))
 	{
