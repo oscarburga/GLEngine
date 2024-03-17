@@ -7,6 +7,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define VALID_SYMBOL_NAME(X) (std::is_object<decltype(X)>::value || std::is_function<decltype(X)>::value)
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -49,7 +51,9 @@ int main(int argc, char** argv)
 		-0.5f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f  // top left 
 	};
 
-	float texCoords[] = { // tex coords are measured with (0,0) being bottom left corner
+	// opengl tex coords are measured with (0,0) being bottom left corner.
+	// regular images have (0,0) coordinate being top left corner. Make sure to vertically flip images when reading them
+	float texCoords[] = { 
 		1.f, 1.f, // top right
 		1.f, 0.f, // bot right
 		0.f, 0.f, // bot left
@@ -60,34 +64,6 @@ int main(int argc, char** argv)
 		0, 1, 3,   // first triangle
 		1, 2, 3    // second triangle
 	};  
-
-	// Textures
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, texBorderColor);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // downscale texture filtering: nearest
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // upscale texture filtering: linear interp
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); // Nearest mipmap, closest pixel.
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR); // Take closest mipmap and linearly interpolate
-
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	int w, h, c;
-	if (stbi_uc* texData = stbi_load("Textures/container.jpg", &w, &h, &c, 0))
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, texData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		stbi_image_free(texData);
-	}
-	else
-	{
-		std::cerr << "failed to load texture\n";
-		std::abort();
-	}
 
 	// Vertex array objects store all the calls to glEnableVertexAttribArray or glDisableVertexAttribArray, glVertexAttribPointer, and also stores the buffer objects associated.
 	// Use them to not have to re-specify these attributes every time you want to use a certain buffer with a layout. 
@@ -127,10 +103,51 @@ int main(int argc, char** argv)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+	// Textures
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, texBorderColor);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // downscale texture filtering: nearest
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // upscale texture filtering: linear interp
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); // Nearest mipmap, closest pixel.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR); // Take closest mipmap and linearly interpolate
+
+	GLuint textures[2];
+	const char* paths[2] = { "Textures/container.jpg", "Textures/awesomeface.png" };
+	GLenum inputFormat[2] = { GL_RGB, GL_RGBA };
+	glGenTextures(2, textures);
+	stbi_set_flip_vertically_on_load(true);
+	for (int i = 0; i < 2; i++)
+	{
+		int w, h, c;
+		if (stbi_uc* texData = stbi_load(paths[i], &w, &h, &c, 0))
+		{
+			glBindTexture(GL_TEXTURE_2D, textures[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, inputFormat[i], GL_UNSIGNED_BYTE, texData);
+			glGenerateMipmap(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			stbi_image_free(texData);
+		}
+		else
+		{
+			std::cerr << "failed to load texture\n";
+			std::abort();
+		}
+	}
+	auto [woodTexture, faceTexture] = textures;
+	
+
 	Shader shader("Shaders/shader.vert", "Shaders/shader.frag");
 	shader.use();
 	glBindVertexArray(VAO);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, woodTexture);
+	shader.SetUniform("woodTexture", int(0));
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, faceTexture);
+	shader.SetUniform("faceTexture", int(1));
 	// glPolygonMode(GL_BACK, GL_LINE);
 	while (!glfwWindowShouldClose(window))
 	{
