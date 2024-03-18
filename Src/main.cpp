@@ -15,8 +15,8 @@ void processInput(GLFWwindow* window);
 int main(int argc, char** argv)
 {
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(800, 600, "GLEngine", nullptr, nullptr);
@@ -107,25 +107,30 @@ int main(int argc, char** argv)
 	GLuint textures[2];
 	const char* paths[2] = { "Textures/container.jpg", "Textures/awesomeface.png" };
 	GLenum inputFormat[2] = { GL_RGB, GL_RGBA };
-	glGenTextures(2, textures);
+	glCreateTextures(GL_TEXTURE_2D, 2, textures);
 	stbi_set_flip_vertically_on_load(true);
 	for (int i = 0; i < 2; i++)
 	{
 		int w, h, c;
 		if (stbi_uc* texData = stbi_load(paths[i], &w, &h, &c, 0))
 		{
-			glBindTexture(GL_TEXTURE_2D, textures[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			GLuint texture = textures[i];
+			const int numLevels = 1 + floor(log2(std::max(w, h))); // TODO use count leading zero to calculate num mipmaps
+			glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
-			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, texBorderColor);
+			glTextureParameterfv(texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
 			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // downscale texture filtering: nearest
 			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // upscale texture filtering: linear interp
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // interp mipmaps and sample value
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Take closest mipmap and linearly interpolate
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, inputFormat[i], GL_UNSIGNED_BYTE, texData);
-			glGenerateMipmap(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Take closest mipmap and linearly interpolate
+
+			glTextureStorage2D(texture, numLevels, GL_RGB8, w, h);
+			glTextureSubImage2D(texture, 0, 0, 0, w, h, inputFormat[i], GL_UNSIGNED_BYTE, texData);
+			glGenerateTextureMipmap(texture);
+			// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, inputFormat[i], GL_UNSIGNED_BYTE, texData);
+			// glGenerateMipmap(GL_TEXTURE_2D);
+			// glBindTexture(GL_TEXTURE_2D, 0);
 			stbi_image_free(texData);
 		}
 		else
@@ -140,11 +145,9 @@ int main(int argc, char** argv)
 	Shader shader("Shaders/shader.vert", "Shaders/shader.frag");
 	shader.use();
 	glBindVertexArray(VAO);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, woodTexture);
+	glBindTextureUnit(0, woodTexture);
+	glBindTextureUnit(1, faceTexture);
 	shader.SetUniform("woodTexture", int(0));
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, faceTexture);
 	shader.SetUniform("faceTexture", int(1));
 	// glPolygonMode(GL_BACK, GL_LINE);
 	while (!glfwWindowShouldClose(window))
