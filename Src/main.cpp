@@ -3,9 +3,11 @@
 
 #include <iostream>
 #include "Shader.h"
+#include "EngineMath.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "RefIgnore.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -163,7 +165,6 @@ int main(int argc, char** argv)
 	}
 	auto [woodTexture, faceTexture] = textures;
 	
-
 	Shader shader("Shaders/shader.vert", "Shaders/shader.frag");
 	shader.use();
 	glBindVertexArray(VAO);
@@ -174,11 +175,22 @@ int main(int argc, char** argv)
 	// glPolygonMode(GL_BACK, GL_LINE);
 	while (!glfwWindowShouldClose(window))
 	{
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 		processInput(window);
 		const float time = (float)glfwGetTime();
 		shader.SetUniform("time", time);
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glm::mat4 transform(1.0f);
+		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+		transform = glm::rotate(transform, time, glm::vec3(0.0, 0.0, 1.0));
+		transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
+		shader.SetUniform("transform", transform);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+		transform = glm::mat4(1.0f);
+		transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
+		transform = glm::rotate(transform, time, glm::vec3(0.0, 0.0, 1.0));
+		transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
+		shader.SetUniform("transform", transform);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glfwSwapBuffers(window);
 		glfwPollEvents();

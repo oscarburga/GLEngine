@@ -143,6 +143,8 @@
     <ClCompile Include="Src\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\EngineMath.h" />
+    <ClInclude Include="Src\RefIgnore.h" />
     <ClInclude Include="Src\Shader.h" />
   </ItemGroup>
   <ItemGroup>
