@@ -7,8 +7,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#define VALID_SYMBOL_NAME(X) (std::is_object<decltype(X)>::value || std::is_function<decltype(X)>::value)
-
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -68,40 +66,64 @@ int main(int argc, char** argv)
 	// Vertex array objects store all the calls to glEnableVertexAttribArray or glDisableVertexAttribArray, glVertexAttribPointer, and also stores the buffer objects associated.
 	// Use them to not have to re-specify these attributes every time you want to use a certain buffer with a layout. 
 	GLuint VAO;
-	glGenVertexArrays(1, &VAO);
-	GLuint buffers[2];
-	glGenBuffers(2, buffers); // Create a buffer and get a handle to it
-	auto [VBO, texCoordBuffer] = buffers;
-	GLuint EBO; // Element buffer object
-	glGenBuffers(1, &EBO);
+	glCreateVertexArrays(1, &VAO);
+	GLuint buffers[3];
+	glCreateBuffers(3, buffers);
+	// glGenBuffers(2, buffers); // Create a buffer and get a handle to it
+	auto [VBO, texCoordBuffer, IBO] = buffers; 
 
-	glBindVertexArray(VAO);
+	glNamedBufferData(VBO, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glNamedBufferData(texCoordBuffer, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+	glNamedBufferData(IBO, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	const int vboBindIndex = 0, texCoordsBindIndex = 1;
+
+	glVertexArrayElementBuffer(VAO, IBO); // Set the VAO to use IndexBufferObject for the element indices.
+
+	// What buffers it uses in each slot for vertex data
+	glVertexArrayVertexBuffer(VAO, vboBindIndex, VBO, 0, 6 * sizeof(float));
+	glVertexArrayVertexBuffer(VAO, texCoordsBindIndex, texCoordBuffer, 0, 2 * sizeof(float));
+
+	glEnableVertexArrayAttrib(VAO, 0); // enable VAO's array attrib 0
+	glVertexArrayAttribFormat(VAO, 0, 3, GL_FLOAT, GL_FALSE, 0); // VAO's array attrib 0 has 3 floats,
+	glVertexArrayAttribBinding(VAO, 0, vboBindIndex); // VAO's array attrib 0 reads from the buffer bound at vboBindIndex (0)
+
+	glEnableVertexArrayAttrib(VAO, 1);
+	glVertexArrayAttribFormat(VAO, 1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float)); // array attrib has 3 floats, starting after 3 floats (from attrib 0)
+	glVertexArrayAttribBinding(VAO, 1, vboBindIndex); // VAO's array attrib 1 reads from the buffer bound at vboBindIndex (0)
+
+	glEnableVertexArrayAttrib(VAO, 2);
+	glVertexArrayAttribFormat(VAO, 2, 2, GL_FLOAT, GL_FALSE, 0); // array attrib has 2 floats
+	glVertexArrayAttribBinding(VAO, 2, texCoordsBindIndex); // vao's array attrib 2 reads from buffer bound at texCoordsBindIndex(1)
+
+
+	// glBindVertexArray(VAO);
 	// Start "recording" all the buffer bindings and attributes for this vertex array object.
-	glBindBuffer(GL_ARRAY_BUFFER, VBO); // OpenGL state machine has a slot to use an Array Buffer. Set it to use our Array Buffer
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // Copy our vertex data into the currently bound array buffer (our buffer).
+	// glBindBuffer(GL_ARRAY_BUFFER, VBO); // OpenGL state machine has a slot to use an Array Buffer. Set it to use our Array Buffer
+	// glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // Copy our vertex data into the currently bound array buffer (our buffer).
 	// glBufferData requires specifying buffer usage: static draw sets the data only once and uses it many times.
 
 	// Specify wthe layout of each vertex data in the array for opengl to interpret before rendering.
 	// In this case, we specify that the first attribute (attrib at location 0) has 3 components (must be 1-4), 
 	// we don't want to auto-clamp it, it takes the size of 3 floats, and there's no offset on the first component of the first attribute in the array.
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), nullptr); 
-	glEnableVertexAttribArray(0); // remember to enable the attrib lol
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	// glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), nullptr); 
+	// glEnableVertexAttribArray(0); // remember to enable the attrib lol
+	// glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	// glEnableVertexAttribArray(1);
 
-	glBindBuffer(GL_ARRAY_BUFFER, texCoordBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
-	glEnableVertexAttribArray(2);
+	// glBindBuffer(GL_ARRAY_BUFFER, texCoordBuffer);
+	// glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+	// glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+	// glEnableVertexAttribArray(2);
 
 	// Bind the element buffer object to draw the vertices by index
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	// glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	// Unbind the VAO, VBO and EBO when done setting them up.
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	// glBindVertexArray(0);
+	// glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	// Textures
 	GLuint textures[2];

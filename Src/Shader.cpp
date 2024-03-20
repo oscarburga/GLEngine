@@ -1,8 +1,9 @@
 #include "Shader.h"
+#include <glad/glad.h>
+#include <glm/glm.hpp>
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <vector>
 
 Shader::Shader(const char* vertexPath, const char* fragmentPath)
 {
@@ -56,7 +57,7 @@ void Shader::use()
 
 void Shader::SetUniform(const std::string& name, bool value) const
 {
-    glUniform1i(glGetUniformLocation(id, name.c_str()), (int)value);
+    SetUniform(name, int(value));
 }
 
 void Shader::SetUniform(const std::string& name, int value) const
@@ -67,6 +68,36 @@ void Shader::SetUniform(const std::string& name, int value) const
 void Shader::SetUniform(const std::string& name, float value) const
 {
     glUniform1f(glGetUniformLocation(id, name.c_str()), value);
+}
+
+void Shader::SetUniform(const std::string& name, const glm::vec2& value) const
+{
+    glUniform2f(glGetUniformLocation(id, name.c_str()), value.x, value.y);
+}
+
+void Shader::SetUniform(const std::string& name, const glm::vec3& value) const
+{
+    glUniform3fv(glGetUniformLocation(id, name.c_str()), 3, &value[0]);
+}
+
+void Shader::SetUniform(const std::string& name, const glm::vec4& value) const
+{
+    glUniform4fv(glGetUniformLocation(id, name.c_str()), 4, &value[0]);
+}
+
+void Shader::SetUniform(const std::string& name, const glm::mat2& value) const
+{
+    glUniformMatrix2fv(glGetUniformLocation(id, name.c_str()), 1, GL_FALSE, &value[0][0]);
+}
+
+void Shader::SetUniform(const std::string& name, const glm::mat3& value) const
+{
+    glUniformMatrix3fv(glGetUniformLocation(id, name.c_str()), 1, GL_FALSE, &value[0][0]);
+}
+
+void Shader::SetUniform(const std::string& name, const glm::mat4& value) const
+{
+    glUniformMatrix4fv(glGetUniformLocation(id, name.c_str()), 1, GL_FALSE, &value[0][0]);
 }
 
 void Shader::CheckShaderCompilation(unsigned int shader, const char* shaderPath)
