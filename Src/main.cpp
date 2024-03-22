@@ -9,6 +9,9 @@
 #include "stb_image.h"
 #include "RefIgnore.h"
 
+uint32_t winSizeX = 0, winSizeY = 0;
+float aspectRatio = 0;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
@@ -35,7 +38,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	glViewport(0, 0, 800, 600);
+	framebuffer_size_callback(window, 800, 600);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	{
@@ -44,26 +47,76 @@ int main(int argc, char** argv)
 		std::cout << "Max number of vertex attributes: " << numAttributes << " 4-component vertex attributes\n";
 	}
 
-	float vertices[] = {
-		 0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // top right
-		 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom right
-		-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
-		-0.5f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f  // top left 
+	const float vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+	};
+
+	const vec3 cubePositions[] = {
+		vec3(0.0f,  0.0f,  0.0f),
+		vec3(2.0f,  5.0f, -15.0f),
+		vec3(-1.5f, -2.2f, -2.5f),
+		vec3(-3.8f, -2.0f, -12.3f),
+		vec3(2.4f, -0.4f, -3.5f),
+		vec3(-1.7f,  3.0f, -7.5f),
+		vec3(1.3f, -2.0f, -2.5f),
+		vec3(1.5f,  2.0f, -2.5f),
+		vec3(1.5f,  0.2f, -1.5f),
+		vec3(-1.3f,  1.0f, -1.5f)
 	};
 
 	// opengl tex coords are measured with (0,0) being bottom left corner.
 	// regular images have (0,0) coordinate being top left corner. Make sure to vertically flip images when reading them
-	float texCoords[] = { 
-		1.f, 1.f, // top right
-		1.f, 0.f, // bot right
-		0.f, 0.f, // bot left
-		0.f, 1.f // top left
-	};
+	// float texCoords[] = {  // unused texcoords now  that we have the cube
+	// 	1.f, 1.f, // top right
+	// 	1.f, 0.f, // bot right
+	// 	0.f, 0.f, // bot left
+	// 	0.f, 1.f // top left
+	// };
 
-	GLuint indices[] = {  // note that we start from 0!
-		0, 1, 3,   // first triangle
-		1, 2, 3    // second triangle
-	};  
+	// GLuint indices[] = {  // note that we start from 0!
+	// 	0, 1, 3,   // first triangle
+	// 	1, 2, 3    // second triangle
+	// };  
 
 	// Vertex array objects store all the calls to glEnableVertexAttribArray or glDisableVertexAttribArray, glVertexAttribPointer, and also stores the buffer objects associated.
 	// Use them to not have to re-specify these attributes every time you want to use a certain buffer with a layout. 
@@ -72,31 +125,32 @@ int main(int argc, char** argv)
 	GLuint buffers[3];
 	glCreateBuffers(3, buffers);
 	// glGenBuffers(2, buffers); // Create a buffer and get a handle to it
-	auto [VBO, texCoordBuffer, IBO] = buffers; 
+	// auto [VBO, texCoordBuffer, IBO] = buffers; 
+	GLuint VBO = buffers[0];
 
 	glNamedBufferData(VBO, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glNamedBufferData(texCoordBuffer, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
-	glNamedBufferData(IBO, sizeof(indices), indices, GL_STATIC_DRAW);
+	// glNamedBufferData(texCoordBuffer, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+	// glNamedBufferData(IBO, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	const int vboBindIndex = 0, texCoordsBindIndex = 1;
+	const int vboBindIndex = 0;// , texCoordsBindIndex = 1;
 
-	glVertexArrayElementBuffer(VAO, IBO); // Set the VAO to use IndexBufferObject for the element indices.
+	// glVertexArrayElementBuffer(VAO, IBO); // Set the VAO to use IndexBufferObject for the element indices.
 
 	// What buffers it uses in each slot for vertex data
-	glVertexArrayVertexBuffer(VAO, vboBindIndex, VBO, 0, 6 * sizeof(float));
-	glVertexArrayVertexBuffer(VAO, texCoordsBindIndex, texCoordBuffer, 0, 2 * sizeof(float));
+	glVertexArrayVertexBuffer(VAO, vboBindIndex, VBO, 0, 5 * sizeof(float));
+	// glVertexArrayVertexBuffer(VAO, texCoordsBindIndex, texCoordBuffer, 0, 2 * sizeof(float));
 
 	glEnableVertexArrayAttrib(VAO, 0); // enable VAO's array attrib 0
 	glVertexArrayAttribFormat(VAO, 0, 3, GL_FLOAT, GL_FALSE, 0); // VAO's array attrib 0 has 3 floats,
 	glVertexArrayAttribBinding(VAO, 0, vboBindIndex); // VAO's array attrib 0 reads from the buffer bound at vboBindIndex (0)
 
 	glEnableVertexArrayAttrib(VAO, 1);
-	glVertexArrayAttribFormat(VAO, 1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float)); // array attrib has 3 floats, starting after 3 floats (from attrib 0)
+	glVertexArrayAttribFormat(VAO, 1, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(float)); // array attrib has 3 floats, starting after 3 floats (from attrib 0)
 	glVertexArrayAttribBinding(VAO, 1, vboBindIndex); // VAO's array attrib 1 reads from the buffer bound at vboBindIndex (0)
 
-	glEnableVertexArrayAttrib(VAO, 2);
-	glVertexArrayAttribFormat(VAO, 2, 2, GL_FLOAT, GL_FALSE, 0); // array attrib has 2 floats
-	glVertexArrayAttribBinding(VAO, 2, texCoordsBindIndex); // vao's array attrib 2 reads from buffer bound at texCoordsBindIndex(1)
+	// glEnableVertexArrayAttrib(VAO, 2);
+	// glVertexArrayAttribFormat(VAO, 2, 2, GL_FLOAT, GL_FALSE, 0); // array attrib has 2 floats
+	// glVertexArrayAttribBinding(VAO, 2, texCoordsBindIndex); // vao's array attrib 2 reads from buffer bound at texCoordsBindIndex(1)
 
 
 	// glBindVertexArray(VAO);
@@ -173,25 +227,32 @@ int main(int argc, char** argv)
 	shader.SetUniform("woodTexture", int(0));
 	shader.SetUniform("faceTexture", int(1));
 	// glPolygonMode(GL_BACK, GL_LINE);
+	mat4 worldToCamera = glm::mat4(1.0f);
+	worldToCamera = glm::translate(worldToCamera, vec3(0.0f, 0.0f, -3.0f));
+	mat4 cameraToPerspective = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.f);
+	shader.SetVarUniform(worldToCamera);
+	shader.SetVarUniform(cameraToPerspective);
+	glEnable(GL_DEPTH_TEST);
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		processInput(window);
 		const float time = (float)glfwGetTime();
 		shader.SetUniform("time", time);
-		glm::mat4 transform(1.0f);
-		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
-		transform = glm::rotate(transform, time, glm::vec3(0.0, 0.0, 1.0));
-		transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
-		shader.SetUniform("transform", transform);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		transform = glm::mat4(1.0f);
-		transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
-		transform = glm::rotate(transform, time, glm::vec3(0.0, 0.0, 1.0));
-		transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
-		shader.SetUniform("transform", transform);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+
+		for (int i = 0; i < 10; i++)
+		{
+			mat4 localToWorld = mat4(1.0f);
+			const float angle = 20.0f * i;
+			localToWorld = glm::translate(localToWorld, cubePositions[i]);
+			localToWorld = glm::rotate(localToWorld, time * glm::radians(angle), vec3(1.0f, 0.0f, 0.0f));
+			// localToWorld = glm::scale(localToWorld, vec3(1.0f, 1.0f, 1.0f));
+			shader.SetVarUniform(localToWorld);
+			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(float));
+		}
+
+		// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -202,6 +263,9 @@ int main(int argc, char** argv)
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+	winSizeX = width;
+	winSizeY = height;
+	aspectRatio = float(width) / float(height);
 	glViewport(0, 0, width, height);
 }
 

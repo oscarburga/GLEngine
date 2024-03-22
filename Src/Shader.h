@@ -31,3 +31,5 @@ private:
     static void CheckShaderCompilation(unsigned int shader, const char* shaderPath = nullptr);
     static void CheckProgramLinkSuccess(unsigned int program);
 };
+
+#define SetVarUniform(var) SetUniform(#var, var);
