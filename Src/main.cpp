@@ -9,6 +9,10 @@
 #include "stb_image.h"
 #include "RefIgnore.h"
 
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void processInput(GLFWwindow* window, float deltaTime);
+
 struct World
 {
 	static const vec3 front;
@@ -27,7 +31,11 @@ public:
 	vec3 pos;
 	vec3 front;
 	vec3 up;
-	float speed { 1.0f };
+	float yaw { 0.0f };
+	float pitch { 0.0f };
+	float speed { 5.0f };
+	float yawSens { 100.01f };
+	float pitchSens { 100.01f };
 
 	Camera(const vec3& _pos, const vec3& _lookAtLoc) : pos(_pos)
 	{
@@ -39,20 +47,29 @@ public:
 
 	Camera() : Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f)) {}
 
-	vec3 GetRightVector() { return glm::cross(front, up); }
+	vec3 GetRightVector() { return glm::normalize(glm::cross(front, up)); }
 	mat4& GetWorldToCamera() { return lookAt; }
 	mat4& UpdateAndGetWorldToCamera() 
 	{
 		lookAt = glm::lookAt(pos, pos + front, up); 
 		return lookAt; 
 	}
+
+	void UpdateAxesFromYawPitch()
+	{
+		const float yawr = glm::radians(yaw);
+		const float pitchr = glm::radians(pitch);
+		front.x = cos(yawr) * cos(pitchr);
+		front.y = sin(pitchr);
+		front.z = sin(yawr) * cos(pitchr);
+		front = glm::normalize(front);
+		// const vec3 right = glm::normalize(glm::cross(front, World::up));
+		// up = glm::cross(right, front);
+	}
 } camera;
 
 uint32_t winSizeX = 0, winSizeY = 0;
 float aspectRatio = 0;
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window, float deltaTime);
 
 int main(int argc, char** argv)
 {
@@ -79,6 +96,7 @@ int main(int argc, char** argv)
 
 	framebuffer_size_callback(window, 800, 600);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	{
 		int numAttributes;
@@ -316,14 +334,33 @@ void processInput(GLFWwindow* window, float deltaTime)
 
 	vec3 moveDir(0.0f);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        moveDir += camera.front;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        moveDir -= camera.front;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        moveDir -= camera.GetRightVector();
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        moveDir += camera.GetRightVector();
-	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ? 
+		moveDir += camera.front;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		moveDir -= camera.front;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		moveDir -= camera.GetRightVector();
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		moveDir += camera.GetRightVector();
+	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
 		(camera.speed * deltaTime * glm::normalize(moveDir)) :
 		vec3(0.0f);
+
+
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);
+	static float lastx = xpos;
+	static float lasty = ypos;
+
+	float deltax = (float(xpos) - lastx);
+	float deltay = (float(ypos) - lasty);
+
+	lastx = (float)xpos;
+	lasty = (float)ypos;
+
+	camera.yaw += deltax * deltaTime * camera.yawSens;
+	camera.pitch -= deltay * deltaTime * camera.pitchSens;
+	camera.pitch = glm::clamp(camera.pitch, -89.f, 89.f);
+
+	camera.UpdateAxesFromYawPitch();
+	std::cout << camera.yaw << " " << camera.pitch << std::endl;
 }
