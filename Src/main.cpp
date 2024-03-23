@@ -39,10 +39,24 @@ public:
 
 	Camera(const vec3& _pos, const vec3& _lookAtLoc) : pos(_pos)
 	{
+		// If this assertion fails, camera is trying to look straight up/down. We don't support this.
+		assert(abs(glm::dot(glm::normalize(_lookAtLoc - _pos), World::up)) < (1 - 1e-6));
 		front = glm::normalize(_lookAtLoc - _pos);
 		const vec3 right = glm::cross(front, World::up); // Both unit vectors, don't need renormalize
 		up = glm::cross(right, front); // Both unit vectors, ddon't need renormalize
 		lookAt = glm::lookAt(_pos, _lookAtLoc, up);
+		const float pitchr = asin(front.y);
+		pitch = glm::degrees(pitchr);
+		// sin(yaw) * cos(pitch) = front.z = 0.5 * (sin(yaw+pitch) + sin(yaw-pitch))
+		// cos(yaw) * cos(pitch) = front.x = 0.5 * (cos(yaw-pitch) + cos(yaw+pitch))
+
+		// front.z = sin(yaw) * cos(pitch)
+		// sin(yaw) = front.z / cos(pitch)
+		// yaw = asin(front.z / cos(pitch))
+		const float yawr = asin(front.z / cos(pitchr));
+		yaw = glm::degrees(yawr);
+		// TODO: validate the resulting values of yaw and pitch produce a vector that points in the direction of front
+		// have to multiply yaw by -1 if it doesnt.
 	}
 
 	Camera() : Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f)) {}
@@ -63,8 +77,8 @@ public:
 		front.y = sin(pitchr);
 		front.z = sin(yawr) * cos(pitchr);
 		front = glm::normalize(front);
-		// const vec3 right = glm::normalize(glm::cross(front, World::up));
-		// up = glm::cross(right, front);
+		const vec3 right = glm::normalize(glm::cross(front, World::up));
+		up = glm::cross(right, front);
 	}
 } camera;
 
