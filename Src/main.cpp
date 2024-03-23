@@ -9,11 +9,50 @@
 #include "stb_image.h"
 #include "RefIgnore.h"
 
+struct World
+{
+	static const vec3 front;
+	static const vec3 up;
+	static const vec3 right;
+};
+
+const vec3 World::front = vec3(0.0f, 0.0f, 1.0f);
+const vec3 World::up = vec3(0.0f, 1.0f, 0.0f);
+const vec3 World::right = vec3(1.0f, 0.0f, 0.0f);
+
+class Camera
+{
+	mat4 lookAt;
+public:
+	vec3 pos;
+	vec3 front;
+	vec3 up;
+	float speed { 1.0f };
+
+	Camera(const vec3& _pos, const vec3& _lookAtLoc) : pos(_pos)
+	{
+		front = glm::normalize(_lookAtLoc - _pos);
+		const vec3 right = glm::cross(front, World::up); // Both unit vectors, don't need renormalize
+		up = glm::cross(right, front); // Both unit vectors, ddon't need renormalize
+		lookAt = glm::lookAt(_pos, _lookAtLoc, up);
+	}
+
+	Camera() : Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f)) {}
+
+	vec3 GetRightVector() { return glm::cross(front, up); }
+	mat4& GetWorldToCamera() { return lookAt; }
+	mat4& UpdateAndGetWorldToCamera() 
+	{
+		lookAt = glm::lookAt(pos, pos + front, up); 
+		return lookAt; 
+	}
+} camera;
+
 uint32_t winSizeX = 0, winSizeY = 0;
 float aspectRatio = 0;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window, float deltaTime);
 
 int main(int argc, char** argv)
 {
@@ -227,19 +266,20 @@ int main(int argc, char** argv)
 	shader.SetUniform("woodTexture", int(0));
 	shader.SetUniform("faceTexture", int(1));
 	// glPolygonMode(GL_BACK, GL_LINE);
-	mat4 worldToCamera = glm::mat4(1.0f);
-	worldToCamera = glm::translate(worldToCamera, vec3(0.0f, 0.0f, -3.0f));
-	mat4 cameraToPerspective = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.f);
-	shader.SetVarUniform(worldToCamera);
-	shader.SetVarUniform(cameraToPerspective);
 	glEnable(GL_DEPTH_TEST);
+	float lastFrameTime = (float)glfwGetTime();
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		processInput(window);
 		const float time = (float)glfwGetTime();
+		const float deltaTime = time - lastFrameTime;
+		lastFrameTime = time;
 		shader.SetUniform("time", time);
+		processInput(window, deltaTime);
+		mat4 cameraToPerspective = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.f);
+		shader.SetUniform("worldToCamera", camera.UpdateAndGetWorldToCamera());
+		shader.SetVarUniform(cameraToPerspective);
 
 		for (int i = 0; i < 10; i++)
 		{
@@ -269,10 +309,21 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
-void processInput(GLFWwindow* window)
+void processInput(GLFWwindow* window, float deltaTime)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-	{
 		glfwSetWindowShouldClose(window, true);
-	}
+
+	vec3 moveDir(0.0f);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        moveDir += camera.front;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        moveDir -= camera.front;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        moveDir -= camera.GetRightVector();
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        moveDir += camera.GetRightVector();
+	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ? 
+		(camera.speed * deltaTime * glm::normalize(moveDir)) :
+		vec3(0.0f);
 }
