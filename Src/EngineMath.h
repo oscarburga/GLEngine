@@ -10,3 +10,7 @@ using glm::vec3;
 using glm::vec4;
 using glm::mat4;
 using std::numbers::pi;
+
+template<typename T>
+concept IsNumeric = std::is_integral_v<T>;
+

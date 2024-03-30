@@ -138,14 +138,21 @@
     <None Include="Shaders\shader.vert" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\Camera.cpp" />
+    <ClCompile Include="Src\Engine.cpp" />
     <ClCompile Include="Src\glad.c" />
     <ClCompile Include="Src\main.cpp" />
     <ClCompile Include="Src\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\Camera.h" />
+    <ClInclude Include="Src\MultiTypeContainer.h" />
+    <ClInclude Include="Src\Engine.h" />
     <ClInclude Include="Src\EngineMath.h" />
+    <ClInclude Include="Src\InputConcepts.h" />
     <ClInclude Include="Src\RefIgnore.h" />
     <ClInclude Include="Src\Shader.h" />
+    <ClInclude Include="Src\World.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\awesomeface.png" />

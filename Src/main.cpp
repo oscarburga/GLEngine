@@ -8,116 +8,18 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "RefIgnore.h"
+#include "Engine.h"
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window, float deltaTime);
-
-struct World
-{
-	static const vec3 front;
-	static const vec3 up;
-	static const vec3 right;
-};
-
-const vec3 World::front = vec3(0.0f, 0.0f, 1.0f);
-const vec3 World::up = vec3(0.0f, 1.0f, 0.0f);
-const vec3 World::right = vec3(1.0f, 0.0f, 0.0f);
-
-class Camera
-{
-	mat4 lookAt;
-public:
-	vec3 pos;
-	vec3 front;
-	vec3 up;
-	float yaw { 0.0f };
-	float pitch { 0.0f };
-	float speed { 5.0f };
-	float yawSens { 100.01f };
-	float pitchSens { 100.01f };
-
-	Camera(const vec3& _pos, const vec3& _lookAtLoc) : pos(_pos)
-	{
-		// If this assertion fails, camera is trying to look straight up/down. We don't support this.
-		assert(abs(glm::dot(glm::normalize(_lookAtLoc - _pos), World::up)) < (1 - 1e-6));
-		front = glm::normalize(_lookAtLoc - _pos);
-		const vec3 right = glm::cross(front, World::up); // Both unit vectors, don't need renormalize
-		up = glm::cross(right, front); // Both unit vectors, ddon't need renormalize
-		lookAt = glm::lookAt(_pos, _lookAtLoc, up);
-		const float pitchr = asin(front.y);
-		pitch = glm::degrees(pitchr);
-		// sin(yaw) * cos(pitch) = front.z = 0.5 * (sin(yaw+pitch) + sin(yaw-pitch))
-		// cos(yaw) * cos(pitch) = front.x = 0.5 * (cos(yaw-pitch) + cos(yaw+pitch))
-
-		// front.z = sin(yaw) * cos(pitch)
-		// sin(yaw) = front.z / cos(pitch)
-		// yaw = asin(front.z / cos(pitch))
-		const float yawr = asin(front.z / cos(pitchr));
-		yaw = glm::degrees(yawr);
-		// TODO: validate the resulting values of yaw and pitch produce a vector that points in the direction of front
-		// have to multiply yaw by -1 if it doesnt.
-	}
-
-	Camera() : Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f)) {}
-
-	vec3 GetRightVector() { return glm::normalize(glm::cross(front, up)); }
-	mat4& GetWorldToCamera() { return lookAt; }
-	mat4& UpdateAndGetWorldToCamera() 
-	{
-		lookAt = glm::lookAt(pos, pos + front, up); 
-		return lookAt; 
-	}
-
-	void UpdateAxesFromYawPitch()
-	{
-		const float yawr = glm::radians(yaw);
-		const float pitchr = glm::radians(pitch);
-		front.x = cos(yawr) * cos(pitchr);
-		front.y = sin(pitchr);
-		front.z = sin(yawr) * cos(pitchr);
-		front = glm::normalize(front);
-		const vec3 right = glm::normalize(glm::cross(front, World::up));
-		up = glm::cross(right, front);
-	}
-} camera;
 
 uint32_t winSizeX = 0, winSizeY = 0;
 float aspectRatio = 0;
 
 int main(int argc, char** argv)
 {
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	GLFWwindow* window = glfwCreateWindow(800, 600, "GLEngine", nullptr, nullptr);
-	if (window == nullptr)
-	{
-		std::cerr << "Failed to create glfw window\n";
-		glfwTerminate();
-		return -1;
-	}
-
-	glfwMakeContextCurrent(window);
-
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		std::cerr << "Failed to init GLAD\n";
-		return -1;
-	}
-
-	framebuffer_size_callback(window, 800, 600);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	{
-		int numAttributes;
-		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &numAttributes);
-		std::cout << "Max number of vertex attributes: " << numAttributes << " 4-component vertex attributes\n";
-	}
-
+	CEngine* Engine = CEngine::Create();
 	const float vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -354,16 +256,26 @@ void processInput(GLFWwindow* window, float deltaTime)
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 		moveDir -= camera.GetRightVector();
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		moveDir += camera.GetRightVector();
+		moveDir += camera.GetRightVector(); 
+
 	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
 		(camera.speed * deltaTime * glm::normalize(moveDir)) :
 		vec3(0.0f);
 
+	moveDir = vec3(0.0f);
+	if (glfwGetKey(window, GLFW_KEY_E))
+		moveDir += camera.up;
+	if (glfwGetKey(window, GLFW_KEY_Q))
+		moveDir -= camera.up;
+
+	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
+		(camera.speed * deltaTime * glm::normalize(moveDir)) :
+		vec3(0.0f);
 
 	double xpos, ypos;
 	glfwGetCursorPos(window, &xpos, &ypos);
-	static float lastx = xpos;
-	static float lasty = ypos;
+	static float lastx = (float)xpos;
+	static float lasty = (float)ypos;
 
 	float deltax = (float(xpos) - lastx);
 	float deltay = (float(ypos) - lasty);
