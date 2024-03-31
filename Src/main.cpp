@@ -9,13 +9,9 @@
 #include "stb_image.h"
 #include "RefIgnore.h"
 #include "Engine.h"
+#include "Camera.h"
+#include "WorldContainers.h"
 
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window, float deltaTime);
-
-uint32_t winSizeX = 0, winSizeY = 0;
-float aspectRatio = 0;
 
 int main(int argc, char** argv)
 {
@@ -166,7 +162,7 @@ int main(int argc, char** argv)
 		if (stbi_uc* texData = stbi_load(paths[i], &w, &h, &c, 0))
 		{
 			GLuint texture = textures[i];
-			const int numLevels = 1 + floor(log2(std::max(w, h))); // TODO use count leading zero to calculate num mipmaps
+			const int numLevels = 1 + (int)floor(log2(std::max(w, h))); // TODO use count leading zero to calculate num mipmaps
 			glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
@@ -202,15 +198,14 @@ int main(int argc, char** argv)
 	// glPolygonMode(GL_BACK, GL_LINE);
 	glEnable(GL_DEPTH_TEST);
 	float lastFrameTime = (float)glfwGetTime();
-	while (!glfwWindowShouldClose(window))
+	Camera& camera = WorldContainers::InputProcessors.emplace_back(Camera());
+	Engine->RenderFunc = [&](float deltaTime)
 	{
+		const float aspectRatio = Engine->Viewport.AspectRatio;
+		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		const float time = (float)glfwGetTime();
-		const float deltaTime = time - lastFrameTime;
-		lastFrameTime = time;
 		shader.SetUniform("time", time);
-		processInput(window, deltaTime);
 		mat4 cameraToPerspective = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.f);
 		shader.SetUniform("worldToCamera", camera.UpdateAndGetWorldToCamera());
 		shader.SetVarUniform(cameraToPerspective);
@@ -225,68 +220,9 @@ int main(int argc, char** argv)
 			shader.SetVarUniform(localToWorld);
 			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(float));
 		}
-
-		// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
+	};
+	Engine->MainLoop();
 
 	glfwTerminate();
 	return 0;
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	winSizeX = width;
-	winSizeY = height;
-	aspectRatio = float(width) / float(height);
-	glViewport(0, 0, width, height);
-}
-
-void processInput(GLFWwindow* window, float deltaTime)
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-
-	vec3 moveDir(0.0f);
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		moveDir += camera.front;
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		moveDir -= camera.front;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		moveDir -= camera.GetRightVector();
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		moveDir += camera.GetRightVector(); 
-
-	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
-		(camera.speed * deltaTime * glm::normalize(moveDir)) :
-		vec3(0.0f);
-
-	moveDir = vec3(0.0f);
-	if (glfwGetKey(window, GLFW_KEY_E))
-		moveDir += camera.up;
-	if (glfwGetKey(window, GLFW_KEY_Q))
-		moveDir -= camera.up;
-
-	camera.pos += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
-		(camera.speed * deltaTime * glm::normalize(moveDir)) :
-		vec3(0.0f);
-
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-	static float lastx = (float)xpos;
-	static float lasty = (float)ypos;
-
-	float deltax = (float(xpos) - lastx);
-	float deltay = (float(ypos) - lasty);
-
-	lastx = (float)xpos;
-	lasty = (float)ypos;
-
-	camera.yaw += deltax * deltaTime * camera.yawSens;
-	camera.pitch -= deltay * deltaTime * camera.pitchSens;
-	camera.pitch = glm::clamp(camera.pitch, -89.f, 89.f);
-
-	camera.UpdateAxesFromYawPitch();
-	std::cout << camera.yaw << " " << camera.pitch << std::endl;
 }

@@ -143,6 +143,7 @@
     <ClCompile Include="Src\glad.c" />
     <ClCompile Include="Src\main.cpp" />
     <ClCompile Include="Src\Shader.cpp" />
+    <ClCompile Include="Src\WorldContainers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Camera.h" />
@@ -153,6 +154,7 @@
     <ClInclude Include="Src\RefIgnore.h" />
     <ClInclude Include="Src\Shader.h" />
     <ClInclude Include="Src\World.h" />
+    <ClInclude Include="Src\WorldContainers.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\awesomeface.png" />

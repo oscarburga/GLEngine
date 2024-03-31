@@ -5,6 +5,9 @@
 
 #include <cassert>
 #include <iostream>
+#include "WorldContainers.h"
+
+CEngine* CEngine::Engine = nullptr;
 
 CEngine* CEngine::Create()
 {
@@ -14,21 +17,40 @@ CEngine* CEngine::Create()
 
 void CEngine::MainLoop()
 {
-	const float newTime = (float)glfwGetTime();
-	const float deltaTime = newTime - CurrentTime;
+	CurrentTime = (float)glfwGetTime();
+	assert(RenderFunc);
 	while (!glfwWindowShouldClose(Viewport.Window))
 	{
+		const float newTime = (float)glfwGetTime();
+		const float deltaTime = newTime - CurrentTime;
+		CurrentTime = newTime;
 		glfwPollEvents();
-		ProcessInput();
+		ProcessInput(deltaTime);
+		RenderFunc(deltaTime);
 		glfwSwapBuffers(Viewport.Window);
 	}
 }
 
-void CEngine::ProcessInput()
+void CEngine::ProcessInput(float deltaTime)
 {
 	if (glfwGetKey(Viewport.Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(Viewport.Window, true);
 
+	double xpos, ypos;
+	glfwGetCursorPos(Viewport.Window, &xpos, &ypos);
+	static float lastx = (float)xpos;
+	static float lasty = (float)ypos;
+
+	float deltax = (float(xpos) - lastx);
+	float deltay = (float(ypos) - lasty);
+
+	lastx = (float)xpos;
+	lasty = (float)ypos;
+
+	WorldContainers::InputProcessors.apply([&](HandlesInput auto& inputProcessor)
+	{
+		inputProcessor.HandleInput(Viewport.Window, deltax, deltay, deltaTime);
+	});
 }
 
 CEngine::CEngine()

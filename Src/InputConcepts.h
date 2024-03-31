@@ -1,6 +1,6 @@
 #pragma once
 
-class GLFWwindow;
+struct GLFWwindow;
 
 template<typename T>
 concept HandlesInput = requires(T inputHandler, GLFWwindow* window, float pointerDeltaX, float pointerDeltaY, float deltaTime)

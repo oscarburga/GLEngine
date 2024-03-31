@@ -1,8 +1,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <functional>
 
-class GLFWwindow;
+struct GLFWwindow;
 
 class CEngine
 {
@@ -19,10 +20,17 @@ public:
 		uint32_t SizeY = 600;
 		float AspectRatio = 800.f / 600.f;
 	} Viewport;
+
+	float CursorLastX;
+	float CursorLastY;
 	float CurrentTime;
 
 	void MainLoop();
-	void ProcessInput();
+	void ProcessInput(float deltaTime);
+
+	// TEMP: to keep progressing through learnopengl before making renderable concepts,
+	// just set a RenderFunc from main
+	std::function<void(float)> RenderFunc;
 
 protected:
 	CEngine();

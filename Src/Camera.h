@@ -4,7 +4,7 @@
 #include "World.h"
 #include "InputConcepts.h"
 
-class GLFWwindow;
+struct GLFWwindow;
 
 class Camera
 {

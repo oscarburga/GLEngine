@@ -13,9 +13,6 @@ struct World
 	static constexpr vec3 X = right;
 	static constexpr vec3 Y = up;
 	static constexpr vec3 Z = front;
-
-	float deltaTime;
-	float lastTime;
 };
 
 

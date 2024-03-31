@@ -3,6 +3,7 @@
 #include <iostream>
 #include "EngineMath.h"
 #include <GLFW/glfw3.h>
+#include "WorldContainers.h"
 
 Camera::Camera(const vec3& _pos, const vec3& _lookAtLoc) : pos(_pos)
 {
@@ -26,7 +27,7 @@ Camera::Camera(const vec3& _pos, const vec3& _lookAtLoc) : pos(_pos)
     // have to multiply yaw by -1 if it doesnt.
 }
 
-inline mat4& Camera::UpdateAndGetWorldToCamera()
+mat4& Camera::UpdateAndGetWorldToCamera()
 {
     lookAt = glm::lookAt(pos, pos + front, up);
     return lookAt;
@@ -70,21 +71,10 @@ void Camera::HandleInput(GLFWwindow* window, float deltax, float deltay, float d
 		(speed * deltaTime * glm::normalize(moveDir)) :
 		vec3(0.0f);
 
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-	static float lastx = (float)xpos;
-	static float lasty = (float)ypos;
-
-	float deltax = (float(xpos) - lastx);
-	float deltay = (float(ypos) - lasty);
-
-	lastx = (float)xpos;
-	lasty = (float)ypos;
-
 	yaw += deltax * deltaTime * yawSens;
 	pitch -= deltay * deltaTime * pitchSens;
 	pitch = glm::clamp(pitch, -89.f, 89.f);
 
 	UpdateAxesFromYawPitch();
-	// std::cout << yaw << " " << pitch << std::endl;
+	std::cout << yaw << " " << pitch << std::endl;
 }
