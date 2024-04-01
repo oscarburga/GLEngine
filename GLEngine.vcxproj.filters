@@ -25,6 +25,12 @@
     <None Include="Shaders\shader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\lightningShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\lightningShader.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Shader.cpp">

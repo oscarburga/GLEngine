@@ -77,12 +77,12 @@ void Shader::SetUniform(const std::string& name, const glm::vec2& value) const
 
 void Shader::SetUniform(const std::string& name, const glm::vec3& value) const
 {
-    glUniform3fv(glGetUniformLocation(id, name.c_str()), 3, &value[0]);
+    glUniform3fv(glGetUniformLocation(id, name.c_str()), 1, &value[0]);
 }
 
 void Shader::SetUniform(const std::string& name, const glm::vec4& value) const
 {
-    glUniform4fv(glGetUniformLocation(id, name.c_str()), 4, &value[0]);
+    glUniform4fv(glGetUniformLocation(id, name.c_str()), 1, &value[0]);
 }
 
 void Shader::SetUniform(const std::string& name, const glm::mat2& value) const

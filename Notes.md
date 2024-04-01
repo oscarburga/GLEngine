@@ -39,3 +39,6 @@ VAO binds attributes to locations for input variables in shader code.
 * Vertex buffer object is a memory buffer to hold information about vertices (coordinates, colors, normals, texcoords, etc etc)
 
 
+## Texture coordinates
+opengl tex coords are measured with (0,0) being bottom left corner.
+regular images have (0,0) coordinate being top left corner. Make sure to vertically flip images when reading them

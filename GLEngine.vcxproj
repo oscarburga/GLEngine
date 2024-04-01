@@ -134,6 +134,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="Notes.md" />
+    <None Include="Shaders\lightningShader.frag" />
+    <None Include="Shaders\lightningShader.vert" />
     <None Include="Shaders\shader.frag" />
     <None Include="Shaders\shader.vert" />
   </ItemGroup>
