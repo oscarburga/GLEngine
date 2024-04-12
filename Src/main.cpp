@@ -16,49 +16,51 @@
 int main(int argc, char** argv)
 {
 	CEngine* Engine = CEngine::Create();
-	const float vertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	float vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
 
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
 
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
 
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
 
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
+
 
 	const vec3 cubePositions[] = {
 		vec3(0.0f,  0.0f,  0.0f),
@@ -73,37 +75,32 @@ int main(int argc, char** argv)
 		vec3(-1.3f,  1.0f, -1.5f)
 	};
 
-	// Vertex array objects store all the calls to glEnableVertexAttribArray or glDisableVertexAttribArray, glVertexAttribPointer, and also stores the buffer objects associated.
-	// Use them to not have to re-specify these attributes every time you want to use a certain buffer with a layout. 
 	GLuint vaos[2];
 	glCreateVertexArrays(2, vaos);
-	auto [VAO, lightVao] = vaos;
-	GLuint buffers[3];
-	glCreateBuffers(3, buffers);
-	// glGenBuffers(2, buffers); // Create a buffer and get a handle to it
-	// auto [VBO, texCoordBuffer, IBO] = buffers; 
-	GLuint VBO = buffers[0];
+	auto [cubeVao, lightVao] = vaos;
 
-	glNamedBufferData(VBO, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	// glNamedBufferData(IBO, sizeof(indices), indices, GL_STATIC_DRAW);
+	GLuint cubeBuffer;
+	glCreateBuffers(1, &cubeBuffer);
+
+	glNamedBufferData(cubeBuffer, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// glVertexArrayElementBuffer(VAO, IBO); // Set the VAO to use IndexBufferObject for the element indices.
 
 	// What buffers it uses in each slot for vertex data
 	const int vboBindIndex = 0;// , texCoordsBindIndex = 1;
-	glVertexArrayVertexBuffer(lightVao, vboBindIndex, VBO, 0, 5 * sizeof(float));
+	glVertexArrayVertexBuffer(lightVao, vboBindIndex, cubeBuffer, 0, 6 * sizeof(float));
 	glEnableVertexArrayAttrib(lightVao, 0);
 	glVertexArrayAttribFormat(lightVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
 	glVertexArrayAttribBinding(lightVao, 0, vboBindIndex);
 
-	glVertexArrayVertexBuffer(VAO, vboBindIndex, VBO, 0, 5 * sizeof(float));
+	glVertexArrayVertexBuffer(cubeVao, vboBindIndex, cubeBuffer, 0, 6 * sizeof(float));
 
-	glEnableVertexArrayAttrib(VAO, 0); // enable VAO's array attrib 0
-	glVertexArrayAttribFormat(VAO, 0, 3, GL_FLOAT, GL_FALSE, 0); // VAO's array attrib 0 has 3 floats,
-	glVertexArrayAttribBinding(VAO, 0, vboBindIndex); // VAO's array attrib 0 reads from the buffer bound at vboBindIndex (0)
+	glEnableVertexArrayAttrib(cubeVao, 0); // enable VAO's array attrib 0
+	glVertexArrayAttribFormat(cubeVao, 0, 3, GL_FLOAT, GL_FALSE, 0); // VAO's array attrib 0 has 3 floats,
+	glVertexArrayAttribBinding(cubeVao, 0, vboBindIndex); // VAO's array attrib 0 reads from the buffer bound at vboBindIndex (0)
 
-	glEnableVertexArrayAttrib(VAO, 1);
-	glVertexArrayAttribFormat(VAO, 1, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(float)); // array attrib has 3 floats, starting after 3 floats (from attrib 0)
-	glVertexArrayAttribBinding(VAO, 1, vboBindIndex); // VAO's array attrib 1 reads from the buffer bound at vboBindIndex (0)
+	glEnableVertexArrayAttrib(cubeVao, 1);
+	glVertexArrayAttribFormat(cubeVao, 1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
+	glVertexArrayAttribBinding(cubeVao, 1, vboBindIndex);
 
 	// Textures
 	GLuint textures[2];
@@ -154,24 +151,29 @@ int main(int argc, char** argv)
 	Camera& camera = WorldContainers::InputProcessors.emplace_back(Camera());
 	Engine->RenderFunc = [&](float deltaTime)
 	{
+		constexpr float MaxDeltaTime = 0.2f;
+		deltaTime = glm::min(deltaTime, MaxDeltaTime);
 		const float aspectRatio = Engine->Viewport.AspectRatio;
 		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		const vec3 lightPos(1.2f, 1.0f + glm::sin(time), 2.0f);
 		shader.use();
 		shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
 		shader.SetUniform("lightColor", vec3(1.0f, 1.0f, 1.0f));
+		shader.SetVarUniform(lightPos);
+		shader.SetUniform("viewPos", camera.pos);
 		mat4 cameraToPerspective = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.f);
 		shader.SetUniform("worldToCamera", camera.UpdateAndGetWorldToCamera());
 		shader.SetVarUniform(cameraToPerspective);
 		mat4 localToWorld = mat4(1.0f);
 		shader.SetVarUniform(localToWorld);
 
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));
+		glBindVertexArray(cubeVao);
+		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (6 * sizeof(float)));
 
 		lightShader.use();
-		localToWorld = glm::translate(localToWorld, vec3(1.2f, 1.0f, 2.0f));
+		localToWorld = glm::translate(localToWorld, lightPos);
 		// localToWorld = glm::rotate(localToWorld, ...);
 		localToWorld = glm::scale(localToWorld, vec3(0.2f));
 		lightShader.SetUniform("worldToCamera", camera.GetWorldToCamera());
@@ -184,7 +186,7 @@ int main(int argc, char** argv)
 	Engine->MainLoop();
 
 	glDeleteVertexArrays(2, vaos);
-	glDeleteBuffers(3, buffers);
+	glDeleteBuffers(1, &cubeBuffer);
 
 	glfwTerminate();
 	return 0;
