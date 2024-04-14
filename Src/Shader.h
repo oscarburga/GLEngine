@@ -4,13 +4,13 @@
 // Figure out if we can forward declare the vec structs somehow to skip this include
 #include <glm/glm.hpp>
 
-class Shader
+class CShader
 {
 public:
     unsigned int id = 0;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
-    Shader(const char* vertexPath, const char* fragmentPath);
+    CShader(const char* vertexPath, const char* fragmentPath);
     // activate the shader
     // ------------------------------------------------------------------------
     void use();

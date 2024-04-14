@@ -57,6 +57,12 @@ public:
 		return std::get<std::vector<T>>(Data).emplace_back(value);
 	}
 
+	template<MatchesAnyType<Types...> T, typename... Args>
+	inline T& emplace_back(Args&&... args)
+	{
+		return std::get<std::vector<T>>(Data).emplace_back(args...);
+	}
+
 	template<IsCallableWith<Types&...> F>
 	inline void apply(F&& f)
 	{

@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 	}
 	auto [woodTexture, faceTexture] = textures;
 	
-	Shader shader("Shaders/shader.vert", "Shaders/shader.frag");
+	CShader shader("Shaders/shader.vert", "Shaders/shader.frag");
 	shader.use();
 	// glBindVertexArray(VAO);
 	// glBindTextureUnit(0, woodTexture);
@@ -143,12 +143,14 @@ int main(int argc, char** argv)
 	// shader.SetUniform("woodTexture", int(0));
 	// shader.SetUniform("faceTexture", int(1));
 
-	Shader lightShader("Shaders/lightningShader.vert", "Shaders/lightningShader.frag");
+	CShader lightShader("Shaders/lightningShader.vert", "Shaders/lightningShader.frag");
 	lightShader.use();
 	// glPolygonMode(GL_BACK, GL_LINE);
 	glEnable(GL_DEPTH_TEST);
 	float lastFrameTime = (float)glfwGetTime();
-	Camera& camera = WorldContainers::InputProcessors.emplace_back(Camera());
+	GCamera& camera = WorldContainers::InputProcessors.emplace_back<GCamera>();
+	GWorldObject cube, light;
+	light.Scale = vec3(0.2f);
 	Engine->RenderFunc = [&](float deltaTime)
 	{
 		constexpr float MaxDeltaTime = 0.2f;
@@ -157,28 +159,23 @@ int main(int argc, char** argv)
 		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		const vec3 lightPos(1.2f, 1.0f + glm::sin(time), 2.0f);
+		light.Position = vec3(1.2f, 1.0f + glm::sin(time), 2.0f);
 		shader.use();
 		shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
 		shader.SetUniform("lightColor", vec3(1.0f, 1.0f, 1.0f));
-		shader.SetVarUniform(lightPos);
-		shader.SetUniform("viewPos", camera.pos);
-		mat4 cameraToPerspective = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.f);
-		shader.SetUniform("worldToCamera", camera.UpdateAndGetWorldToCamera());
-		shader.SetVarUniform(cameraToPerspective);
-		mat4 localToWorld = mat4(1.0f);
-		shader.SetVarUniform(localToWorld);
+		shader.SetUniform("lightPos", light.Position);
+		shader.SetUniform("viewPos", camera.Position);
+		shader.SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
+		shader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
+		shader.SetUniform("localToWorld", cube.GetTransformMatrix());
 
 		glBindVertexArray(cubeVao);
 		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (6 * sizeof(float)));
 
 		lightShader.use();
-		localToWorld = glm::translate(localToWorld, lightPos);
-		// localToWorld = glm::rotate(localToWorld, ...);
-		localToWorld = glm::scale(localToWorld, vec3(0.2f));
-		lightShader.SetUniform("worldToCamera", camera.GetWorldToCamera());
-		lightShader.SetVarUniform(cameraToPerspective);
-		lightShader.SetVarUniform(localToWorld);
+		lightShader.SetUniform("worldToCamera", camera.GetViewMatrix());
+		lightShader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
+		lightShader.SetUniform("localToWorld", light.GetTransformMatrix());
 
 		glBindVertexArray(lightVao);
 		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));

@@ -1,35 +1,28 @@
 #pragma once
 
-#include "EngineMath.h"
-#include "World.h"
+#include "WorldObject.h"
 #include "InputConcepts.h"
 
 struct GLFWwindow;
 
-class Camera
+class GCamera : public GWorldObject
 {
-	mat4 lookAt;
+	mutable mat4 ViewMatrix;
+	mat4 ProjMatrix;
+	float FOV = glm::radians(80.f); // Field of view in radians
 public:
-	vec3 pos;
-	vec3 front;
-	vec3 up;
-	float yaw { 0.0f };
-	float pitch { 0.0f };
-	float speed { 5.0f };
-	float yawSens { 100.01f };
-	float pitchSens { 100.01f };
-
-	Camera(const vec3& _pos, const vec3& _lookAtLoc);
-
-	Camera() : Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f)) {}
-
-	vec3 GetRightVector() const { return glm::normalize(glm::cross(front, up)); }
-	mat4& GetWorldToCamera() { return lookAt; }
-	mat4& UpdateAndGetWorldToCamera();
-
-	void UpdateAxesFromYawPitch();
+	GCamera();
+	float Speed = 5.0f;
+	float YawSens = 0.5f;
+	float PitchSens = 0.5f;
+	float NearPlane = 0.1f;
+	float FarPlane = 100.f;
+	const mat4& GetViewMatrix() const { return ViewMatrix; } // View transforms from world space to view/camera space.
+	const mat4& UpdateAndGetViewMatrix() const;
+	const mat4& GetProjectionMatrix() { return ProjMatrix; } // Projection transforms from camera/view space to clip space (applies perspective)
+	void SetFOV(float _fov);
 
 	void HandleInput(GLFWwindow* window, float deltax, float deltay, float deltaTime);
 };
 
-static_assert(HandlesInput<Camera>);
+static_assert(HandlesInput<GCamera>);

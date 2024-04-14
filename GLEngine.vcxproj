@@ -142,10 +142,12 @@
   <ItemGroup>
     <ClCompile Include="Src\Camera.cpp" />
     <ClCompile Include="Src\Engine.cpp" />
+    <ClCompile Include="Src\EngineMath.cpp" />
     <ClCompile Include="Src\glad.c" />
     <ClCompile Include="Src\main.cpp" />
     <ClCompile Include="Src\Shader.cpp" />
     <ClCompile Include="Src\WorldContainers.cpp" />
+    <ClCompile Include="Src\WorldObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Camera.h" />
@@ -157,6 +159,7 @@
     <ClInclude Include="Src\Shader.h" />
     <ClInclude Include="Src\World.h" />
     <ClInclude Include="Src\WorldContainers.h" />
+    <ClInclude Include="Src\WorldObject.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\awesomeface.png" />

@@ -4,7 +4,7 @@
 #include "InputConcepts.h"
 #include "Camera.h"
 
-#define INPUT_PROCESSOR_CLASSES Camera
+#define INPUT_PROCESSOR_CLASSES GCamera
 
 DeclareConceptContainer(InputProcessors, HandlesInput)
 
