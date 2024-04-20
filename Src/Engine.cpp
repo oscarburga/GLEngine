@@ -11,8 +11,14 @@ CEngine* CEngine::Engine = nullptr;
 
 CEngine* CEngine::Create()
 {
+	assert(!Engine);
 	Engine = new CEngine();
 	return Engine;
+}
+
+void CEngine::Destroy()
+{
+	delete Engine;
 }
 
 void CEngine::MainLoop()
@@ -83,6 +89,12 @@ CEngine::CEngine()
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &numAttributes);
 		std::cout << "Max number of vertex attributes: " << numAttributes << " 4-component vertex attributes\n";
 	}
+	CurrentTime = (float)glfwGetTime();
+}
+
+CEngine::~CEngine()
+{
+	glfwTerminate();
 }
 
 void CEngine::OnWindowResize(GLFWwindow* window, int width, int height)

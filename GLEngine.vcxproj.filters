@@ -31,6 +31,7 @@
     <None Include="Shaders\lightningShader.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="quat_mul_generator\quatmul.py" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Shader.cpp">

@@ -11,7 +11,8 @@ public:
 	CEngine(const CEngine&) = delete;
 	CEngine(CEngine&&) = delete;
 	static CEngine* Create();
-	static CEngine* Get() { return Engine; }
+	static void Destroy();
+	inline static CEngine* Get() { return Engine; }
 	
 	struct SViewport
 	{
@@ -21,9 +22,9 @@ public:
 		float AspectRatio = 800.f / 600.f;
 	} Viewport;
 
-	float CursorLastX;
-	float CursorLastY;
-	float CurrentTime;
+	float CursorLastX = 0.0f;
+	float CursorLastY = 0.0f;
+	float CurrentTime = 0.0f;
 
 	void MainLoop();
 	void ProcessInput(float deltaTime);
@@ -34,6 +35,7 @@ public:
 
 protected:
 	CEngine();
+	~CEngine();
 	static void OnWindowResize(GLFWwindow* window, int width, int height);
 	static CEngine* Engine;
 };

@@ -134,6 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="Notes.md" />
+    <None Include="quat_mul_generator\quatmul.py" />
     <None Include="Shaders\lightningShader.frag" />
     <None Include="Shaders\lightningShader.vert" />
     <None Include="Shaders\shader.frag" />

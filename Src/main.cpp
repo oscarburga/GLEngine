@@ -63,16 +63,16 @@ int main(int argc, char** argv)
 
 
 	const vec3 cubePositions[] = {
-		vec3(0.0f,  0.0f,  0.0f),
-		vec3(2.0f,  5.0f, -15.0f),
-		vec3(-1.5f, -2.2f, -2.5f),
-		vec3(-3.8f, -2.0f, -12.3f),
-		vec3(2.4f, -0.4f, -3.5f),
-		vec3(-1.7f,  3.0f, -7.5f),
-		vec3(1.3f, -2.0f, -2.5f),
-		vec3(1.5f,  2.0f, -2.5f),
-		vec3(1.5f,  0.2f, -1.5f),
-		vec3(-1.3f,  1.0f, -1.5f)
+		vec3(-2.4f, 0.4f, 3.5f),
+		vec3(2.0f,  5.0f, 15.0f),
+		vec3(-1.5f, -2.2f, 2.5f),
+		vec3(-3.8f, -2.0f, 12.3f),
+		vec3(2.4f, -0.4f, 3.5f),
+		vec3(-1.7f,  3.0f, 7.5f),
+		vec3(1.3f, -2.0f, 2.5f),
+		vec3(1.5f,  2.0f, 2.5f),
+		vec3(1.5f,  0.2f, 1.5f),
+		vec3(-1.3f,  1.0f, 1.5f)
 	};
 
 	GLuint vaos[2];
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			std::cerr << "failed to load texture\n";
+			std::cerr << "failed to load texture " << paths[i] << "\n";
 			std::abort();
 		}
 	}
@@ -149,8 +149,14 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	float lastFrameTime = (float)glfwGetTime();
 	GCamera& camera = WorldContainers::InputProcessors.emplace_back<GCamera>();
+	std::vector<GWorldObject> cubes(10);
+	for (size_t i = 0; i<cubes.size(); i++)
+	{
+		cubes[i].Transform.SetPosition(cubePositions[i]);
+		// cubes[i].SetRotation(glm::ballRand(pi));
+	}
 	GWorldObject cube, light;
-	light.Scale = vec3(0.2f);
+	light.Transform.SetScale(vec3(0.2f));
 	Engine->RenderFunc = [&](float deltaTime)
 	{
 		constexpr float MaxDeltaTime = 0.2f;
@@ -159,23 +165,44 @@ int main(int argc, char** argv)
 		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		light.Position = vec3(1.2f, 1.0f + glm::sin(time), 2.0f);
+		light.Transform.SetPosition(vec3(1.2f, 1.0f + glm::sin(time), 2.0f));
 		shader.use();
 		shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
 		shader.SetUniform("lightColor", vec3(1.0f, 1.0f, 1.0f));
-		shader.SetUniform("lightPos", light.Position);
-		shader.SetUniform("viewPos", camera.Position);
+		shader.SetUniform("lightPos", light.Transform.GetPosition());
+		shader.SetUniform("viewPos", camera.Transform.GetPosition());
 		shader.SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
 		shader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
-		shader.SetUniform("localToWorld", cube.GetTransformMatrix());
+		shader.SetUniform("localToWorld", cube.Transform.GetMatrix());
 
 		glBindVertexArray(cubeVao);
-		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (6 * sizeof(float)));
+		for (int i = 0; i < 10; i++)
+		{
+			vec3 color(0.0f);
+			quat rotator = cubes[i].Transform.GetRotation();
+			vec3 pos(0.0f);
+			for (int j = 0; j < 3; j++)
+			{
+				color[j] = float((i >> j) & 1);
+				if ((i >> j) & 1)
+				{
+					static vec3 axes[] = { World::Up, World::Right, World::Front };
+					rotator = glm::angleAxis(deltaTime, axes[j]) * rotator;
+					pos[j] = 3.f * (i / 8 + 1);
+				}
+			}
+			// std::cerr << "setting rot " << angles.x << " " << angles.y << " " << angles.z << '\n';
+			cubes[i].Transform.SetPosition(pos);
+			cubes[i].Transform.SetRotation(rotator);
+			shader.SetUniform("objectColor", color);
+			shader.SetUniform("localToWorld", cubes[i].Transform.GetMatrix());
+			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));
+		}
 
 		lightShader.use();
 		lightShader.SetUniform("worldToCamera", camera.GetViewMatrix());
 		lightShader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
-		lightShader.SetUniform("localToWorld", light.GetTransformMatrix());
+		lightShader.SetUniform("localToWorld", light.Transform.GetMatrix());
 
 		glBindVertexArray(lightVao);
 		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));

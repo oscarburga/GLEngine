@@ -13,8 +13,8 @@ class GCamera : public GWorldObject
 public:
 	GCamera();
 	float Speed = 5.0f;
-	float YawSens = 0.5f;
-	float PitchSens = 0.5f;
+	float YawSens = 0.6f;
+	float PitchSens = 0.6f;
 	float NearPlane = 0.1f;
 	float FarPlane = 100.f;
 	const mat4& GetViewMatrix() const { return ViewMatrix; } // View transforms from world space to view/camera space.

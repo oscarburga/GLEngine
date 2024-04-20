@@ -13,7 +13,7 @@ GCamera::GCamera()
 
 const mat4& GCamera::UpdateAndGetViewMatrix() const
 {
-    ViewMatrix = glm::lookAt(Position, Position + Front, Up);
+    ViewMatrix = glm::lookAtLH(Transform.GetPosition(), Transform.GetPosition() + GetFrontVector(), GetUpVector());
     return ViewMatrix;
 }
 
@@ -21,38 +21,44 @@ void GCamera::SetFOV(float _fov)
 {
 	FOV = _fov;
 	const float aspectRatio = CEngine::Get()->Viewport.AspectRatio;
-	ProjMatrix = glm::perspective(FOV, aspectRatio, NearPlane, FarPlane);
+	ProjMatrix = glm::perspectiveLH(FOV, aspectRatio, NearPlane, FarPlane);
 }
 
 void GCamera::HandleInput(GLFWwindow* window, float deltax, float deltay, float deltaTime)
 {
 	vec3 moveDir(0.0f);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		moveDir += Front;
+		moveDir += GetFrontVector();
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		moveDir -= Front;
+		moveDir -= GetFrontVector();
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		moveDir -= Right;
+		moveDir -= GetRightVector();
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		moveDir += Right; 
+		moveDir += GetRightVector(); 
 
-	Position += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
+	vec3 positionDelta(abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
 		(Speed * deltaTime * glm::normalize(moveDir)) :
-		vec3(0.0f);
+		vec3(0.0f));
 
 	moveDir = vec3(0.0f);
 	if (glfwGetKey(window, GLFW_KEY_E))
-		moveDir += Up;
+		moveDir += GetUpVector();
 	if (glfwGetKey(window, GLFW_KEY_Q))
-		moveDir -= Up;
+		moveDir -= GetUpVector();
 
-	Position += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
+	positionDelta += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
 		(Speed * deltaTime * glm::normalize(moveDir)) :
 		vec3(0.0f);
 
-	Angles.x += deltay * deltaTime * PitchSens;
-	Angles.y -= deltax * deltaTime * YawSens;
+	Transform.SetPosition(Transform.GetPosition() + positionDelta);
 
-	UpdateRotationFromAngles();
-	std::cout << glm::degrees(Angles.y) << " " << glm::degrees(Angles.x) << std::endl;
+
+	static float yaw = 0, pitch = 0;
+	const float deltaYaw = deltax * deltaTime * YawSens;
+	const float deltaPitch = deltay * deltaTime * PitchSens;
+	yaw += deltaYaw;
+	pitch += deltaPitch;
+	quat rot = glm::fromYawPitch(yaw, pitch);
+	Transform.SetRotation(rot);
+	std::cout << glm::degrees(yaw) << " " << glm::degrees(pitch) << std::endl;
 }
