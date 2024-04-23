@@ -255,11 +255,14 @@ quat glm::fromRollPitchYaw(float Roll, float Pitch, float Yaw)
 	);
 }
 
+STransform::STransform() : Rotation(IQuat), Angles(vec3(0.0f)), Position(0.0f), Scale(1.0f) {}
 
-STransform::STransform() : Rotation(IQuat), Position(0.0f), Scale(1.0f) {}
+STransform::STransform(const vec3& pos, const vec3& angles, const vec3& scale) : Angles(angles), Position(pos), Scale(scale) 
+{
+	Rotation = glm::fromYawPitchRoll(angles);
+}
 
-
-STransform::STransform(const vec3& Pos, const quat& Rot, const vec3& Scale) : Rotation(Rot), Position(Pos), Scale(Scale) {}
+STransform::STransform(const vec3& pos, const quat& rot, const vec3& scale) : Rotation(rot), Angles(std::nullopt), Position(pos), Scale(scale) {}
 
 #ifdef GLM_GTX_matrix_decompose
 STransform::STransform(const mat4& transformMatrix)
@@ -301,6 +304,13 @@ mat4 STransform::GetMatrix() const
 	}
 	matrix = glm::scale(matrix, Scale);
 	return matrix;
+}
+
+void STransform::SetRotation(const vec3& yawPitchRoll) 
+{ 
+	Angles = yawPitchRoll; 
+	// Consider using glm::angleAxis and multiplying quaternions instead, potentially better precision.
+	Rotation = glm::fromYawPitchRoll(yawPitchRoll);
 }
 
 vec3 STransform::TransformLocation(const vec3& v) const

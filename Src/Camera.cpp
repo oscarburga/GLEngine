@@ -51,14 +51,10 @@ void GCamera::HandleInput(GLFWwindow* window, float deltax, float deltay, float 
 		vec3(0.0f);
 
 	Transform.SetPosition(Transform.GetPosition() + positionDelta);
-
-
-	static float yaw = 0, pitch = 0;
-	const float deltaYaw = deltax * deltaTime * YawSens;
-	const float deltaPitch = deltay * deltaTime * PitchSens;
-	yaw += deltaYaw;
-	pitch += deltaPitch;
-	quat rot = glm::fromYawPitch(yaw, pitch);
-	Transform.SetRotation(rot);
-	std::cout << glm::degrees(yaw) << " " << glm::degrees(pitch) << std::endl;
+	vec3 angles = Transform.GetAngles().value_or(vec3(0.0f));
+	angles.x += deltax * deltaTime * YawSens;
+	angles.y += deltay * deltaTime * PitchSens;
+	angles.z = 0.0f;
+	Transform.SetRotation(angles);
+	std::cout << glm::degrees(angles.x) << " " << glm::degrees(angles.y) << " " << glm::degrees(angles.z) << std::endl;
 }

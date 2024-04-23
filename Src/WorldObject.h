@@ -16,7 +16,8 @@ public:
 protected:
 	// STransform RelativeTransform;
 	// STransform WorldTransform;
-	GWorldObject* Parent;
+	GWorldObject* Parent = nullptr;
+	float CreateTime = 0.0f;
 
 public:
 	/* Methods */

@@ -153,7 +153,6 @@ int main(int argc, char** argv)
 	for (size_t i = 0; i<cubes.size(); i++)
 	{
 		cubes[i].Transform.SetPosition(cubePositions[i]);
-		// cubes[i].SetRotation(glm::ballRand(pi));
 	}
 	GWorldObject cube, light;
 	light.Transform.SetScale(vec3(0.2f));
@@ -179,21 +178,21 @@ int main(int argc, char** argv)
 		for (int i = 0; i < 10; i++)
 		{
 			vec3 color(0.0f);
-			quat rotator = cubes[i].Transform.GetRotation();
+			auto angles = cubes[i].Transform.GetAngles();
 			vec3 pos(0.0f);
+			if (!angles)
+				continue;
 			for (int j = 0; j < 3; j++)
 			{
 				color[j] = float((i >> j) & 1);
 				if ((i >> j) & 1)
 				{
-					static vec3 axes[] = { World::Up, World::Right, World::Front };
-					rotator = glm::angleAxis(deltaTime, axes[j]) * rotator;
+					angles.value()[j] += deltaTime;
 					pos[j] = 3.f * (i / 8 + 1);
 				}
 			}
-			// std::cerr << "setting rot " << angles.x << " " << angles.y << " " << angles.z << '\n';
+			cubes[i].Transform.SetRotation(*angles);
 			cubes[i].Transform.SetPosition(pos);
-			cubes[i].Transform.SetRotation(rotator);
 			shader.SetUniform("objectColor", color);
 			shader.SetUniform("localToWorld", cubes[i].Transform.GetMatrix());
 			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));

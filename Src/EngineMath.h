@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/random.hpp>
+#include <optional>
 
 
 using glm::vec2;
@@ -48,6 +49,8 @@ namespace glm
 	 inline quat fromRollYawPitch(const vec3& rollYawPitch) { return fromRollYawPitch(rollYawPitch.x, rollYawPitch.y, rollYawPitch.z); }
 	 quat fromRollPitchYaw(float Roll, float Pitch, float Yaw);
 	 inline quat fromRollPitchYaw(const vec3& rollPitchYaw) { return fromRollPitchYaw(rollPitchYaw.x, rollPitchYaw.y, rollPitchYaw.z); }
+
+	// vec3 toYawPitchRoll(const quat& q); // I cannot get this to work for lord knows what reason. Won't support converting from quat to euler lol.
 }
 
 // #define GLM_ENABLE_EXPERIMENTAL
@@ -57,6 +60,7 @@ struct STransform
 {
 	STransform();
 	STransform(const vec3& pos, const quat& rot, const vec3& scale);
+	STransform(const vec3& pos, const vec3& angles, const vec3& scale);
 	STransform(const STransform&) = default;
 
 #ifdef GLM_GTX_matrix_decompose
@@ -68,9 +72,11 @@ struct STransform
 	inline const vec3& GetPosition() const { return Position; }
 	inline const vec3& GetScale() const { return Scale; }
 	inline const quat& GetRotation() const { return Rotation; }
+	inline const std::optional<vec3>& GetAngles() const { return Angles; }
 	inline void SetPosition(const vec3& position) { Position = position; }
 	inline void SetScale(const vec3& scale) { Scale = scale; }
-	void SetRotation(const quat& rotation) { Rotation = rotation; } // Assumes a valid rotation, normalized quaternion.
+	inline void SetRotation(const quat& rotation) { Rotation = rotation; Angles.reset(); } // Assumes a valid rotation, normalized quaternion.
+	void SetRotation(const vec3& yawPitchRoll); // Consider using glm::angleAxis and multiplying quaternions instead, potentially better precision.
 
 	// Applies this transform to vector v.
 	vec3 TransformLocation(const vec3& v) const; 
@@ -98,6 +104,7 @@ struct STransform
 
 protected:
 	quat Rotation;
+	std::optional<vec3> Angles;
 	vec3 Position;
 	vec3 Scale;
 };
