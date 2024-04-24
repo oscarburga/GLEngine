@@ -1,5 +1,6 @@
 #include "EngineMath.h"
 #include "RefIgnore.h"
+#include "World.h"
 #include <iostream>
 #include <format>
 
@@ -310,7 +311,13 @@ void STransform::SetRotation(const vec3& yawPitchRoll)
 { 
 	Angles = yawPitchRoll; 
 	// Consider using glm::angleAxis and multiplying quaternions instead, potentially better precision.
-	Rotation = glm::fromYawPitchRoll(yawPitchRoll);
+	const quat yawQuat = glm::angleAxis(yawPitchRoll.x, World::Up);
+	const vec3 right = yawQuat * World::Right;
+	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, right);
+	const vec3 front = (pitchQuat * yawQuat) * World::Front;
+	const quat rollQuat = glm::angleAxis(yawPitchRoll.z, front);
+	Rotation = rollQuat * pitchQuat * yawQuat;
+	// Rotation = glm::fromYawPitchRoll(yawPitchRoll);
 }
 
 vec3 STransform::TransformLocation(const vec3& v) const

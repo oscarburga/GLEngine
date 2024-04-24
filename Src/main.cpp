@@ -164,15 +164,20 @@ int main(int argc, char** argv)
 		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		light.Transform.SetPosition(vec3(1.2f, 1.0f + glm::sin(time), 2.0f));
+		light.Transform.SetPosition(vec3(1.5f, 1.0f + glm::sin(time), -2.0f));
 		shader.use();
-		shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
-		shader.SetUniform("lightColor", vec3(1.0f, 1.0f, 1.0f));
-		shader.SetUniform("lightPos", light.Transform.GetPosition());
+		// shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
+		shader.SetUniform("light.position", light.Transform.GetPosition());
+		shader.SetUniform("light.ambient", vec3(0.1f));
+		shader.SetUniform("light.diffuse", vec3(0.5f));
+		shader.SetUniform("light.specular", vec3(1.f));
 		shader.SetUniform("viewPos", camera.Transform.GetPosition());
 		shader.SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
 		shader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
 		shader.SetUniform("localToWorld", cube.Transform.GetMatrix());
+		shader.SetUniform("material.specular", vec3(0.5f, 0.5f, 0.5f));
+		shader.SetUniform("material.shininess", 32.f);
+		shader.SetUniform("material.shininess", 32.f);
 
 		glBindVertexArray(cubeVao);
 		for (int i = 0; i < 10; i++)
@@ -193,7 +198,8 @@ int main(int argc, char** argv)
 			}
 			cubes[i].Transform.SetRotation(*angles);
 			cubes[i].Transform.SetPosition(pos);
-			shader.SetUniform("objectColor", color);
+			shader.SetUniform("material.ambient", color);
+			shader.SetUniform("material.diffuse", color);
 			shader.SetUniform("localToWorld", cubes[i].Transform.GetMatrix());
 			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));
 		}
