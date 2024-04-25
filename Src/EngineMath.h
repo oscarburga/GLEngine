@@ -18,39 +18,11 @@ constexpr float pi = glm::pi<float>();
 constexpr float SMALLER_NUMBER = 1.e-8f;
 constexpr float SMALL_NUMBER = 1.e-4f;
 
-/*
-* https://danceswithcode.net/engineeringnotes/quaternions/quaternions.html
-*/
 namespace glm
 {
-	// applies passive quaternion rotation q * v * q-1 (coordinate system is rotated with respect to the point, point remains fixed).
-	vec3 rotateByQuat(const vec3& v, const quat& q);
-	// applies active quaternion rotation q-1 * v * q (point is rotated with respect to the axes, axes remain fixed).
-	vec3 rotateByQuatActive(const vec3& v, const quat& q);
-
-	 quat fromYaw(float Yaw);
-	 quat fromPitch(float Pitch);
-	 quat fromYawPitch(float Yaw, float Pitch);
-	 quat fromPitchYaw(float Pitch, float Yaw);
-	 quat fromRoll(float Roll);
-	 quat fromYawRoll(float Yaw, float Roll);
-	 quat fromRollYaw(float Roll, float Yaw);
-	 quat fromPitchRoll(float Pitch, float Roll);
-	 quat fromRollPitch(float Roll, float Pitch);
-	 quat fromYawPitchRoll(float Yaw, float Pitch, float Roll);
-	 inline quat fromYawPitchRoll(const vec3& yawPitchRoll) { return fromYawPitchRoll(yawPitchRoll.x, yawPitchRoll.y, yawPitchRoll.z); }
-	 quat fromYawRollPitch(float Yaw, float Roll, float Pitch);
-	 inline quat fromYawRollPitch(const vec3& yawRollPitch) { return fromYawRollPitch(yawRollPitch.x, yawRollPitch.y, yawRollPitch.z); }
-	 quat fromPitchYawRoll(float Pitch, float Yaw, float Roll);
-	 inline quat fromPitchYawRoll(const vec3& pitchYawRoll) { return fromPitchYawRoll(pitchYawRoll.x, pitchYawRoll.y, pitchYawRoll.z); }
-	 quat fromPitchRollYaw(float Pitch, float Roll, float Yaw);
-	 inline quat fromPitchRollYaw(const vec3& pitchRollYaw) { return fromPitchRollYaw(pitchRollYaw.x, pitchRollYaw.y, pitchRollYaw.z); }
-	 quat fromRollYawPitch(float Roll, float Yaw, float Pitch);
-	 inline quat fromRollYawPitch(const vec3& rollYawPitch) { return fromRollYawPitch(rollYawPitch.x, rollYawPitch.y, rollYawPitch.z); }
-	 quat fromRollPitchYaw(float Roll, float Pitch, float Yaw);
-	 inline quat fromRollPitchYaw(const vec3& rollPitchYaw) { return fromRollPitchYaw(rollPitchYaw.x, rollPitchYaw.y, rollPitchYaw.z); }
-
-	// vec3 toYawPitchRoll(const quat& q); // I cannot get this to work for lord knows what reason. Won't support converting from quat to euler lol.
+	inline vec3 rotateByQuat(const vec3& v, const quat& q) { return q * v; };
+	inline vec3 rotateByQuatInverse(const vec3& v, const quat& q) { return v * q; };
+	quat fromYawPitchRoll(const vec3& yawPitchRoll);
 }
 
 // #define GLM_ENABLE_EXPERIMENTAL

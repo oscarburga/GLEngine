@@ -19,9 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Notes.md" />
-    <None Include="Shaders\shader.frag">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Shaders\shader.vert">
       <Filter>Shaders</Filter>
     </None>
@@ -32,6 +29,16 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="quat_mul_generator\quatmul_generator.py" />
+    <None Include="Shaders\lightmapShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\materialShader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shaderTexCoords.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Shader.cpp">
@@ -96,6 +103,15 @@
       <Filter>Textures</Filter>
     </Image>
     <Image Include="Textures\container.jpg">
+      <Filter>Textures</Filter>
+    </Image>
+    <Image Include="Textures\container2.png">
+      <Filter>Textures</Filter>
+    </Image>
+    <Image Include="Textures\container2_specular.png">
+      <Filter>Textures</Filter>
+    </Image>
+    <Image Include="Textures\matrix.jpg">
       <Filter>Textures</Filter>
     </Image>
   </ItemGroup>

@@ -18,49 +18,49 @@ int main(int argc, char** argv)
 	CEngine* Engine = CEngine::Create();
 
 	float vertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+		// positions          // normals           // texture coords
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
 
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 	};
-
 
 	const vec3 cubePositions[] = {
 		vec3(-2.4f, 0.4f, 3.5f),
@@ -87,12 +87,13 @@ int main(int argc, char** argv)
 
 	// What buffers it uses in each slot for vertex data
 	const int vboBindIndex = 0;// , texCoordsBindIndex = 1;
-	glVertexArrayVertexBuffer(lightVao, vboBindIndex, cubeBuffer, 0, 6 * sizeof(float));
+	// Light cube only uses the veritces, normals dont matter
+	glVertexArrayVertexBuffer(lightVao, vboBindIndex, cubeBuffer, 0, 8 * sizeof(float));
 	glEnableVertexArrayAttrib(lightVao, 0);
 	glVertexArrayAttribFormat(lightVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
 	glVertexArrayAttribBinding(lightVao, 0, vboBindIndex);
 
-	glVertexArrayVertexBuffer(cubeVao, vboBindIndex, cubeBuffer, 0, 6 * sizeof(float));
+	glVertexArrayVertexBuffer(cubeVao, vboBindIndex, cubeBuffer, 0, 8 * sizeof(float));
 
 	glEnableVertexArrayAttrib(cubeVao, 0); // enable VAO's array attrib 0
 	glVertexArrayAttribFormat(cubeVao, 0, 3, GL_FLOAT, GL_FALSE, 0); // VAO's array attrib 0 has 3 floats,
@@ -102,26 +103,31 @@ int main(int argc, char** argv)
 	glVertexArrayAttribFormat(cubeVao, 1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
 	glVertexArrayAttribBinding(cubeVao, 1, vboBindIndex);
 
+	glEnableVertexArrayAttrib(cubeVao, 2);
+	glVertexArrayAttribFormat(cubeVao, 2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float));
+	glVertexArrayAttribBinding(cubeVao, 2, vboBindIndex);
+
 	// Textures
-	GLuint textures[2];
-	const char* paths[2] = { "Textures/container.jpg", "Textures/awesomeface.png" };
-	GLenum inputFormat[2] = { GL_RGB, GL_RGBA };
-	glCreateTextures(GL_TEXTURE_2D, 2, textures);
+	constexpr int numTextures = 4;
+	GLuint textures[numTextures];
+	constexpr const char* paths[numTextures] = { "Textures/container2.png", "Textures/container2_specular.png", "Textures/container.jpg", "Textures/awesomeface.png" };
+	constexpr GLenum inputFormat[numTextures] = { GL_RGBA, GL_RGBA, GL_RGB, GL_RGBA };
+	constexpr GLenum textureWrap[numTextures] = { GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_CLAMP_TO_BORDER };
+	glCreateTextures(GL_TEXTURE_2D, numTextures, textures);
 	stbi_set_flip_vertically_on_load(true);
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < numTextures; i++)
 	{
 		int w, h, c;
 		if (stbi_uc* texData = stbi_load(paths[i], &w, &h, &c, 0))
 		{
 			GLuint texture = textures[i];
 			const int numLevels = 1 + (int)floor(log2(std::max(w, h))); // TODO use count leading zero to calculate num mipmaps
-			glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-			glTextureParameteri(texture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTextureParameteri(texture, GL_TEXTURE_WRAP_S, textureWrap[i]);
+			glTextureParameteri(texture, GL_TEXTURE_WRAP_T, textureWrap[i]);
 			float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
 			glTextureParameterfv(texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
 			glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Take closest mipmap and linearly interpolate
-
 			glTextureStorage2D(texture, numLevels, GL_RGB8, w, h);
 			glTextureSubImage2D(texture, 0, 0, 0, w, h, inputFormat[i], GL_UNSIGNED_BYTE, texData);
 			glGenerateTextureMipmap(texture);
@@ -133,9 +139,9 @@ int main(int argc, char** argv)
 			std::abort();
 		}
 	}
-	auto [woodTexture, faceTexture] = textures;
+	auto [crateSpecular, crateDiffuse, woodTexture, faceTexture] = textures;
 	
-	CShader shader("Shaders/shader.vert", "Shaders/shader.frag");
+	CShader shader("Shaders/shaderTexCoords.vert", "Shaders/lightmapShader.frag");
 	shader.use();
 	// glBindVertexArray(VAO);
 	// glBindTextureUnit(0, woodTexture);
@@ -177,9 +183,13 @@ int main(int argc, char** argv)
 		shader.SetUniform("localToWorld", cube.Transform.GetMatrix());
 		shader.SetUniform("material.specular", vec3(0.5f, 0.5f, 0.5f));
 		shader.SetUniform("material.shininess", 32.f);
-		shader.SetUniform("material.shininess", 32.f);
 
 		glBindVertexArray(cubeVao);
+		glBindTextureUnit(0, crateDiffuse);
+		glBindTextureUnit(1, crateSpecular);
+		shader.SetUniform("material.diffuseMap", 0);
+		shader.SetUniform("material.diffuseMap", 1);
+
 		for (int i = 0; i < 10; i++)
 		{
 			vec3 color(0.0f);
@@ -198,10 +208,10 @@ int main(int argc, char** argv)
 			}
 			cubes[i].Transform.SetRotation(*angles);
 			cubes[i].Transform.SetPosition(pos);
-			shader.SetUniform("material.ambient", color);
-			shader.SetUniform("material.diffuse", color);
+			// shader.SetUniform("material.ambient", color);
+			// shader.SetUniform("material.diffuse", color);
 			shader.SetUniform("localToWorld", cubes[i].Transform.GetMatrix());
-			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));
+			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
 		}
 
 		lightShader.use();
@@ -210,7 +220,7 @@ int main(int argc, char** argv)
 		lightShader.SetUniform("localToWorld", light.Transform.GetMatrix());
 
 		glBindVertexArray(lightVao);
-		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (5 * sizeof(float)));
+		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
 	};
 	Engine->MainLoop();
 

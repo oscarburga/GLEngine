@@ -135,10 +135,13 @@
   <ItemGroup>
     <None Include="Notes.md" />
     <None Include="quat_mul_generator\quatmul_generator.py" />
+    <None Include="README.md" />
+    <None Include="Shaders\lightmapShader.frag" />
     <None Include="Shaders\lightningShader.frag" />
     <None Include="Shaders\lightningShader.vert" />
-    <None Include="Shaders\shader.frag" />
+    <None Include="Shaders\materialShader.frag" />
     <None Include="Shaders\shader.vert" />
+    <None Include="Shaders\shaderTexCoords.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Camera.cpp" />
@@ -165,6 +168,9 @@
   <ItemGroup>
     <Image Include="Textures\awesomeface.png" />
     <Image Include="Textures\container.jpg" />
+    <Image Include="Textures\container2.png" />
+    <Image Include="Textures\container2_specular.png" />
+    <Image Include="Textures\matrix.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
