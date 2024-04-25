@@ -10,8 +10,9 @@ I want to brush up on the skills I already had and learn new stuff :)
 
 Create a basic game engine in C++ using ONLY static polymorphism (no virtual functions, dynamic_cast, etc.).
 * Main source of polymorphism should come from the use of templates and C++20's concepts. 
-* Inheritance/interfaces, pointers to base-class, etc. are allowed, but virtual functions and dynamic casts are not.
-* Switch cases with type enums as a replacement for polymorphism should also be avoided.
+* Inheritance, pointers to base-class, etc. are allowed, but virtual functions, dynamic casts and built-in RTTI are not.
+    * Ideally, avoid making my own reflection / RTTI system aswell. 
+    * Won't explicitly forbid it though in case it becomes convenient in the future when asset management and object variations actually matter, or if I ever want to add scripting support.
 
 ## Bonus / Longer Term Goals
 
