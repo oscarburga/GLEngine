@@ -17,6 +17,7 @@ Create a basic game engine in C++ using ONLY static polymorphism (no virtual fun
 ## Bonus / Longer Term Goals
 
 In no particular order:
+* Implement sound/audio support
 * Implement multithreading in some meaningful way into the engine.
 * Implement physics in some meaningful way into the engine. 
     * Probably would use Jolt for it.
