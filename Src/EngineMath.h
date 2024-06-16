@@ -22,7 +22,8 @@ namespace glm
 {
 	inline vec3 rotateByQuat(const vec3& v, const quat& q) { return q * v; };
 	inline vec3 rotateByQuatInverse(const vec3& v, const quat& q) { return v * q; };
-	quat fromYawPitchRoll(const vec3& yawPitchRoll);
+	quat fromYawPitchRoll(const vec3& yawPitchRoll); // Constructs quat applying yaw->pitch->roll
+	quat fromPitchYawRoll(const vec3& yawPitchRoll); // Constructs quat applying pitch->yaw->roll
 }
 
 // #define GLM_ENABLE_EXPERIMENTAL
@@ -47,8 +48,17 @@ struct STransform
 	inline const std::optional<vec3>& GetAngles() const { return Angles; }
 	inline void SetPosition(const vec3& position) { Position = position; }
 	inline void SetScale(const vec3& scale) { Scale = scale; }
-	inline void SetRotation(const quat& rotation) { Rotation = rotation; Angles.reset(); } // Assumes a valid rotation, normalized quaternion.
-	void SetRotation(const vec3& yawPitchRoll); // Consider using glm::angleAxis and multiplying quaternions instead, potentially better precision.
+
+	/* Rotation stuff */
+
+	// Assumes a valid rotation, normalized quaternion. Does not store angles.
+	inline void SetRotation(const quat& rotation) { Rotation = rotation; Angles.reset(); } 
+
+	// Use if you want to set rotation with angles in an order that isnt yaw->pitch->roll
+	inline void SetRotationWithAngles(const quat& rotation, const vec3& angles) { Rotation = rotation; Angles = angles; } 
+
+	// Applies Yaw->Pitch->Roll rotation.
+	void SetRotation(const vec3& yawPitchRoll); 
 
 	// Applies this transform to vector v.
 	vec3 TransformLocation(const vec3& v) const; 

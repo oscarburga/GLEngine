@@ -173,10 +173,25 @@ int main(int argc, char** argv)
 		light.Transform.SetPosition(vec3(1.5f, 1.0f + glm::sin(time), -2.0f));
 		shader.use();
 		// shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
-		shader.SetUniform("light.position", light.Transform.GetPosition());
-		shader.SetUniform("light.ambient", vec3(0.1f));
-		shader.SetUniform("light.diffuse", vec3(0.5f));
-		shader.SetUniform("light.specular", vec3(1.f));
+		shader.SetUniform("pointLight.position", light.Transform.GetPosition());
+		shader.SetUniform("pointLight.ambient", vec3(0.1f));
+		shader.SetUniform("pointLight.diffuse", vec3(0.5f));
+		shader.SetUniform("pointLight.specular", vec3(1.f));
+		shader.SetUniform("pointLight.constant", 1.f);
+		shader.SetUniform("pointLight.linear", 0.09f);
+		shader.SetUniform("pointLight.quadratic", 0.032f);
+
+		shader.SetUniform("spotLight.position", camera.Transform.GetPosition());
+		shader.SetUniform("spotLight.direction", camera.GetFrontVector());
+		shader.SetUniform("spotLight.ambient", vec3(0.1f));
+		shader.SetUniform("spotLight.diffuse", vec3(0.5f));
+		shader.SetUniform("spotLight.specular", vec3(1.f));
+		shader.SetUniform("spotLight.constant", 1.f);
+		shader.SetUniform("spotLight.linear", 0.09f);
+		shader.SetUniform("spotLight.quadratic", 0.032f);
+		shader.SetUniform("spotLight.innerCutoff", glm::radians(12.f));
+		shader.SetUniform("spotLight.outerCutoff", glm::radians(17.f));
+
 		shader.SetUniform("viewPos", camera.Transform.GetPosition());
 		shader.SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
 		shader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());

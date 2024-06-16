@@ -54,7 +54,10 @@ void GCamera::HandleInput(GLFWwindow* window, float deltax, float deltay, float 
 	vec3 angles = Transform.GetAngles().value_or(vec3(0.0f));
 	angles.x += deltax * deltaTime * YawSens;
 	angles.y += deltay * deltaTime * PitchSens;
+	constexpr float minPitch = glm::radians(-89.f);
+	constexpr float maxPitch = glm::radians(89.f);
+	angles.y = glm::clamp(angles.y, minPitch, maxPitch);
 	angles.z = 0.0f;
 	Transform.SetRotation(angles);
-	std::cout << glm::degrees(angles.x) << " " << glm::degrees(angles.y) << " " << glm::degrees(angles.z) << std::endl;
+	//std::cout << glm::degrees(angles.x) << " " << glm::degrees(angles.y) << " " << glm::degrees(angles.z) << std::endl;
 }

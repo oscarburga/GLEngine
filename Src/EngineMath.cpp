@@ -14,14 +14,26 @@ namespace
 	quat IQuat(1.0f, 0.0f, 0.0f, 0.0f);
 }
 
-quat glm::fromYawPitchRoll(const vec3 & yawPitchRoll)
+quat glm::fromYawPitchRoll(const vec3& yawPitchRoll)
 {
 	const quat yawQuat = glm::angleAxis(yawPitchRoll.x, World::Up);
 	const vec3 right = yawQuat * World::Right;
 	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, right);
-	const vec3 front = (pitchQuat * yawQuat) * World::Front;
+	const quat yawPitchQuat = pitchQuat * yawQuat;
+	const vec3 front = yawPitchQuat * World::Front;
 	const quat rollQuat = glm::angleAxis(yawPitchRoll.z, front);
-	return rollQuat * pitchQuat * yawQuat;
+	return rollQuat * yawPitchQuat;
+}
+
+quat glm::fromPitchYawRoll(const vec3& yawPitchRoll)
+{
+	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, World::Right);
+	const vec3 up = pitchQuat * World::Up;
+	const quat yawQuat = glm::angleAxis(yawPitchRoll.x, up);
+	const quat pitchYawQuat = yawQuat * pitchQuat;
+	const vec3 front = (pitchYawQuat) * World::Front;
+	const quat rollQuat = glm::angleAxis(yawPitchRoll.z, front);
+	return rollQuat * pitchYawQuat;
 }
 
 STransform::STransform() : Rotation(IQuat), Angles(vec3(0.0f)), Position(0.0f), Scale(1.0f) {}
