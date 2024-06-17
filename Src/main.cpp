@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <format>
 #include "Shader.h"
 #include "EngineMath.h"
 
@@ -160,8 +161,21 @@ int main(int argc, char** argv)
 	{
 		cubes[i].Transform.SetPosition(cubePositions[i]);
 	}
-	GWorldObject cube, light;
-	light.Transform.SetScale(vec3(0.2f));
+
+	vec3 pointLightPositions[] = {
+		vec3( 0.7f,  0.2f,  2.0f),
+		vec3( 2.3f, -3.3f, -4.0f),
+		vec3(-4.0f,  2.0f, -12.0f),
+		vec3( 0.0f,  0.0f, -3.0f)
+	};  
+	std::vector<GWorldObject> lights(4);
+	std::for_each(lights.begin(), lights.end(), [&](auto& obj)
+	{
+		int i = &obj - lights.data();
+		obj.Transform.SetPosition(pointLightPositions[i]);
+		obj.Transform.SetScale(vec3(0.2f));
+	});
+
 	Engine->RenderFunc = [&](float deltaTime)
 	{
 		constexpr float MaxDeltaTime = 0.2f;
@@ -170,16 +184,21 @@ int main(int argc, char** argv)
 		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		light.Transform.SetPosition(vec3(1.5f, 1.0f + glm::sin(time), -2.0f));
 		shader.use();
-		// shader.SetUniform("objectColor", vec3(1.0f, 0.5f, 0.31f));
-		shader.SetUniform("pointLight.position", light.Transform.GetPosition());
-		shader.SetUniform("pointLight.ambient", vec3(0.1f));
-		shader.SetUniform("pointLight.diffuse", vec3(0.5f));
-		shader.SetUniform("pointLight.specular", vec3(1.f));
-		shader.SetUniform("pointLight.constant", 1.f);
-		shader.SetUniform("pointLight.linear", 0.09f);
-		shader.SetUniform("pointLight.quadratic", 0.032f);
+
+		std::for_each(lights.begin(), lights.end(), [&](auto& light)
+		{
+			int i = &light - lights.data();
+			std::string prefix = std::format("pointLights[{}].", i);
+			shader.SetUniform(prefix + "position", light.Transform.GetPosition());
+			shader.SetUniform(prefix + "ambient", vec3(0.1f));
+			shader.SetUniform(prefix + "diffuse", vec3(0.5f));
+			shader.SetUniform(prefix + "specular", vec3(1.f));
+			shader.SetUniform(prefix + "constant", 1.f);
+			shader.SetUniform(prefix + "linear", 0.09f);
+			shader.SetUniform(prefix + "quadratic", 0.032f);
+
+		});
 
 		shader.SetUniform("spotLight.position", camera.Transform.GetPosition());
 		shader.SetUniform("spotLight.direction", camera.GetFrontVector());
@@ -195,7 +214,6 @@ int main(int argc, char** argv)
 		shader.SetUniform("viewPos", camera.Transform.GetPosition());
 		shader.SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
 		shader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
-		shader.SetUniform("localToWorld", cube.Transform.GetMatrix());
 		shader.SetUniform("material.specular", vec3(0.5f, 0.5f, 0.5f));
 		shader.SetUniform("material.shininess", 32.f);
 
@@ -232,10 +250,12 @@ int main(int argc, char** argv)
 		lightShader.use();
 		lightShader.SetUniform("worldToCamera", camera.GetViewMatrix());
 		lightShader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
-		lightShader.SetUniform("localToWorld", light.Transform.GetMatrix());
-
 		glBindVertexArray(lightVao);
-		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
+		for (int i = 0; i < (int)lights.size(); i++)
+		{
+			lightShader.SetUniform("localToWorld", lights[i].Transform.GetMatrix());
+			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
+		}
 	};
 	Engine->MainLoop();
 

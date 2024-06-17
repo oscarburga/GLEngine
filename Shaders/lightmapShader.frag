@@ -33,8 +33,10 @@ struct SLight {
 	float outerCutoff;
 };
 
+#define MAX_POINT_LIGHTS 4
+
 uniform SMaterial material;
-uniform SLight pointLight;
+uniform SLight pointLights[MAX_POINT_LIGHTS];
 uniform SLight spotLight;
 uniform vec3 viewPos;
 uniform vec3 objectColor;
@@ -104,7 +106,11 @@ vec3 calcDirLight()
 void main()
 {
 	vec3 dirLightColor = calcDirLight();
-	vec3 pointLightColor = calcLight(pointLight);
+	vec3 pointLightColor = vec3(0.0f);
+	for (int i = 0; i<MAX_POINT_LIGHTS; i++) 
+	{
+		pointLightColor += calcLight(pointLights[i]);
+	}
 	vec3 spotLightColor = calcSpotLight(spotLight);
 	FragColor = vec4(dirLightColor + pointLightColor + spotLightColor, 1.0f);
 }
