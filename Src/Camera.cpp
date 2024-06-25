@@ -1,7 +1,6 @@
 #include "Camera.h"
 
 #include <iostream>
-#include "EngineMath.h"
 #include <GLFW/glfw3.h>
 #include "WorldContainers.h"
 #include "Engine.h"

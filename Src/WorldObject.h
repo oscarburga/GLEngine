@@ -1,7 +1,7 @@
 #pragma once
 
 #include "World.h"
-#include "EngineMath.h"
+#include "Math/EngineMath.h"
 #include <vector>
 /*
 * Base world object class that handles the geometric fundamentals. 

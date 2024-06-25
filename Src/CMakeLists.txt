@@ -1,16 +1,23 @@
 add_executable (GLEngine 
 	main.cpp
+
+	Assets/AssetLoader.h
+	Assets/AssetLoader.cpp
+	
+	Math/EngineMath.h
+	Math/EngineMath.cpp
+	
+	Graphics/Shader.h
+	Graphics/Shader.cpp
+
+	Utils/MultiTypeContainer.h
+	Utils/RefIgnore.h
+	
 	Camera.h
 	Camera.cpp
 	Engine.h
 	Engine.cpp
-	EngineMath.h
-	EngineMath.cpp
 	InputConcepts.h
-	MultiTypeContainer.h
-	RefIgnore.h
-	Shader.h
-	Shader.cpp
 	World.h
 	WorldContainers.h
 	WorldContainers.cpp

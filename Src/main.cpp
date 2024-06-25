@@ -3,12 +3,12 @@
 
 #include <iostream>
 #include <format>
-#include "Shader.h"
-#include "EngineMath.h"
+#include "Graphics/Shader.h"
+#include "Math/EngineMath.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "RefIgnore.h"
+#include "Utils/RefIgnore.h"
 #include "Engine.h"
 #include "Camera.h"
 #include "WorldContainers.h"
