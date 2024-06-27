@@ -7,13 +7,13 @@
 class CShader
 {
 public:
-    unsigned int id = 0;
+    unsigned int Id = 0;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
-    CShader(const char* vertexPath, const char* fragmentPath);
+    CShader(unsigned int id) : Id(id) {}
     // activate the shader
     // ------------------------------------------------------------------------
-    void use();
+    void Use();
     // utility uniform functions
     // ------------------------------------------------------------------------
     void SetUniform(const std::string& name, bool value) const;
@@ -25,11 +25,6 @@ public:
     void SetUniform(const std::string& name, const glm::mat2& value) const;
     void SetUniform(const std::string& name, const glm::mat3& value) const;
     void SetUniform(const std::string& name, const glm::mat4& value) const;
-
-private:
-    inline static char infoLog[1024] = {};
-    static void CheckShaderCompilation(unsigned int shader, const char* shaderPath = nullptr);
-    static void CheckProgramLinkSuccess(unsigned int program);
 };
 
 #define SetVarUniform(var) SetUniform(#var, var);

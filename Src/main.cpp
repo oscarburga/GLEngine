@@ -5,6 +5,7 @@
 #include <format>
 #include "Graphics/Shader.h"
 #include "Math/EngineMath.h"
+#include "Assets/AssetLoader.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -12,9 +13,164 @@
 #include "Engine.h"
 #include "Camera.h"
 #include "WorldContainers.h"
-
+#include <Utils/Defer.h>
 
 int main(int argc, char** argv)
+{
+	CEngine* Engine = CEngine::Create();
+	float vertices[] = {
+		// positions          // normals           // texture coords
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
+	};
+
+	const vec3 cubePositions[] = {
+		vec3(-2.4f, 0.4f, 3.5f),
+		vec3(2.0f,  5.0f, 15.0f),
+		vec3(-1.5f, -2.2f, 2.5f),
+		vec3(-3.8f, -2.0f, 12.3f),
+		vec3(2.4f, -0.4f, 3.5f),
+		vec3(-1.7f,  3.0f, 7.5f),
+		vec3(1.3f, -2.0f, 2.5f),
+		vec3(1.5f,  2.0f, 2.5f),
+		vec3(1.5f,  0.2f, 1.5f),
+		vec3(-1.3f,  1.0f, 1.5f)
+	};
+
+	std::vector<SVertex> cubeData;
+	constexpr int numRows = sizeof(vertices) / (8 * sizeof(float));
+	for (int i = 0; i < numRows; i++)
+	{
+		const int idx = i * 8;
+		SVertex v {
+			.Position = { vertices[idx], vertices[idx + 1], vertices[idx + 2] },
+			.uv_x = vertices[idx + 6],
+			.Normal = { vertices[idx + 3], vertices[idx + 4], vertices[idx + 5] },
+			.uv_y = vertices[idx + 7],
+		};
+		v.Color = vec4(v.Normal, 1.f);
+		cubeData.emplace_back(v);
+	}
+	SMeshAsset mesh;
+	mesh.Surfaces.emplace_back(SGeoSurface{
+		.StartIndex = 0,
+		.Count = (uint32_t)cubeData.size(),
+	});
+
+	mesh.MeshBuffers.IndexBuffer = GL_NONE;
+	GLuint emptyVAO;
+	glCreateVertexArrays(1, &emptyVAO);
+	glBindVertexArray(emptyVAO);
+	glCreateBuffers(1, &mesh.MeshBuffers.VertexBuffer);
+	glNamedBufferStorage(mesh.MeshBuffers.VertexBuffer, cubeData.size() * sizeof(SVertex), cubeData.data(), GL_DYNAMIC_STORAGE_BIT);
+	auto deferredDelete = Defer([&]()
+	{
+		glDeleteBuffers(1, &mesh.MeshBuffers.VertexBuffer);
+	});
+
+	GCamera& camera = WorldContainers::InputProcessors.emplace_back(GCamera());
+	GWorldObject cube;
+	cube.Transform.SetPosition(vec3(0.0f, 0.0f, 3.f));
+	
+	auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader.frag");
+	if (!pvpShader)
+		std::abort();
+
+	auto basicMeshes = CAssetLoader::LoadGLTFMeshes("GLTF/basicmesh.glb");
+	if (!basicMeshes)
+		std::abort();
+
+	pvpShader->Use();
+	glEnable(GL_DEPTH_TEST);
+	Engine->RenderFunc = [&](float deltaTime)
+	{
+		pvpShader->SetUniform("localToWorld", cube.Transform.GetMatrix());
+		pvpShader->SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
+		pvpShader->SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
+
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		constexpr int idx = 2;
+		auto& mesh = basicMeshes->at(idx);
+		{
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.MeshBuffers.VertexBuffer);
+			if (mesh.MeshBuffers.IndexBuffer != GL_NONE)
+			{
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.MeshBuffers.IndexBuffer);
+				for (auto& surface : mesh.Surfaces)
+					glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)surface.StartIndex);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			}
+			else
+			{
+				for (auto& surface : mesh.Surfaces)
+					glDrawArrays(GL_TRIANGLES, surface.StartIndex, surface.Count);
+			}
+		}
+
+		// cube
+		{
+			return;
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.MeshBuffers.VertexBuffer);
+			for (SGeoSurface const& surface : mesh.Surfaces)
+			{
+				if (mesh.MeshBuffers.IndexBuffer != GL_NONE)
+				{
+					glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)surface.StartIndex);
+				}
+				else
+				{
+					glDrawArrays(GL_TRIANGLES, surface.StartIndex, surface.Count);
+				}
+			}
+		}
+	};
+	Engine->MainLoop();
+	return 0;
+}
+
+#if 0
+int oldmain(int argc, char** argv)
 {
 	CEngine* Engine = CEngine::Create();
 
@@ -119,7 +275,8 @@ int main(int argc, char** argv)
 	for (int i = 0; i < numTextures; i++)
 	{
 		int w, h, c;
-		if (stbi_uc* texData = stbi_load(paths[i], &w, &h, &c, 0))
+		std::filesystem::path p = CAssetLoader::ContentRoot / paths[i];
+		if (stbi_uc* texData = stbi_load(p.string().c_str(), &w, &h, &c, 0))
 		{
 			GLuint texture = textures[i];
 			const int numLevels = 1 + (int)floor(log2(std::max(w, h))); // TODO use count leading zero to calculate num mipmaps
@@ -136,22 +293,22 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			std::cerr << "failed to load texture " << paths[i] << "\n";
+			std::cerr << "failed to load texture " << p << "\n";
 			std::abort();
 		}
 	}
 	auto [crateSpecular, crateDiffuse, woodTexture, faceTexture] = textures;
 	
-	CShader shader("Shaders/shaderTexCoords.vert", "Shaders/lightmapShader.frag");
-	shader.use();
+	auto shader = *CAssetLoader::LoadShaderProgram("Shaders/shaderTexCoords.vert", "Shaders/lightmapShader.frag");
+	shader.Use();
 	// glBindVertexArray(VAO);
 	// glBindTextureUnit(0, woodTexture);
 	// glBindTextureUnit(1, faceTexture);
 	// shader.SetUniform("woodTexture", int(0));
 	// shader.SetUniform("faceTexture", int(1));
 
-	CShader lightShader("Shaders/lightningShader.vert", "Shaders/lightningShader.frag");
-	lightShader.use();
+	auto lightShader = *CAssetLoader::LoadShaderProgram("Shaders/lightningShader.vert", "Shaders/lightningShader.frag");
+	lightShader.Use();
 	// glPolygonMode(GL_BACK, GL_LINE);
 	glEnable(GL_DEPTH_TEST);
 	float lastFrameTime = (float)glfwGetTime();
@@ -176,6 +333,38 @@ int main(int argc, char** argv)
 		obj.Transform.SetScale(vec3(0.2f));
 	});
 
+	std::vector<SVertex> cubeData;
+	constexpr int numRows = sizeof(vertices) / (8 * sizeof(float));
+	for (int i = 0; i < numRows; i++)
+	{
+		const int idx = i * 8;
+		SVertex v {
+			.Position = { vertices[idx], vertices[idx + 1], vertices[idx + 2] },
+			.uv_x = vertices[idx + 6],
+			.Normal = { vertices[idx + 3], vertices[idx + 4], vertices[idx + 5] },
+			.uv_y = vertices[idx + 7],
+		};
+		v.Color = vec4(v.Normal, 1.f);
+		cubeData.emplace_back(v);
+	}
+	SMeshAsset mesh;
+	mesh.Surfaces.emplace_back(SGeoSurface{
+		.StartIndex = 0,
+		.Count = (uint32_t)cubeData.size(),
+	});
+
+	mesh.MeshBuffers.IndexBuffer = GL_NONE;
+	glCreateBuffers(1, &mesh.MeshBuffers.VertexBuffer);
+	glNamedBufferStorage(mesh.MeshBuffers.VertexBuffer, cubeData.size() * sizeof(SVertex), cubeData.data(), GL_DYNAMIC_STORAGE_BIT);
+	auto deferredDelete = Defer([&]()
+	{
+		glDeleteBuffers(1, &mesh.MeshBuffers.VertexBuffer);
+	});
+
+	auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader.frag");
+	if (!pvpShader)
+		std::abort();
+
 	Engine->RenderFunc = [&](float deltaTime)
 	{
 		constexpr float MaxDeltaTime = 0.2f;
@@ -184,7 +373,7 @@ int main(int argc, char** argv)
 		const float time = Engine->CurrentTime;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		shader.use();
+		shader.Use();
 
 		std::for_each(lights.begin(), lights.end(), [&](auto& light)
 		{
@@ -223,7 +412,7 @@ int main(int argc, char** argv)
 		shader.SetUniform("material.diffuseMap", 0);
 		shader.SetUniform("material.diffuseMap", 1);
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 8; i++)
 		{
 			vec3 color(0.0f);
 			auto angles = cubes[i].Transform.GetAngles();
@@ -244,10 +433,11 @@ int main(int argc, char** argv)
 			// shader.SetUniform("material.ambient", color);
 			// shader.SetUniform("material.diffuse", color);
 			shader.SetUniform("localToWorld", cubes[i].Transform.GetMatrix());
-			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
+			if (i > 0)
+				glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
 		}
 
-		lightShader.use();
+		lightShader.Use();
 		lightShader.SetUniform("worldToCamera", camera.GetViewMatrix());
 		lightShader.SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
 		glBindVertexArray(lightVao);
@@ -256,6 +446,29 @@ int main(int argc, char** argv)
 			lightShader.SetUniform("localToWorld", lights[i].Transform.GetMatrix());
 			glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / (8 * sizeof(float)));
 		}
+
+		pvpShader->Use();
+		pvpShader->SetUniform("localToWorld", cubes[0].Transform.GetMatrix());
+		pvpShader->SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
+		pvpShader->SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
+
+		// glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBindVertexArray(0);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.MeshBuffers.VertexBuffer);
+		for (SGeoSurface const& surface : mesh.Surfaces)
+		{
+			if (mesh.MeshBuffers.IndexBuffer != GL_NONE)
+			{
+				glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)surface.StartIndex);
+			}
+			else
+			{
+				glDrawArrays(GL_TRIANGLES, surface.StartIndex, surface.Count);
+			}
+		}
+
 	};
 	Engine->MainLoop();
 
@@ -265,3 +478,4 @@ int main(int argc, char** argv)
 	glfwTerminate();
 	return 0;
 }
+#endif

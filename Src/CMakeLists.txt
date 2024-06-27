@@ -10,6 +10,8 @@ add_executable (GLEngine
 	Graphics/Shader.h
 	Graphics/Shader.cpp
 
+	Utils/Defer.h
+	Utils/FuncVector.h
 	Utils/MultiTypeContainer.h
 	Utils/RefIgnore.h
 	

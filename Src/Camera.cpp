@@ -58,5 +58,5 @@ void GCamera::HandleInput(GLFWwindow* window, float deltax, float deltay, float 
 	angles.y = glm::clamp(angles.y, minPitch, maxPitch);
 	angles.z = 0.0f;
 	Transform.SetRotation(angles);
-	//std::cout << glm::degrees(angles.x) << " " << glm::degrees(angles.y) << " " << glm::degrees(angles.z) << std::endl;
+	std::cout << glm::degrees(angles.x) << " " << glm::degrees(angles.y) << " " << glm::degrees(angles.z) << std::endl;
 }
