@@ -7,6 +7,9 @@ struct GLFWwindow;
 
 class CEngine
 {
+protected:
+	CEngine();
+	~CEngine();
 public:
 	CEngine(const CEngine&) = delete;
 	CEngine(CEngine&&) = delete;
@@ -34,8 +37,6 @@ public:
 	std::function<void(float)> RenderFunc;
 
 protected:
-	CEngine();
-	~CEngine();
 	static void OnWindowResize(GLFWwindow* window, int width, int height);
 	static CEngine* Engine;
 };

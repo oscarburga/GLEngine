@@ -20,8 +20,9 @@ struct SMaterial {
 };
 
 uniform vec3 viewPos;
+uniform SMaterial material;
 
 void main()
 {
-	FragColor = abs(fsColor);
+	FragColor = abs(fsColor * texture(material.diffuseMap, fsTexCoords));
 }

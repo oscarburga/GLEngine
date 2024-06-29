@@ -1,9 +1,11 @@
 #include "AssetLoader.h"
-#include "glad/glad.h"
 #include <iostream>
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
-#include <Utils/Defer.h>
+#include "Utils/Defer.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#undef STB_IMAGE_IMPLEMENTATION
 
 std::filesystem::path CAssetLoader::ContentRoot = "C:\\Users\\51956\\Documents\\OpenGLProjects\\GLEngine\\Content";
 
@@ -41,7 +43,7 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
 
     constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::LoadGLBBuffers;
     fastgltf::Parser parser {};
-    Expected<fastgltf::Asset> gltf = parser.loadGltfBinary(data.get(), filePath.parent_path(), gltfOptions);
+    Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
     if (HasGltfError(gltf, filePath))
         return std::nullopt;
 
@@ -70,7 +72,7 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
                 fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
                 fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
                 {
-                    indices.push_back(index + startVertex);
+                    indices.push_back(index + uint32_t(startVertex));
                 });
             }
 
@@ -119,7 +121,7 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
             }
             // TODO: Load textures
         }
-		constexpr bool bNormalsAsColors = true;
+		constexpr bool bNormalsAsColors = false;
 		if constexpr (bNormalsAsColors)
 		{
             for (auto& vtx : vertices)
@@ -138,6 +140,36 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
         meshes.emplace_back(std::move(newMesh));
     }
     return meshes;
+}
+
+std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromFile(std::filesystem::path const& texturePath)
+{
+	stbi_set_flip_vertically_on_load(true);
+    SGPUTexture gpuTex {};
+	std::filesystem::path p = CAssetLoader::ContentRoot / texturePath;
+	p.make_preferred();
+    int w, h, c;
+	if (stbi_uc* texData = stbi_load(p.string().c_str(), &w, &h, &c, 4))
+	{
+        RegisterTexture2D(texData, gpuTex, w, h, c);
+		stbi_image_free(texData);
+        return gpuTex;
+	}
+    return std::nullopt;
+}
+
+std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, int size)
+{
+	stbi_set_flip_vertically_on_load(true);
+    SGPUTexture gpuTex {};
+    int w, h, c;
+	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, size, &w, &h, &c, 4))
+	{
+        RegisterTexture2D(texData, gpuTex, w, h, c);
+		stbi_image_free(texData);
+        return gpuTex;
+	}
+    return std::nullopt;
 }
 
 std::optional<CShader> CAssetLoader::LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath)
@@ -203,6 +235,22 @@ std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem
     return shader;
 }
 
+void CAssetLoader::RegisterTexture2D(void* stbiTexData, SGPUTexture& gpuTex, int w, int h, int c)
+{
+	// Set sensible defaults and generate mipmaps
+    glCreateTextures(GL_TEXTURE_2D, 1, &gpuTex.Texture);
+	const int numLevels = 1 + (int)std::floor(std::log2(std::max(w, h))); 
+	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
+	glTextureParameterfv(gpuTex.Texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
+	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+	glTextureStorage2D(gpuTex.Texture, numLevels, GL_RGBA8, w, h);
+	glTextureSubImage2D(gpuTex.Texture, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, stbiTexData);
+	glGenerateTextureMipmap(gpuTex.Texture);
+}
+
 bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesystem::path& shaderPath)
 {
 	int success;
@@ -216,4 +264,12 @@ bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesy
         return false;
 	}
     return true;
+}
+
+void SSolidMaterial::SetUniforms(CShader& shader)
+{
+    shader.SetUniform("material.ambient", Ambient);
+    shader.SetUniform("material.diffuse", Diffuse);
+    shader.SetUniform("material.specular", Specular);
+    shader.SetUniform("material.shininess", Shininess);
 }

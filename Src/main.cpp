@@ -7,8 +7,6 @@
 #include "Math/EngineMath.h"
 #include "Assets/AssetLoader.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include "Utils/RefIgnore.h"
 #include "Engine.h"
 #include "Camera.h"
@@ -18,6 +16,9 @@
 int main(int argc, char** argv)
 {
 	CEngine* Engine = CEngine::Create();
+	GLuint emptyVAO;
+	glCreateVertexArrays(1, &emptyVAO);
+	glBindVertexArray(emptyVAO);
 	float vertices[] = {
 		// positions          // normals           // texture coords
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
@@ -87,31 +88,42 @@ int main(int argc, char** argv)
 			.Normal = { vertices[idx + 3], vertices[idx + 4], vertices[idx + 5] },
 			.uv_y = vertices[idx + 7],
 		};
-		v.Color = vec4(v.Normal, 1.f);
+		// v.Color = vec4(v.Normal, 1.f);
+		v.Color = vec4(1.f);
 		cubeData.emplace_back(v);
 	}
-	SMeshAsset mesh;
-	mesh.Surfaces.emplace_back(SGeoSurface{
-		.StartIndex = 0,
-		.Count = (uint32_t)cubeData.size(),
-	});
+	SMeshAsset cubeMesh;
+	{
+		auto& surface = cubeMesh.Surfaces.emplace_back(SGeoSurface{
+			.StartIndex = 0,
+			.Count = (uint32_t)cubeData.size(),
+		});
 
-	mesh.MeshBuffers.IndexBuffer = GL_NONE;
-	GLuint emptyVAO;
-	glCreateVertexArrays(1, &emptyVAO);
-	glBindVertexArray(emptyVAO);
-	glCreateBuffers(1, &mesh.MeshBuffers.VertexBuffer);
-	glNamedBufferStorage(mesh.MeshBuffers.VertexBuffer, cubeData.size() * sizeof(SVertex), cubeData.data(), GL_DYNAMIC_STORAGE_BIT);
+		auto diffuseTex = CAssetLoader::LoadTexture2DFromFile("Textures/container2.png");
+		if (!diffuseTex)
+			std::abort();
+
+		auto specularTex = CAssetLoader::LoadTexture2DFromFile("Textures/container2_specular.png");
+		if (!specularTex)
+			std::abort();
+
+		surface.Material.Diffuse.Texture = diffuseTex->Texture;
+		surface.Material.Specular.Texture = specularTex->Texture;
+	}
+
+	cubeMesh.MeshBuffers.IndexBuffer = GL_NONE;
+	glCreateBuffers(1, &cubeMesh.MeshBuffers.VertexBuffer);
+	glNamedBufferStorage(cubeMesh.MeshBuffers.VertexBuffer, cubeData.size() * sizeof(SVertex), cubeData.data(), GL_DYNAMIC_STORAGE_BIT);
 	auto deferredDelete = Defer([&]()
 	{
-		glDeleteBuffers(1, &mesh.MeshBuffers.VertexBuffer);
+		glDeleteBuffers(1, &cubeMesh.MeshBuffers.VertexBuffer);
 	});
 
 	GCamera& camera = WorldContainers::InputProcessors.emplace_back(GCamera());
 	GWorldObject cube;
 	cube.Transform.SetPosition(vec3(0.0f, 0.0f, 3.f));
 	
-	auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader.frag");
+	auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_textured.frag");
 	if (!pvpShader)
 		std::abort();
 
@@ -130,15 +142,16 @@ int main(int argc, char** argv)
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		constexpr int idx = 2;
-		auto& mesh = basicMeshes->at(idx);
+		if (0)
 		{
+			constexpr int idx = 2;
+			auto& mesh = basicMeshes->at(idx);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.MeshBuffers.VertexBuffer);
 			if (mesh.MeshBuffers.IndexBuffer != GL_NONE)
 			{
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.MeshBuffers.IndexBuffer);
 				for (auto& surface : mesh.Surfaces)
-					glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)surface.StartIndex);
+					glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.StartIndex));
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 			}
 			else
@@ -150,13 +163,23 @@ int main(int argc, char** argv)
 
 		// cube
 		{
-			return;
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.MeshBuffers.VertexBuffer);
-			for (SGeoSurface const& surface : mesh.Surfaces)
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, cubeMesh.MeshBuffers.VertexBuffer);
+			for (SGeoSurface const& surface : cubeMesh.Surfaces)
 			{
-				if (mesh.MeshBuffers.IndexBuffer != GL_NONE)
+				if (surface.Material.Diffuse.Texture != GL_NONE)
 				{
-					glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)surface.StartIndex);
+					glBindTextureUnit(0, surface.Material.Diffuse.Texture);
+					pvpShader->SetUniform("material.diffuseMap", 0);
+				}
+				if (surface.Material.Specular.Texture != GL_NONE)
+				{
+					glBindTextureUnit(1, surface.Material.Specular.Texture);
+					pvpShader->SetUniform("material.specularMap", 1);
+				}
+				pvpShader->SetUniform("material.shininess", surface.Material.Shininess);
+				if (cubeMesh.MeshBuffers.IndexBuffer != GL_NONE)
+				{
+					glDrawElements(GL_TRIANGLES, surface.Count, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.StartIndex));
 				}
 				else
 				{
