@@ -82,7 +82,7 @@ public:
 private:
 
 	static std::optional<unsigned int> LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType);
-	static void RegisterTexture2D(void* stbiTexData, SGPUTexture& gpuTex, int w, int h, int c);
+	static void RegisterTexture2D(void* stbiTexData, SGPUTexture& gpuTex, int width, int height, int channels);
 
     inline static char infoLog[1024] = {};
     static bool CheckShaderCompilation(unsigned int shader, const std::filesystem::path& shaderPath);

@@ -149,7 +149,7 @@ std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromFile(std::filesystem::
 	std::filesystem::path p = CAssetLoader::ContentRoot / texturePath;
 	p.make_preferred();
     int w, h, c;
-	if (stbi_uc* texData = stbi_load(p.string().c_str(), &w, &h, &c, 4))
+	if (stbi_uc* texData = stbi_load(p.string().c_str(), &w, &h, &c, 0))
 	{
         RegisterTexture2D(texData, gpuTex, w, h, c);
 		stbi_image_free(texData);
@@ -163,7 +163,7 @@ std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, i
 	stbi_set_flip_vertically_on_load(true);
     SGPUTexture gpuTex {};
     int w, h, c;
-	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, size, &w, &h, &c, 4))
+	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, size, &w, &h, &c, 0))
 	{
         RegisterTexture2D(texData, gpuTex, w, h, c);
 		stbi_image_free(texData);
@@ -235,19 +235,24 @@ std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem
     return shader;
 }
 
-void CAssetLoader::RegisterTexture2D(void* stbiTexData, SGPUTexture& gpuTex, int w, int h, int c)
+void CAssetLoader::RegisterTexture2D(void* stbiTexData, SGPUTexture& gpuTex, int width, int height, int channels)
 {
 	// Set sensible defaults and generate mipmaps
+    assert(channels > 0 && channels != 2 && channels < 5);
+    static constexpr GLenum inputFormatsByChannels[5] = { GL_NONE, GL_RED, GL_NONE, GL_RGB, GL_RGBA };
+    static constexpr GLenum storageFormatsByChannels[5] = { GL_NONE, GL_R8, GL_NONE, GL_RGB8, GL_RGBA8 };
+    const GLenum inputFormat = inputFormatsByChannels[channels];
+    const GLenum storageFormat = storageFormatsByChannels[channels];
     glCreateTextures(GL_TEXTURE_2D, 1, &gpuTex.Texture);
-	const int numLevels = 1 + (int)std::floor(std::log2(std::max(w, h))); 
+	const int numLevels = 1 + (int)std::floor(std::log2(std::max(width, height))); 
 	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
 	glTextureParameterfv(gpuTex.Texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
 	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTextureParameteri(gpuTex.Texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
-	glTextureStorage2D(gpuTex.Texture, numLevels, GL_RGBA8, w, h);
-	glTextureSubImage2D(gpuTex.Texture, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, stbiTexData);
+	glTextureStorage2D(gpuTex.Texture, numLevels, storageFormat, width, height);
+	glTextureSubImage2D(gpuTex.Texture, 0, 0, 0, width, height, inputFormat, GL_UNSIGNED_BYTE, stbiTexData);
 	glGenerateTextureMipmap(gpuTex.Texture);
 }
 
