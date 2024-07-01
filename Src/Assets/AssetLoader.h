@@ -50,11 +50,11 @@ struct SMeshAsset
 
 struct SVertex
 {
-	glm::vec3 Position;
-	float uv_x;
-	glm::vec3 Normal;
-	float uv_y;
-	glm::vec4 Color;
+	glm::vec3 Position = {};
+	float uv_x = 0.0f;
+	glm::vec3 Normal = {};
+	float uv_y = 0.0f;
+	glm::vec4 Color = {};
 };
 
 /*

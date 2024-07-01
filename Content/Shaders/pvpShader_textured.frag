@@ -35,8 +35,7 @@ uniform SMaterial material;
 uniform SLight pointLights[MAX_POINT_LIGHTS];
 uniform SLight spotLight;
 uniform vec3 viewPos;
-uniform vec3 objectColor;
-
+uniform bool ignoreLighting;
 
 vec3 calcLight(SLight light) 
 {
@@ -103,6 +102,10 @@ vec3 calcDirLight()
 
 void main()
 {
+	if (ignoreLighting) {
+		FragColor = fsColor;
+		return;
+	}
 	vec3 dirLightColor = calcDirLight();
 	vec3 pointLightColor = vec3(0.0f);
 	for (int i = 0; i<MAX_POINT_LIGHTS; i++) 

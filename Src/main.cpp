@@ -94,10 +94,10 @@ int main(int argc, char** argv)
 	}
 	SMeshAsset cubeMesh;
 	{
-		auto& surface = cubeMesh.Surfaces.emplace_back(SGeoSurface{
+		auto& surface = cubeMesh.Surfaces.emplace_back(SGeoSurface {
 			.StartIndex = 0,
 			.Count = (uint32_t)cubeData.size(),
-		});
+			});
 
 		auto diffuseTex = CAssetLoader::LoadTexture2DFromFile("Textures/container2.png");
 		if (!diffuseTex)
@@ -114,15 +114,11 @@ int main(int argc, char** argv)
 	cubeMesh.MeshBuffers.IndexBuffer = GL_NONE;
 	glCreateBuffers(1, &cubeMesh.MeshBuffers.VertexBuffer);
 	glNamedBufferStorage(cubeMesh.MeshBuffers.VertexBuffer, cubeData.size() * sizeof(SVertex), cubeData.data(), GL_DYNAMIC_STORAGE_BIT);
-	auto deferredDelete = Defer([&]()
-	{
-		glDeleteBuffers(1, &cubeMesh.MeshBuffers.VertexBuffer);
-	});
 
 	GCamera& camera = WorldContainers::InputProcessors.emplace_back(GCamera());
 	GWorldObject cube;
 	cube.Transform.SetPosition(vec3(0.0f, 0.0f, 3.f));
-	
+
 	auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_textured.frag");
 	if (!pvpShader)
 		std::abort();
@@ -131,13 +127,50 @@ int main(int argc, char** argv)
 	if (!basicMeshes)
 		std::abort();
 
+	STexturedMaterial blankTex {};
+	{
+		vec4 white(1.f);
+		glCreateTextures(GL_TEXTURE_2D, 1, &blankTex.Diffuse.Texture);
+		glTextureStorage2D(blankTex.Diffuse.Texture, 1, GL_RGBA8, 1, 1);
+		glTextureSubImage2D(blankTex.Diffuse.Texture, 0, 0, 0, 1, 1, GL_RGBA, GL_FLOAT, &white);
+	}
+
 	pvpShader->Use();
 	glEnable(GL_DEPTH_TEST);
+
+	SMeshAsset axisMesh {};
+	{
+		SVertex vertices[12] = {};
+		vec4 colors[] = { vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 1.0f), vec4(0.0f, 0.0f, 1.f, 1.f) };
+		for (int i = 0; i < 12; i += 2)
+		{
+			int axis = (i >> 1) % 3;
+			vertices[i + 1].Position[axis] = (i < 6) ? 1.f : -1.f;
+			vertices[i].Color = vertices[i + 1].Color = colors[axis];
+		}
+		glCreateBuffers(1, &axisMesh.MeshBuffers.VertexBuffer);
+		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, GL_DYNAMIC_STORAGE_BIT);
+		axisMesh.Surfaces.push_back(SGeoSurface { .Count = 12 });
+	}
+	auto deferredDelete = Defer([&]()
+	{
+		glDeleteBuffers(1, &cubeMesh.MeshBuffers.VertexBuffer);
+		glDeleteBuffers(1, &axisMesh.MeshBuffers.VertexBuffer);
+		for (auto& mesh : *basicMeshes)
+		{
+			glDeleteBuffers(1, &mesh.MeshBuffers.VertexBuffer);
+			if (mesh.MeshBuffers.IndexBuffer != GL_NONE)
+				glDeleteBuffers(1, &mesh.MeshBuffers.IndexBuffer);
+		}
+	});
+
 	Engine->RenderFunc = [&](float deltaTime)
 	{
-		pvpShader->SetUniform("localToWorld", cube.Transform.GetMatrix());
+		pvpShader->SetUniform("ignoreLighting", false);
 		pvpShader->SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
 		pvpShader->SetUniform("cameraToPerspective", camera.GetProjectionMatrix());
+		pvpShader->SetUniform("material.diffuseMap", 0);
+		pvpShader->SetUniform("material.specularMap", 1);
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -163,18 +196,17 @@ int main(int argc, char** argv)
 
 		// cube
 		{
+			pvpShader->SetUniform("localToWorld", cube.Transform.GetMatrix());
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, cubeMesh.MeshBuffers.VertexBuffer);
 			for (SGeoSurface const& surface : cubeMesh.Surfaces)
 			{
 				if (surface.Material.Diffuse.Texture != GL_NONE)
 				{
 					glBindTextureUnit(0, surface.Material.Diffuse.Texture);
-					pvpShader->SetUniform("material.diffuseMap", 0);
 				}
 				if (surface.Material.Specular.Texture != GL_NONE)
 				{
 					glBindTextureUnit(1, surface.Material.Specular.Texture);
-					pvpShader->SetUniform("material.specularMap", 1);
 				}
 				pvpShader->SetUniform("material.shininess", surface.Material.Shininess);
 				if (cubeMesh.MeshBuffers.IndexBuffer != GL_NONE)
@@ -186,6 +218,17 @@ int main(int argc, char** argv)
 					glDrawArrays(GL_TRIANGLES, surface.StartIndex, surface.Count);
 				}
 			}
+		}
+
+		// axes
+		{
+			mat4 transform = glm::scale(mat4(1.0f), vec3(camera.FarPlane));
+			pvpShader->SetUniform("localToWorld", transform);
+			pvpShader->SetUniform("ignoreLighting", true);
+			glBindTextureUnit(0, axisMesh.Surfaces[0].Material.Diffuse.Texture);
+			glBindTextureUnit(1, axisMesh.Surfaces[0].Material.Diffuse.Texture);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, axisMesh.MeshBuffers.VertexBuffer);
+			glDrawArrays(GL_LINES, axisMesh.Surfaces[0].StartIndex, axisMesh.Surfaces[0].Count);
 		}
 	};
 	Engine->MainLoop();
