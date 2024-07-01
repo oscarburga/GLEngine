@@ -144,9 +144,9 @@ int main(int argc, char** argv)
 		vec4 colors[] = { vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 1.0f), vec4(0.0f, 0.0f, 1.f, 1.f) };
 		for (int i = 0; i < 12; i += 2)
 		{
-			int axis = (i >> 1) % 3;
-			vertices[i + 1].Position[axis] = (i < 6) ? 1.f : -1.f;
-			vertices[i].Color = vertices[i + 1].Color = colors[axis];
+			int axis = (i >> 1);
+			vertices[i + 1].Position[axis % 3] = (i < 6) ? 1.f : -1.f;
+			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : vec4(1.f);
 		}
 		glCreateBuffers(1, &axisMesh.MeshBuffers.VertexBuffer);
 		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, GL_DYNAMIC_STORAGE_BIT);
