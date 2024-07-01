@@ -7,8 +7,10 @@ add_executable (GLEngine
 	Math/EngineMath.h
 	Math/EngineMath.cpp
 	
-	Graphics/Shader.h
-	Graphics/Shader.cpp
+	Render/GlRenderer.h
+	Render/GlRenderer.cpp
+	Render/GlShader.h
+	Render/GlShader.cpp
 
 	Utils/Defer.h
 	Utils/FuncVector.h

@@ -5,6 +5,14 @@
 
 struct GLFWwindow;
 
+struct SViewport
+{
+	GLFWwindow* Window = nullptr;
+	uint32_t SizeX = 800;
+	uint32_t SizeY = 600;
+	float AspectRatio = 800.f / 600.f;
+};
+
 class CEngine
 {
 protected:
@@ -16,15 +24,9 @@ public:
 	static CEngine* Create();
 	static void Destroy();
 	inline static CEngine* Get() { return Engine; }
-	
-	struct SViewport
-	{
-		GLFWwindow* Window = nullptr;
-		uint32_t SizeX = 800;
-		uint32_t SizeY = 600;
-		float AspectRatio = 800.f / 600.f;
-	} Viewport;
 
+	SViewport Viewport;
+	
 	float CursorLastX = 0.0f;
 	float CursorLastY = 0.0f;
 	float CurrentTime = 0.0f;

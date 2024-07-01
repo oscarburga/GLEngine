@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <format>
-#include "Graphics/Shader.h"
+#include "Render/GlShader.h"
 #include "Math/EngineMath.h"
 #include "Assets/AssetLoader.h"
 
@@ -15,7 +15,7 @@
 
 int main(int argc, char** argv)
 {
-	CEngine* Engine = CEngine::Create();
+	CEngine* engine = CEngine::Create();
 	GLuint emptyVAO;
 	glCreateVertexArrays(1, &emptyVAO);
 	glBindVertexArray(emptyVAO);
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
 		}
 	});
 
-	Engine->RenderFunc = [&](float deltaTime)
+	engine->RenderFunc = [&](float deltaTime)
 	{
 		pvpShader->SetUniform("ignoreLighting", false);
 		pvpShader->SetUniform("worldToCamera", camera.UpdateAndGetViewMatrix());
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
 			glDrawArrays(GL_LINES, axisMesh.Surfaces[0].StartIndex, axisMesh.Surfaces[0].Count);
 		}
 	};
-	Engine->MainLoop();
+	engine->MainLoop();
 	return 0;
 }
 

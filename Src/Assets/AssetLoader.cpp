@@ -172,7 +172,7 @@ std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, i
     return std::nullopt;
 }
 
-std::optional<CShader> CAssetLoader::LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath)
+std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath)
 {
     auto vs = LoadSingleShader(vsPath, GL_VERTEX_SHADER);
     auto fs = LoadSingleShader(fsPath, GL_FRAGMENT_SHADER);
@@ -200,7 +200,7 @@ std::optional<CShader> CAssetLoader::LoadShaderProgram(const std::filesystem::pa
         glDeleteProgram(program);
         return std::nullopt;
 	}
-    return CShader(program);
+    return CGlShader(program);
 }
 
 std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType)
@@ -271,7 +271,7 @@ bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesy
     return true;
 }
 
-void SSolidMaterial::SetUniforms(CShader& shader)
+void SSolidMaterial::SetUniforms(CGlShader& shader)
 {
     shader.SetUniform("material.ambient", Ambient);
     shader.SetUniform("material.diffuse", Diffuse);

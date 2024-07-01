@@ -3,7 +3,7 @@
 #include "glad/glad.h"
 #include <filesystem>
 #include "glm/glm.hpp"
-#include "Graphics/Shader.h"
+#include "Render/GlShader.h"
 
 struct SGPUMeshBuffers
 {
@@ -23,7 +23,7 @@ struct SSolidMaterial
 	glm::vec3 Diffuse {};
 	glm::vec3 Specular {};
 	float Shininess = 32.f;
-	void SetUniforms(CShader& shader);
+	void SetUniforms(CGlShader& shader);
 };
 
 struct STexturedMaterial
@@ -77,7 +77,7 @@ public:
 	static std::optional<SGPUTexture> LoadTexture2DFromFile(std::filesystem::path const& texturePath);
 	static std::optional<SGPUTexture> LoadTexture2DFromBuffer(void* buffer, int size);
 
-	static std::optional<CShader> LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath);
+	static std::optional<CGlShader> LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath);
 
 private:
 
