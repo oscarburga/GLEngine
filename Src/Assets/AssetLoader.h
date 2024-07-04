@@ -4,41 +4,13 @@
 #include <filesystem>
 #include "glm/glm.hpp"
 #include "Render/GlShader.h"
+#include "Render/GlRenderStructs.h"
+#include "Render/GlIdTypes.h"
 
-struct SGPUMeshBuffers
+struct STextureAsset
 {
-	uint32_t IndexBuffer = 0;
-	uint32_t VertexBuffer = 0;
-};
-
-struct SGPUTexture
-{
-	uint32_t Texture = 0;
-	uint32_t Sampler = 0;
-};
-
-struct SSolidMaterial
-{
-	glm::vec3 Ambient {};
-	glm::vec3 Diffuse {};
-	glm::vec3 Specular {};
-	float Shininess = 32.f;
-	void SetUniforms(CGlShader& shader);
-};
-
-struct STexturedMaterial
-{
-	SGPUTexture Diffuse = {};
-	SGPUTexture Specular = {};
-	float Shininess = 32.f;
-};
-
-struct SGeoSurface
-{
-	uint32_t StartIndex = 0;
-	uint32_t Count = 0;
-	// Temp: this eventually needs to be replaced by a templated material or a variant
-	STexturedMaterial Material = {}; 
+	std::string Name;
+	SGlTextureId Id;
 };
 
 struct SMeshAsset
@@ -48,13 +20,23 @@ struct SMeshAsset
 	SGPUMeshBuffers MeshBuffers;
 };
 
-struct SVertex
+struct SGLTFMaterial
 {
-	glm::vec3 Position = {};
-	float uv_x = 0.0f;
-	glm::vec3 Normal = {};
-	float uv_y = 0.0f;
-	glm::vec4 Color = {};
+};
+
+struct SLoadedGLTF
+{
+	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
+	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
+	std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures;
+	std::vector<SGlSamplerId> Samplers;
+	std::vector<std::shared_ptr<SNode>> RootNodes;
+	// TODO: Materials
+	//std::unordered_map<std::string, std::shared_ptr<SGLTFMaterial>> Materials;
+	//SGlBufferId MaterialDataBuffer
+
+	~SLoadedGLTF() { ClearAll(); }
+	void ClearAll();
 };
 
 /*
@@ -63,16 +45,24 @@ struct SVertex
 */
 class CAssetLoader
 {
-public:
+	static std::filesystem::path ContentRoot; // TODO: Read this from some sort of a config/lua file.
+	inline static CAssetLoader* AssetLoader = nullptr;
+    inline static char infoLog[1024] = {};
+	std::unordered_map<std::string, std::shared_ptr<SLoadedGLTF>> SceneCache;
+	CAssetLoader() { LoadDefaultAssets(); };
+	~CAssetLoader();
 
-	/*
-	* TODO: Read all of these from some sort of a config/lua file.
-	*/
-	static std::filesystem::path ContentRoot;
-	// static std::filesystem::path MeshesDir;
-	// static std::filesystem::path ScriptsDir;
+public:
+	SGlTextureId WhiteTexture;
+	SGlTextureId ErrorTexture;
+	static void Create();
+	static void Destroy();
+	inline static CAssetLoader* Get() { return AssetLoader; }
+
+	void LoadDefaultAssets();
 
 	static std::optional<std::vector<SMeshAsset>> LoadGLTFMeshes(std::filesystem::path filePath);
+	std::shared_ptr<SLoadedGLTF> LoadGLTFScene(std::filesystem::path filePath);
 
 	static std::optional<SGPUTexture> LoadTexture2DFromFile(std::filesystem::path const& texturePath);
 	static std::optional<SGPUTexture> LoadTexture2DFromBuffer(void* buffer, int size);
@@ -82,9 +72,8 @@ public:
 private:
 
 	static std::optional<unsigned int> LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType);
-	static void RegisterTexture2D(void* stbiTexData, SGPUTexture& gpuTex, int width, int height, int channels);
+	static SGlTextureId RegisterTexture2D(void* rawTexData, int width, int height, int channels);
 
-    inline static char infoLog[1024] = {};
     static bool CheckShaderCompilation(unsigned int shader, const std::filesystem::path& shaderPath);
 };
 

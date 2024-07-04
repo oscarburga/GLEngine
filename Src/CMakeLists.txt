@@ -1,22 +1,31 @@
-add_executable (GLEngine 
+set(SOURCE_LIST 
 	main.cpp
 
+	# ASSETS
 	Assets/AssetLoader.h
 	Assets/AssetLoader.cpp
 	
+	# MATH
 	Math/EngineMath.h
 	Math/EngineMath.cpp
 	
+	# RENDERING
+	Render/GlIdTypes.h
+	Render/GlRenderStructs.h
+	Render/GlRenderStructs.cpp
 	Render/GlRenderer.h
 	Render/GlRenderer.cpp
 	Render/GlShader.h
 	Render/GlShader.cpp
 
+	# UTILS
 	Utils/Defer.h
 	Utils/FuncVector.h
 	Utils/MultiTypeContainer.h
 	Utils/RefIgnore.h
+	Utils/IdType.h
 	
+	# GAME / UNCATEGORIZED
 	Camera.h
 	Camera.cpp
 	Engine.h
@@ -28,6 +37,9 @@ add_executable (GLEngine
 	WorldObject.h
 	WorldObject.cpp
 )
+
+add_executable(GLEngine ${SOURCE_LIST})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST})
 
 set_property(TARGET GLEngine PROPERTY CXX_STANDARD 20)
 target_include_directories(GLEngine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

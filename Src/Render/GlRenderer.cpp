@@ -3,6 +3,7 @@
 #include <iostream>
 #include <format>
 #include "Engine.h"
+#include <Assets/AssetLoader.h>
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
 
@@ -89,6 +90,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	int numAttributes;
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &numAttributes);
 	std::cout << "Max number of vertex attributes: " << numAttributes << " 4-component vertex attributes\n";
+	CAssetLoader::Create();
 }
 
 void CGlRenderer::Destroy()

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlRenderStructs.h"
+
 class CEngine;
 struct SViewport;
 
