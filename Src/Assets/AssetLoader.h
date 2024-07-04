@@ -5,39 +5,6 @@
 #include "glm/glm.hpp"
 #include "Render/GlShader.h"
 #include "Render/GlRenderStructs.h"
-#include "Render/GlIdTypes.h"
-
-struct STextureAsset
-{
-	std::string Name;
-	SGlTextureId Id;
-};
-
-struct SMeshAsset
-{
-	std::string Name;
-	std::vector<SGeoSurface> Surfaces;
-	SGPUMeshBuffers MeshBuffers;
-};
-
-struct SGLTFMaterial
-{
-};
-
-struct SLoadedGLTF
-{
-	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
-	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
-	std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures;
-	std::vector<SGlSamplerId> Samplers;
-	std::vector<std::shared_ptr<SNode>> RootNodes;
-	// TODO: Materials
-	//std::unordered_map<std::string, std::shared_ptr<SGLTFMaterial>> Materials;
-	//SGlBufferId MaterialDataBuffer
-
-	~SLoadedGLTF() { ClearAll(); }
-	void ClearAll();
-};
 
 /*
 * Class responsible for all basic asset loading done. Meshes, shaders, textures, etc.
@@ -49,7 +16,6 @@ class CAssetLoader
 	inline static CAssetLoader* AssetLoader = nullptr;
     inline static char infoLog[1024] = {};
 	std::unordered_map<std::string, std::shared_ptr<SLoadedGLTF>> SceneCache;
-	CAssetLoader() { LoadDefaultAssets(); };
 	~CAssetLoader();
 
 public:

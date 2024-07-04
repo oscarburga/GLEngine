@@ -2,9 +2,9 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include "glm/glm.hpp"
 #include "GlIdTypes.h"
-#include "Utils/MultiTypeContainer.h"
 
 class CGlShader;
 
@@ -63,7 +63,26 @@ struct SVertex
 	glm::vec4 Color = {};
 };
 
-struct SNode
+struct STextureAsset
+{
+	std::string Name;
+	SGlTextureId Id;
+};
+
+struct SMeshAsset
+{
+	std::string Name;
+	std::vector<SGeoSurface> Surfaces;
+	SGPUMeshBuffers MeshBuffers;
+};
+
+
+class IRenderable
+{
+	virtual void Draw(const glm::mat4& topMatrix) = 0;
+};
+
+struct SNode : public IRenderable
 {
 	std::weak_ptr<SNode> Parent;
 	std::vector<std::shared_ptr<SNode>> Children;
@@ -85,9 +104,26 @@ struct SNode
 	}
 };
 
-struct SMeshAsset;
 struct SMeshNode : public SNode
 {
 	std::shared_ptr<SMeshAsset> Mesh;
 	virtual void Draw(const glm::mat4& topMatrix) override;
 };
+
+struct SLoadedGLTF : public IRenderable
+{
+	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
+	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
+	std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures;
+	std::vector<SGlSamplerId> Samplers;
+	std::vector<std::shared_ptr<SNode>> RootNodes;
+	// TODO: Materials
+	//std::unordered_map<std::string, std::shared_ptr<SGLTFMaterial>> Materials;
+	//SGlBufferId MaterialDataBuffer
+
+	~SLoadedGLTF() { ClearAll(); }
+	void ClearAll();
+	virtual void Draw(const glm::mat4& topMatrix) override {} // TODO
+};
+
+struct SGLTFMaterial; // TODO
