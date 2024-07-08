@@ -14,13 +14,39 @@ void SSolidMaterial::SetUniforms(CGlShader& shader)
     shader.SetUniform("material.shininess", Shininess);
 }
 
-void SMeshNode::Draw(const glm::mat4& topMatrix)
+void SNode::RefreshTransform(const glm::mat4& parentMatrix)
 {
-	SNode::Draw(topMatrix);
+    WorldTransform = parentMatrix * LocalTransform;
+    for (auto& child : Children)
+        child->RefreshTransform(parentMatrix);
+}
+
+void SNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
+{
+    for (auto& child : Children)
+        child->Draw(topMatrix, drawCtx);
+}
+
+void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
+{
+    {
+        glm::mat4 nodeMatrix = topMatrix * WorldTransform;
+        for (auto& surface : Mesh->Surfaces)
+        {
+            auto& draw = drawCtx.OpaqueSurfaces.emplace_back();
+            draw.IndexCount = surface.Count;
+            draw.FirstIndex = surface.StartIndex;
+            draw.Material = surface.Material;
+            draw.Buffers = Mesh->MeshBuffers;
+            draw.Transform = nodeMatrix;
+        }
+    }
+	SNode::Draw(topMatrix, drawCtx);
 }
 
 void SLoadedGLTF::ClearAll()
 {
+    // This might be a bad idea... its fine if noone else is using buffers from this node graph
     for (auto& [name, meshPtr] : Meshes)
     {
         if (meshPtr->MeshBuffers.IndexBuffer)
@@ -40,5 +66,13 @@ void SLoadedGLTF::ClearAll()
     static_assert(sizeof(SGlSamplerId) == sizeof(uint32_t));
     glDeleteSamplers((GLsizei)Samplers.size(), reinterpret_cast<uint32_t*>(Samplers.data()));
     Samplers.clear();
+}
+
+void SLoadedGLTF::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
+{
+    for (auto& root : RootNodes)
+    {
+        root->Draw(topMatrix, drawCtx);
+    }
 }
 

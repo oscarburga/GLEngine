@@ -1,5 +1,5 @@
-#include "GlRenderer.h"
 #include <glad/glad.h>
+#include "GlRenderer.h"
 #include <iostream>
 #include <format>
 #include "Engine.h"
@@ -90,7 +90,14 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	int numAttributes;
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &numAttributes);
 	std::cout << "Max number of vertex attributes: " << numAttributes << " 4-component vertex attributes\n";
+	glCreateVertexArrays(1, &*EmptyVao);
+	glBindVertexArray(*EmptyVao);
 	CAssetLoader::Create();
+	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_textured.frag"))
+	{
+		PvpShaderTextured = *pvpShader;
+	}
+	else assert(false);
 }
 
 void CGlRenderer::Destroy()
@@ -104,6 +111,30 @@ void CGlRenderer::Destroy()
 
 void CGlRenderer::RenderScene(float deltaTime)
 {
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	for (auto& surface : MainDrawContext.OpaqueSurfaces)
+	{
+		PvpShaderTextured.SetUniform("Model", surface.Transform);
+		PvpShaderTextured.SetUniform("material.diffuseMap", 0);
+		PvpShaderTextured.SetUniform("material.specularMap", 1);
+		PvpShaderTextured.SetUniform("material.shininess", surface.Material.Shininess);
+		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material.bIgnoreLighting);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, surface.Buffers.VertexBuffer);
+		glBindTextureUnit(0, *surface.Material.Diffuse.Texture);
+		glBindTextureUnit(1, *surface.Material.Specular.Texture);
+		if (surface.Buffers.IndexBuffer)
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
+			glDrawElements(surface.Material.PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+		}
+		else
+		{
+			glDrawArrays(surface.Material.PrimitiveType, surface.FirstIndex, surface.IndexCount);
+		}
+	}
+	MainDrawContext.OpaqueSurfaces.clear();
 }
 
 void CGlRenderer::OnWindowResize(CEngine* Engine, const SViewport& Viewport)

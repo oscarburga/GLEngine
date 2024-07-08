@@ -98,7 +98,33 @@ void CAssetLoader::LoadDefaultAssets()
 	}
 	// TODO: XYZ debug axis mesh
 	{
-
+		SMeshAsset axisMesh {};
+		SVertex vertices[12] = {};
+		glm::vec4 colors[] = { glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.f, 1.f) };
+		for (int i = 0; i < 12; i += 2)
+		{
+			int axis = (i >> 1);
+			vertices[i + 1].Position[axis % 3] = (i < 6) ? 1.f : -1.f;
+			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
+		}
+		glCreateBuffers(1, &*axisMesh.MeshBuffers.VertexBuffer);
+		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, GL_DYNAMIC_STORAGE_BIT);
+        SGeoSurface surface {
+            .Count = 12,
+            .Material = STexturedMaterial {
+                .bIgnoreLighting = true,
+                .PrimitiveType = GL_LINES,
+                .Diffuse = { .Texture = WhiteTexture },
+                .Specular = { .Texture = WhiteTexture },
+                .Shininess = 32.f
+            }
+        };
+		axisMesh.Surfaces.push_back(surface);
+        AxisMesh = std::make_shared<SMeshNode>();
+        AxisMesh->LocalTransform = glm::scale(glm::mat4(1.f), glm::vec3(100.f));
+        AxisMesh->RefreshTransform(glm::mat4(1.f));
+        AxisMesh->Mesh = std::make_shared_for_overwrite<SMeshAsset>();
+        *(AxisMesh->Mesh) = std::move(axisMesh);
 	}
 }
 
@@ -218,6 +244,7 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
 std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path filePath)
 {
     // First check if we've cached this before
+    filePath.make_preferred();
     const std::string filePathStr = filePath.string();
     if (auto it = SceneCache.find(filePathStr); it != SceneCache.end())
         return it->second;
@@ -260,21 +287,20 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
     }
 
     // TODO: proper texture loading
-    std::vector<SGlTextureId> textures;
-    {
-		for (fastgltf::Image& image : gltf->images)
-		{
-			textures.emplace_back(ErrorTexture);
-		}
-    }
+    // std::vector<SGlTextureId> textures;
+    // {
+	// 	for (fastgltf::Image& image : gltf->images)
+	// 	{
+	// 		textures.emplace_back(ErrorTexture);
+	// 	}
+    // }
 
 
 	// TODO: GLTF materials
     //std::vector<std::shared_ptr<GLTFMaterial>> materials;
-    // for (fastgltf::Material& mat : gltf->materials)
-    // {
-
-    // }
+    // std::vector<STexturedMaterial> materials;
+    // materials.resize(gltf->materials.size(), STexturedMaterial { { ErrorTexture, {}},  { ErrorTexture, {}}, 32.f });
+    // for (fastgltf::Material& mat : gltf->materials);
 
 
     // Load meshes
@@ -295,6 +321,9 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
 
             for (auto& primitive : mesh.primitives)
             {
+                SGeoSurface surface;
+                surface.StartIndex = (uint32_t)indices.size();
+                surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
                 size_t startVertex = vertices.size();
                 // Load indices
                 {
@@ -348,11 +377,9 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
                         vertices[startVertex + index].Color = v;
                     });
                 }
-                SGeoSurface surface;
-                surface.StartIndex = (uint32_t)indices.size();
-                surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
                 // TODO: LoadMaterials
                 // if (primitive.materialIndex)
+                surface.Material = { .Diffuse = { .Texture = ErrorTexture },  .Specular = { .Texture = ErrorTexture } };
                 newMesh.Surfaces.push_back(surface);
             }
             constexpr bool bNormalsAsColors = false;
@@ -432,10 +459,14 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
         for (auto& node : nodes)
         {
             if (node->Parent.lock() == nullptr)
+            {
                 scene.RootNodes.emplace_back(node);
+                node->RefreshTransform(glm::mat4(1.f));
+            }
         }
     }
     SceneCache[filePathStr] = scene_ptr;
+    std::cout << std::format("Loaded GLTF successfully: {}\n", filePathStr);
     return scene_ptr;
 }
 

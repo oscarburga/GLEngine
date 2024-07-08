@@ -13,8 +13,34 @@
 #include "WorldContainers.h"
 #include <Utils/Defer.h>
 #include <Render/GlRenderStructs.h>
+#include <Render/GlRenderer.h>
 
 int main(int argc, char** argv)
+{
+	CEngine* engine = CEngine::Create();
+	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/basicmesh.glb");
+	GCamera& camera = WorldContainers::InputProcessors.emplace_back(GCamera());
+	camera.YawSens *= 2.f;
+	camera.PitchSens *= 2.f;
+	assert(gltf);
+	CGlRenderer* renderer = CGlRenderer::Get();
+	auto* pvpShader = &renderer->PvpShaderTextured;
+	pvpShader->Use();
+	engine->RenderFunc = [&](float deltaTime)
+	{
+		pvpShader->SetUniform("View", camera.UpdateAndGetViewMatrix());
+		pvpShader->SetUniform("Projection", camera.GetProjectionMatrix());
+		pvpShader->SetUniform("viewPos", camera.Transform.GetPosition());
+		gltf->Draw(mat4(1.f), renderer->MainDrawContext);
+		CAssetLoader::Get()->AxisMesh->Draw(mat4(1.f), renderer->MainDrawContext);
+		renderer->RenderScene(deltaTime);
+	};
+	engine->MainLoop();
+
+	return 0;
+}
+
+int notSoOldMain(int argc, char** argv)
 {
 	CEngine* engine = CEngine::Create();
 	GLuint emptyVAO;

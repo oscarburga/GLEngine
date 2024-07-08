@@ -12,9 +12,9 @@ struct SVertex {
 	vec4 Color;
 };
 
-uniform mat4 localToWorld;
-uniform mat4 worldToCamera;
-uniform mat4 cameraToPerspective;
+uniform mat4 Model;
+uniform mat4 View;
+uniform mat4 Projection;
 
 layout (binding = 0, std430) readonly buffer VertexBuffer {
 	SVertex vertices[];
@@ -28,10 +28,10 @@ out vec4 fsColor;
 void main()
 {
 	const SVertex vertex = vertices[gl_VertexID];
-	gl_Position = cameraToPerspective * worldToCamera * localToWorld * vec4(vertex.Position, 1.0);
-	fsFragPos = (localToWorld * vec4(vertex.Position, 1.0)).xyz;
+	gl_Position = Projection * View * Model * vec4(vertex.Position, 1.0);
+	fsFragPos = (Model * vec4(vertex.Position, 1.0)).xyz;
 	// Inneficient, ideally pass this as a uniform.
-	fsNormal = mat3(transpose(inverse(localToWorld))) * vertex.Normal;
+	fsNormal = mat3(transpose(inverse(Model))) * vertex.Normal;
 	fsTexCoords = vec2(vertex.uv_x, vertex.uv_y);
 	fsColor = vertex.Color;
 }

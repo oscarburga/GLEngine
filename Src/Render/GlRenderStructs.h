@@ -32,6 +32,8 @@ struct SSolidMaterial
 
 struct STexturedMaterial 
 {
+	bool bIgnoreLighting = false; 
+	uint32_t PrimitiveType = 4; // GL_TRIANGLES
 	SGPUTexture Diffuse = {};
 	SGPUTexture Specular = {};
 	float Shininess = 32.f;
@@ -41,7 +43,7 @@ struct SGeoSurface
 {
 	uint32_t StartIndex = 0;
 	uint32_t Count = 0;
-	// Temp: this eventually needs to be replaced by a templated material or something
+	// Temp: this eventually needs to be replaced by a ref/ptr to a material
 	STexturedMaterial Material = {}; 
 };
 
@@ -76,10 +78,23 @@ struct SMeshAsset
 	SGPUMeshBuffers MeshBuffers;
 };
 
+struct SRenderObject
+{
+	uint32_t IndexCount;
+	uint32_t FirstIndex;
+	SGPUMeshBuffers Buffers;
+	STexturedMaterial Material;
+	glm::mat4 Transform;
+};
+
+struct SDrawContext
+{
+	std::vector<SRenderObject> OpaqueSurfaces;
+};
 
 class IRenderable
 {
-	virtual void Draw(const glm::mat4& topMatrix) = 0;
+	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) = 0;
 };
 
 struct SNode : public IRenderable
@@ -90,24 +105,15 @@ struct SNode : public IRenderable
 	glm::mat4 LocalTransform;
 	glm::mat4 WorldTransform;
 	
-	void RefreshTransform(const glm::mat4& parentMatrix)
-	{
-		WorldTransform = parentMatrix * LocalTransform;
-		for (auto& child : Children)
-			child->RefreshTransform(parentMatrix);
-	}
+	void RefreshTransform(const glm::mat4& parentMatrix);
 
-	virtual void Draw(const glm::mat4& topMatrix)
-	{
-		for (auto& child : Children)
-			child->Draw(topMatrix);
-	}
+	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx);
 };
 
 struct SMeshNode : public SNode
 {
 	std::shared_ptr<SMeshAsset> Mesh;
-	virtual void Draw(const glm::mat4& topMatrix) override;
+	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
 };
 
 struct SLoadedGLTF : public IRenderable
@@ -123,7 +129,7 @@ struct SLoadedGLTF : public IRenderable
 
 	~SLoadedGLTF() { ClearAll(); }
 	void ClearAll();
-	virtual void Draw(const glm::mat4& topMatrix) override {} // TODO
+	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override; // TODO
 };
 
 struct SGLTFMaterial; // TODO

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GlRenderStructs.h"
+#include "GlShader.h"
 
 class CEngine;
 struct SViewport;
@@ -14,6 +15,7 @@ class CGlRenderer
 	CGlRenderer(CGlRenderer&&) = delete;
 	~CGlRenderer();
 public:
+	CGlShader PvpShaderTextured { 0 };
 	static CGlRenderer* Create(GlFunctionLoaderFuncType func);
 	void Init(GlFunctionLoaderFuncType func);
 	static void Destroy();
@@ -23,6 +25,8 @@ public:
 
 	void OnWindowResize(CEngine* Engine, const SViewport& Viewport);
 
+	SDrawContext MainDrawContext {};
 private:
+	SGlVaoId EmptyVao {};
 	static CGlRenderer* Renderer;
 };

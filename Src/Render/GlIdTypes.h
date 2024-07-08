@@ -4,13 +4,14 @@
 
 /*
 * Ids representing OpenGL objects (buffers, textures, etc) are prefixed by Gl (i.e. SGlBufferId).
-* Ids representing GlEngine objects are not prefixed by Gl (i.e. SMeshId).
+* Ids representing GlEngine objects are not prefixed by Gl (i.e. SMeshId) (likely not using anymore)
 */
 
 /*
-* Consider maki these Ids "owning", like unique/shared_ptr, so that they call glDelete when destroying.
+* Consider making these Ids "owning", like unique/shared_ptr, so that they call glDelete when destroying.
 * May be unnecessary though, we'll see.
 */
+using SGlVaoId = TId<uint32_t, struct VaoIdTag, 0>;
 using SGlBufferId = TId<uint32_t, struct BufferIdTag, 0>;
 using SGlTextureId = TId<uint32_t, struct TexIdTag, 0>;
 using SGlSamplerId = TId<uint32_t, struct TexIdTag, 0>;
