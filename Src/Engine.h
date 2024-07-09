@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <functional>
+#include "Utils/FuncVector.h"
 
 struct GLFWwindow;
 
@@ -16,8 +16,10 @@ struct SViewport
 class CEngine
 {
 protected:
-	CEngine();
+	void Init();
+	CEngine() {};
 	~CEngine();
+
 public:
 	CEngine(const CEngine&) = delete;
 	CEngine(CEngine&&) = delete;
@@ -34,9 +36,9 @@ public:
 	void MainLoop();
 	void ProcessInput(float deltaTime);
 
-	// TEMP: to keep progressing through learnopengl before making renderable concepts,
-	// just set a RenderFunc from main
-	std::function<void(float)> RenderFunc;
+	// Not sure if i'm keeping this or how i'll handle this. 
+	// Subclassing + virtual function makes the most sense but we'll see.
+	TFuncVector<float> PreRenderFuncs;
 
 protected:
 	static void OnWindowResize(GLFWwindow* window, int width, int height);

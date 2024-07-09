@@ -10,22 +10,22 @@ class TFuncVectorImpl : public std::vector<Callable>
 	static_assert(std::is_invocable_v<Callable, Args...>, "Template type must be callable with Args");
 	using Vector = std::vector<Callable>;
 public:
-	// Return ref to self so you can call vector functions after i.e. ExecuteQueue(args).clear();
-	TFuncVectorImpl& ExecuteQueue(Args&&... args)
+	// Return ref to self so you can call vector functions after i.e. Execute(args).clear();
+	TFuncVectorImpl& Execute(auto&&... args)
 	{
-		ExecuteInternal(Vector::begin(), Vector::end(), std::forward(args)...);
+		ExecuteInternal(Vector::begin(), Vector::end(), args...);
 		return *this;
 	}
 
-	// Return ref to self so you can call vector functions after i.e. ExecuteStack(args).clear();
-	TFuncVectorImpl& ExecuteStack(Args&&... args)
+	// Return ref to self so you can call vector functions after i.e. ExecuteReversed(args).clear();
+	TFuncVectorImpl& ExecuteReversed(auto&&... args)
 	{
-		ExecuteInternal(Vector::rbegin(), Vector::rend(), std::forward(args)...);
+		ExecuteInternal(Vector::rbegin(), Vector::rend(), args...);
 		return *this;
 	}
 private:
 	template<typename It>
-	void ExecuteInternal(It begin, It end, Args&&... args)
+	inline void ExecuteInternal(It begin, It end, auto&&... args)
 	{
 		while (begin != end)
 		{

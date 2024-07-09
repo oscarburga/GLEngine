@@ -274,6 +274,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
     {
 		for (fastgltf::Sampler& sampler : gltf->samplers)
 		{
+			break; // TEMP while materials are pending, not using the samplers.
 			SGlSamplerId id;
 			glCreateSamplers(1, &*id);
 			glTextureParameteri(*id, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);

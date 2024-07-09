@@ -10,6 +10,8 @@ set(SOURCE_LIST
 	Math/EngineMath.cpp
 	
 	# RENDERING
+	Render/GlCamera.h
+	Render/GlCamera.cpp
 	Render/GlIdTypes.h
 	Render/GlRenderStructs.h
 	Render/GlRenderStructs.cpp
@@ -26,16 +28,9 @@ set(SOURCE_LIST
 	Utils/IdType.h
 	
 	# GAME / UNCATEGORIZED
-	Camera.h
-	Camera.cpp
 	Engine.h
 	Engine.cpp
 	InputConcepts.h
-	World.h
-	WorldContainers.h
-	WorldContainers.cpp
-	WorldObject.h
-	WorldObject.cpp
 )
 
 add_executable(GLEngine ${SOURCE_LIST})

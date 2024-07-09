@@ -114,6 +114,9 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	PvpShaderTextured.SetUniform("View", ActiveCamera.UpdateAndGetViewMatrix());
+	PvpShaderTextured.SetUniform("Projection", ActiveCamera.GetProjectionMatrix());
+	PvpShaderTextured.SetUniform("viewPos", ActiveCamera.Position);
 	for (auto& surface : MainDrawContext.OpaqueSurfaces)
 	{
 		PvpShaderTextured.SetUniform("Model", surface.Transform);

@@ -2,6 +2,7 @@
 
 #include "GlRenderStructs.h"
 #include "GlShader.h"
+#include "GlCamera.h"
 
 class CEngine;
 struct SViewport;
@@ -15,6 +16,7 @@ class CGlRenderer
 	CGlRenderer(CGlRenderer&&) = delete;
 	~CGlRenderer();
 public:
+	SGlCamera ActiveCamera {};
 	CGlShader PvpShaderTextured { 0 };
 	static CGlRenderer* Create(GlFunctionLoaderFuncType func);
 	void Init(GlFunctionLoaderFuncType func);

@@ -6,11 +6,10 @@
 #include <cassert>
 #include <iostream>
 #include <format>
-#include "WorldContainers.h"
 
 CEngine* CEngine::Engine = nullptr;
 
-CEngine::CEngine()
+void CEngine::Init()
 {
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -44,6 +43,7 @@ CEngine* CEngine::Create()
 {
 	assert(!Engine);
 	Engine = new CEngine();
+	Engine->Init();
 	return Engine;
 }
 
@@ -55,7 +55,6 @@ void CEngine::Destroy()
 void CEngine::MainLoop()
 {
 	CurrentTime = (float)glfwGetTime();
-	assert(RenderFunc);
 	while (!glfwWindowShouldClose(Viewport.Window))
 	{
 		const float newTime = (float)glfwGetTime();
@@ -63,7 +62,9 @@ void CEngine::MainLoop()
 		CurrentTime = newTime;
 		glfwPollEvents();
 		ProcessInput(deltaTime);
-		RenderFunc(deltaTime);
+		PreRenderFuncs.Execute(deltaTime);
+		CGlRenderer::Get()->RenderScene(deltaTime);
+		//RenderFunc(deltaTime);
 		glfwSwapBuffers(Viewport.Window);
 	}
 }
@@ -84,10 +85,7 @@ void CEngine::ProcessInput(float deltaTime)
 	lastx = (float)xpos;
 	lasty = (float)ypos;
 
-	WorldContainers::InputProcessors.apply([&](HandlesInput auto& inputProcessor)
-	{
-		inputProcessor.HandleInput(Viewport.Window, deltax, deltay, deltaTime);
-	});
+	CGlRenderer::Get()->ActiveCamera.UpdateCameraFromInput(Viewport.Window, deltax, deltay, deltaTime);
 }
 
 void CEngine::OnWindowResize(GLFWwindow* window, int width, int height)
