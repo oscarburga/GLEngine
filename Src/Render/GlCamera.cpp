@@ -1,23 +1,30 @@
 #include "GlCamera.h"
 
 #include <GLFW/glfw3.h>
+#include "GlRenderStructs.h"
 #include <iostream>
 #include "Engine.h"
 #include "Math/EngineMath.h"
 
-const mat4& SGlCamera::UpdateAndGetViewMatrix() const
+void SGlCamera::CalcViewMatrix(glm::mat4& outMat) const
 {
 	const glm::vec3 front = glm::rotateByQuat(World::Front, Rotation);
 	const glm::vec3 up = glm::rotateByQuat(World::Up, Rotation);
-    ViewMatrix = glm::lookAtLH(Position, Position + front, up);
-    return ViewMatrix;
+    outMat = glm::lookAtLH(Position, Position + front, up);
 }
 
-void SGlCamera::SetFOV(float _fov)
+void SGlCamera::CalcProjMatrix(glm::mat4& outMat) const
 {
-	FOV = _fov;
 	const float aspectRatio = CEngine::Get()->Viewport.AspectRatio;
-	ProjMatrix = glm::perspectiveLH(FOV, aspectRatio, NearPlane, FarPlane);
+	outMat = glm::perspectiveLH(FOV, aspectRatio, NearPlane, FarPlane);
+}
+
+void SGlCamera::UpdateSceneData(SSceneData& sceneData)
+{
+	sceneData.CameraPos = glm::vec4(Position, 1.0f);
+	CalcViewMatrix(sceneData.View);
+	CalcProjMatrix(sceneData.Proj);
+	sceneData.ViewProj = sceneData.Proj * sceneData.View; // * Model * V
 }
 
 void SGlCamera::UpdateCameraFromInput(GLFWwindow* window, float deltax, float deltay, float deltaTime)

@@ -87,17 +87,34 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 		std::cout << "Debug callback activated\n";
 	}
-	int numAttributes;
-	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &numAttributes);
-	std::cout << "Max number of vertex attributes: " << numAttributes << " 4-component vertex attributes\n";
-	glCreateVertexArrays(1, &*EmptyVao);
-	glBindVertexArray(*EmptyVao);
+	{
+		int value;
+		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &value);
+		std::cout << std::format("Max Uniform Block Size: {} bytes ({} Mb)\n", value, value / (1'000'000));
+		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &value);
+		std::cout << std::format("Max Uniform Blocks (VERTEX SHADER): {}\n", value);
+		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &value);
+		std::cout << std::format("Max Uniform Blocks (FRAGMENT SHADER): {}\n", value);
+	}
+	// Create & bind empty VAO
+	{
+		glCreateVertexArrays(1, &*EmptyVao);
+		glBindVertexArray(*EmptyVao);
+	}
+	// Scene data uniform buffer
+	{
+		glCreateBuffers(1, &*SceneDataBuffer);
+		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
+		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
+	}
+
 	CAssetLoader::Create();
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_textured.frag"))
 	{
 		PvpShaderTextured = *pvpShader;
 	}
 	else assert(false);
+
 }
 
 void CGlRenderer::Destroy()
@@ -114,9 +131,11 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	PvpShaderTextured.SetUniform("View", ActiveCamera.UpdateAndGetViewMatrix());
-	PvpShaderTextured.SetUniform("Projection", ActiveCamera.GetProjectionMatrix());
-	PvpShaderTextured.SetUniform("viewPos", ActiveCamera.Position);
+	
+	// Refresh SceneData
+	PvpShaderTextured.Use();
+	ActiveCamera.UpdateSceneData(SceneData);
+	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
 	for (auto& surface : MainDrawContext.OpaqueSurfaces)
 	{
 		PvpShaderTextured.SetUniform("Model", surface.Transform);
@@ -124,7 +143,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		PvpShaderTextured.SetUniform("material.specularMap", 1);
 		PvpShaderTextured.SetUniform("material.shininess", surface.Material.Shininess);
 		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material.bIgnoreLighting);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, surface.Buffers.VertexBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
 		glBindTextureUnit(0, *surface.Material.Diffuse.Texture);
 		glBindTextureUnit(1, *surface.Material.Specular.Texture);
 		if (surface.Buffers.IndexBuffer)

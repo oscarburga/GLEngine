@@ -1,4 +1,5 @@
 #version 460 core
+#extension GL_EXT_scalar_block_layout : require
 
 in vec3 fsNormal;
 in vec3 fsFragPos;
@@ -31,10 +32,20 @@ struct SLight {
 
 #define MAX_POINT_LIGHTS 4
 
+// UBO
+layout (binding = 0, std430) uniform SceneData {
+	vec4 CameraPos;
+	vec4 AmbientColor;
+	vec4 SunlightDirection;
+	vec4 SunlightColor;
+	mat4 View;
+	mat4 Proj;
+	mat4 ViewProj;
+} sceneData;
+
 uniform SMaterial material;
 uniform SLight pointLights[MAX_POINT_LIGHTS];
 uniform SLight spotLight;
-uniform vec3 viewPos;
 uniform bool ignoreLighting;
 
 vec3 calcLight(SLight light) 
@@ -56,7 +67,7 @@ vec3 calcLight(SLight light)
 	vec3 ambientColor = diffuseTexColor * light.ambient;
 
 	/* Specular calculations */
-	vec3 dirToCamera = normalize(viewPos - fsFragPos);
+	vec3 dirToCamera = normalize(sceneData.CameraPos.xyz - fsFragPos);
 	vec3 reflectDir = reflect(-dirToLight, fragNormal); // reflect(I, S) expects the incident vector I to point into the surface defined by the normal vector S
 	float specularResult = pow(max(dot(dirToCamera, reflectDir), 0.0f), material.shininess);
 	vec3 specularColor = (specularTexColor * specularResult) * light.specular;

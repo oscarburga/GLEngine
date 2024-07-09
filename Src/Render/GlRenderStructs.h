@@ -8,6 +8,17 @@
 
 class CGlShader;
 
+struct SSceneData
+{
+	glm::vec4 CameraPos {};
+	glm::vec4 AmbientColor {};
+	glm::vec4 SunlightDirection {};
+	glm::vec4 SunlightColor {};
+	glm::mat4 View {};
+	glm::mat4 Proj {};
+	glm::mat4 ViewProj {};
+};
+
 struct SGPUMeshBuffers
 {
 	SGlBufferId IndexBuffer {};
@@ -37,6 +48,29 @@ struct STexturedMaterial
 	SGPUTexture Diffuse = {};
 	SGPUTexture Specular = {};
 	float Shininess = 32.f;
+};
+
+enum class EMaterialPass : uint8_t
+{
+	MainColor,
+	Transparent,
+	Other,
+	Count
+};
+
+struct SPbrMaterial
+{
+	glm::vec4 ColorFactor { 1.f, 1.f, 1.f, 1.f };
+	glm::vec2 MetalRoughFactor {}; // Metal in blue, roughness in green
+	// float NormalScale = 0.0f;
+	// float OcclusionStrength = 0.0f;
+	// glm::vec3 EmissiveFactor {};
+	SGPUTexture ColorTex {}; // Also known as "Albedo"
+	SGPUTexture MetalRoughTex {}; // Metal in blue channel, Roughness in green.
+	// SGPUTexture NormalTex {};
+	// SGPUTexture OcclusionText {};
+	// SGPUTexture EmissiveTex {};
+	SGlOffsetBuffer DataBuffer {};
 };
 
 struct SGeoSurface 

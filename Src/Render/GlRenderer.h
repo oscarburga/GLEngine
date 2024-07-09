@@ -17,6 +17,7 @@ class CGlRenderer
 	~CGlRenderer();
 public:
 	SGlCamera ActiveCamera {};
+	SSceneData SceneData {};
 	CGlShader PvpShaderTextured { 0 };
 	static CGlRenderer* Create(GlFunctionLoaderFuncType func);
 	void Init(GlFunctionLoaderFuncType func);
@@ -30,5 +31,6 @@ public:
 	SDrawContext MainDrawContext {};
 private:
 	SGlVaoId EmptyVao {};
+	SGlBufferId SceneDataBuffer;
 	static CGlRenderer* Renderer;
 };

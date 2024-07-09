@@ -21,7 +21,7 @@ class CAssetLoader
 public:
 	SGlTextureId WhiteTexture;
 	SGlTextureId ErrorTexture;
-	std::shared_ptr<SMeshNode> AxisMesh;
+	std::shared_ptr<SMeshNode> AxisMesh; // Probably move this one to GlRenderer?
 	static void Create();
 	static void Destroy();
 	inline static CAssetLoader* Get() { return AssetLoader; }

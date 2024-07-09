@@ -12,11 +12,9 @@
 int main(int argc, char** argv)
 {
 	CEngine* engine = CEngine::Create();
-	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/basicmesh.glb");
+	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/shiba/scene.gltf");
 	assert(gltf);
 	CGlRenderer* renderer = CGlRenderer::Get();
-	auto* pvpShader = &renderer->PvpShaderTextured;
-	pvpShader->Use();
 	engine->PreRenderFuncs.emplace_back([&](float deltaTime)
 	{
 		gltf->Draw(glm::mat4(1.f), renderer->MainDrawContext);

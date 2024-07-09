@@ -319,7 +319,6 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
             newMesh.Name = mesh.name;
             scene.Meshes[newMesh.Name] = newMesh_ptr;
 
-
             for (auto& primitive : mesh.primitives)
             {
                 SGeoSurface surface;

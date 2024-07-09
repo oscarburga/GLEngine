@@ -16,6 +16,5 @@ struct TId
 	inline operator IntType() const { return Id; }
 	inline operator bool() const { return !IsNull(); }
 	inline TId& operator =(IntType id) { Id = id; return *this; }
-private:
 	IntType Id;
 };
