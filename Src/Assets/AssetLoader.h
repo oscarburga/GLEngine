@@ -31,8 +31,8 @@ public:
 	static std::optional<std::vector<SMeshAsset>> LoadGLTFMeshes(std::filesystem::path filePath);
 	std::shared_ptr<SLoadedGLTF> LoadGLTFScene(std::filesystem::path filePath);
 
-	static std::optional<SGPUTexture> LoadTexture2DFromFile(std::filesystem::path const& texturePath);
-	static std::optional<SGPUTexture> LoadTexture2DFromBuffer(void* buffer, int size);
+	static std::optional<SGlTexture> LoadTexture2DFromFile(std::filesystem::path const& texturePath);
+	static std::optional<SGlTexture> LoadTexture2DFromBuffer(void* buffer, int size);
 
 	static std::optional<CGlShader> LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath);
 

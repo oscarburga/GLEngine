@@ -25,7 +25,7 @@ struct SGPUMeshBuffers
 	SGlBufferId VertexBuffer {};
 };
 
-struct SGPUTexture
+struct SGlTexture
 {
 	SGlTextureId Texture {};
 	SGlSamplerId Sampler {};
@@ -45,33 +45,51 @@ struct STexturedMaterial
 {
 	bool bIgnoreLighting = false; 
 	uint32_t PrimitiveType = 4; // GL_TRIANGLES
-	SGPUTexture Diffuse = {};
-	SGPUTexture Specular = {};
+	SGlTexture Diffuse = {};
+	SGlTexture Specular = {};
 	float Shininess = 32.f;
 };
 
-enum class EMaterialPass : uint8_t
+// enum class EMaterialPass : uint8_t
+// {
+// 	MainColor,
+// 	Transparent,
+// 	Other,
+// 	Count
+// };
+
+struct SPbrMaterialUboData
 {
-	MainColor,
-	Transparent,
-	Other,
-	Count
+	glm::vec4 ColorFactor { 1.f, 1.f, 1.f, 1.f };
+	float MetalFactor = 0.f;
+	float RoughFactor = 0.f;
+	// float NormalScale = 0.0f;
+	// float OcclusionStrength = 0.0f;
+	// glm::vec3 EmissiveFactor {};
+	bool bColorBound = false;
+	bool bMetalRoughBound = false;
+	bool bNormalBound = false;
+	bool bOcclusionBound = false;
+	bool bEmissiveBound = false;
+	bool bPadding[3] = {};
+	int ColorTextureUnit = GlBindPoints::Tex::PbrColor;
+	int MetalRoughTextureUnit = GlBindPoints::Tex::PbrMetalRough;
+	int NormalTextureUnit = GlBindPoints::Tex::Normal;
+	int OcclusionTextureUnit = GlBindPoints::Tex::PbrOcclusion;
+	int EmissiveTextureUnit = GlBindPoints::Tex::PbrOcclusion;
 };
 
 struct SPbrMaterial
 {
-	glm::vec4 ColorFactor { 1.f, 1.f, 1.f, 1.f };
-	glm::vec2 MetalRoughFactor {}; // Metal in blue, roughness in green
-	// float NormalScale = 0.0f;
-	// float OcclusionStrength = 0.0f;
-	// glm::vec3 EmissiveFactor {};
-	SGPUTexture ColorTex {}; // Also known as "Albedo"
-	SGPUTexture MetalRoughTex {}; // Metal in blue channel, Roughness in green.
+	SPbrMaterialUboData UboData;
+	SGlTexture ColorTex {}; // Also known as "Albedo"
+	SGlTexture MetalRoughTex {}; // Metal in blue channel, Roughness in green.
 	// SGPUTexture NormalTex {};
 	// SGPUTexture OcclusionText {};
 	// SGPUTexture EmissiveTex {};
 	SGlOffsetBuffer DataBuffer {};
 };
+
 
 struct SGeoSurface 
 {

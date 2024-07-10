@@ -470,10 +470,10 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(std::filesystem::path f
     return scene_ptr;
 }
 
-std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromFile(std::filesystem::path const& texturePath)
+std::optional<SGlTexture> CAssetLoader::LoadTexture2DFromFile(std::filesystem::path const& texturePath)
 {
 	stbi_set_flip_vertically_on_load(true);
-    SGPUTexture gpuTex {};
+    SGlTexture gpuTex {};
 	std::filesystem::path p = CAssetLoader::ContentRoot / texturePath;
 	p.make_preferred();
     int w, h, c;
@@ -486,10 +486,10 @@ std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromFile(std::filesystem::
     return std::nullopt;
 }
 
-std::optional<SGPUTexture> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, int size)
+std::optional<SGlTexture> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, int size)
 {
 	stbi_set_flip_vertically_on_load(true);
-    SGPUTexture gpuTex {};
+    SGlTexture gpuTex {};
     int w, h, c;
 	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, size, &w, &h, &c, 0))
 	{

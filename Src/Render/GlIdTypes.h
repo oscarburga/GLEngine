@@ -46,6 +46,13 @@ namespace GlBindPoints
 	{
 		enum
 		{
+			PbrColor = 0,
+			PhongDiffuse = 0,
+			PbrMetalRough = 1,
+			PhongSpecular = 1,
+			Normal = 2,
+			PbrOcclusion = 3,
+			Emissive = 4,
 			Count
 		};
 	}
