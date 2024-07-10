@@ -1,5 +1,4 @@
 #version 460 core
-#extension GL_EXT_scalar_block_layout : require
 
 in vec3 fsNormal;
 in vec3 fsFragPos;
@@ -7,13 +6,6 @@ in vec2 fsTexCoords;
 in vec4 fsColor;
 
 out vec4 FragColor;
-
-struct SMaterial {
-	// diffuse map texture. Will also use this for ambient color, but could choose to use a separate ambient texture/vector
-	sampler2D diffuseMap; 
-	sampler2D specularMap;
-	float shininess;
-};
 
 /* Light position + colors per phong lightning component. Includes data for all 
 *  directional light, point light and spot lights to avoid duplicating code.  */
@@ -33,7 +25,7 @@ struct SLight {
 #define MAX_POINT_LIGHTS 4
 
 // UBO
-layout (binding = 0, std430) uniform SceneData {
+layout (binding = 0, std140) uniform SceneData {
 	vec4 CameraPos;
 	vec4 AmbientColor;
 	vec4 SunlightDirection;
@@ -43,7 +35,14 @@ layout (binding = 0, std430) uniform SceneData {
 	mat4 ViewProj;
 } sceneData;
 
-uniform SMaterial material;
+struct SMaterial {
+	// diffuse map texture. Will also use this for ambient color, but could choose to use a separate ambient texture/vector
+	sampler2D diffuseMap; 
+	sampler2D specularMap;
+	float shininess;
+};
+
+layout (location = 1) uniform SMaterial material;
 uniform SLight pointLights[MAX_POINT_LIGHTS];
 uniform SLight spotLight;
 uniform bool ignoreLighting;
@@ -98,10 +97,10 @@ vec3 calcSpotLight(SLight light)
 vec3 calcDirLight() 
 {
 	SLight light;
-	light.direction = normalize(vec3(-0.2f, -1.f, -0.3f));
-	light.ambient = vec3(0.1f);
-	light.diffuse = vec3(0.3f);
-	light.specular = vec3(0.5f);
+	light.direction = normalize(sceneData.SunlightDirection.xyz);
+	light.ambient = sceneData.AmbientColor.xyz;
+	light.diffuse = sceneData.SunlightColor.xyz * 0.3f;
+	light.specular = sceneData.SunlightColor.xyz * 0.5f;
 	light.constant = 1.f;
 	light.linear = 0.0f;
 	light.quadratic = 0.0f;

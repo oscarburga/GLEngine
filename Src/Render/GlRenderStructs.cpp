@@ -6,14 +6,6 @@
 #include <iostream>
 #include "GlRenderStructs.h"
 
-void SSolidMaterial::SetUniforms(CGlShader& shader)
-{
-    shader.SetUniform("material.ambient", Ambient);
-    shader.SetUniform("material.diffuse", Diffuse);
-    shader.SetUniform("material.specular", Specular);
-    shader.SetUniform("material.shininess", Shininess);
-}
-
 void SNode::RefreshTransform(const glm::mat4& parentMatrix)
 {
     WorldTransform = parentMatrix * LocalTransform;

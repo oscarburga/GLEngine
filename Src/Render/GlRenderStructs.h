@@ -12,7 +12,7 @@ struct SSceneData
 {
 	glm::vec4 CameraPos {};
 	glm::vec4 AmbientColor {};
-	glm::vec4 SunlightDirection {};
+	glm::vec4 SunlightDirection {}; // 4th component for sun power
 	glm::vec4 SunlightColor {};
 	glm::mat4 View {};
 	glm::mat4 Proj {};
@@ -37,8 +37,6 @@ struct SSolidMaterial
 	glm::vec3 Diffuse {};
 	glm::vec3 Specular {};
 	float Shininess = 32.f;
-	// Temp: utility for easier test setup
-	void SetUniforms(CGlShader& shader);
 };
 
 struct STexturedMaterial 
@@ -66,17 +64,17 @@ struct SPbrMaterialUboData
 	// float NormalScale = 0.0f;
 	// float OcclusionStrength = 0.0f;
 	// glm::vec3 EmissiveFactor {};
-	bool bColorBound = false;
-	bool bMetalRoughBound = false;
-	bool bNormalBound = false;
-	bool bOcclusionBound = false;
-	bool bEmissiveBound = false;
-	bool bPadding[3] = {};
-	int ColorTextureUnit = GlBindPoints::Tex::PbrColor;
-	int MetalRoughTextureUnit = GlBindPoints::Tex::PbrMetalRough;
-	int NormalTextureUnit = GlBindPoints::Tex::Normal;
-	int OcclusionTextureUnit = GlBindPoints::Tex::PbrOcclusion;
-	int EmissiveTextureUnit = GlBindPoints::Tex::PbrOcclusion;
+	// bool bColorBound = false;
+	// bool bMetalRoughBound = false;
+	// bool bNormalBound = false;
+	// bool bOcclusionBound = false;
+	// bool bEmissiveBound = false;
+	// bool bPadding[3] = {};
+	// int ColorTextureUnit = GlBindPoints::Tex::PbrColor;
+	// int MetalRoughTextureUnit = GlBindPoints::Tex::PbrMetalRough;
+	// int NormalTextureUnit = GlBindPoints::Tex::Normal;
+	// int OcclusionTextureUnit = GlBindPoints::Tex::PbrOcclusion;
+	// int EmissiveTextureUnit = GlBindPoints::Tex::PbrOcclusion;
 };
 
 struct SPbrMaterial

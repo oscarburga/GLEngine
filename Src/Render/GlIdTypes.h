@@ -42,20 +42,44 @@ namespace GlBindPoints
 		};
 	}
 
-	namespace Tex // TODO
+}
+
+/*
+* Uniforms should be mostly reserved for binding textures, and single variables like a model matrix
+* (non-array variables and non-struct variables only; use UBO for those cases)
+*/
+namespace GlUniformLocs 
+{
+	enum Loc
 	{
-		enum
-		{
-			PbrColor = 0,
-			PhongDiffuse = 0,
-			PbrMetalRough = 1,
-			PhongSpecular = 1,
-			Normal = 2,
-			PbrOcclusion = 3,
-			Emissive = 4,
-			Count
-		};
-	}
+		ModelMat = 0,
+
+		PbrColorTex = 1,
+		PhongDiffuseTex = 1,
+
+		PbrMetalRoughTex = 2,
+		PhongSpecularTex = 2,
+
+		PhongShininess = 3,
+
+
+		Count
+	};
+}
+
+namespace GlTexUnits
+{
+	enum
+	{
+		PbrColor = 0,
+		PhongDiffuse = 0,
+		PbrMetalRough = 1,
+		PhongSpecular = 1,
+		Normal = 2,
+		PbrOcclusion = 3,
+		Emissive = 4,
+		Count
+	};
 }
 
 

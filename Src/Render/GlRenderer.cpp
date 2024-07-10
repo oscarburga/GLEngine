@@ -104,6 +104,9 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	// Scene data uniform buffer
 	{
 		glCreateBuffers(1, &*SceneDataBuffer);
+		SceneData.AmbientColor = glm::vec4(0.1f);
+		SceneData.SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 1.f);
+		SceneData.SunlightColor = glm::vec4(1.f);
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
@@ -138,14 +141,14 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
 	for (auto& surface : MainDrawContext.OpaqueSurfaces)
 	{
-		PvpShaderTextured.SetUniform("Model", surface.Transform);
-		PvpShaderTextured.SetUniform("material.diffuseMap", 0);
-		PvpShaderTextured.SetUniform("material.specularMap", 1);
-		PvpShaderTextured.SetUniform("material.shininess", surface.Material.Shininess);
-		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material.bIgnoreLighting);
+		PvpShaderTextured.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+		PvpShaderTextured.SetUniform(GlUniformLocs::PhongDiffuseTex, GlTexUnits::PhongDiffuse);
+		PvpShaderTextured.SetUniform(GlUniformLocs::PhongSpecularTex, GlTexUnits::PhongSpecular);
+		PvpShaderTextured.SetUniform(GlUniformLocs::PhongShininess, surface.Material.Shininess);
+		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material.bIgnoreLighting); // this one will be moved to material UBO soon
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
-		glBindTextureUnit(0, *surface.Material.Diffuse.Texture);
-		glBindTextureUnit(1, *surface.Material.Specular.Texture);
+		glBindTextureUnit(GlTexUnits::PhongDiffuse, *surface.Material.Diffuse.Texture);
+		glBindTextureUnit(GlTexUnits::PhongSpecular, *surface.Material.Specular.Texture);
 		if (surface.Buffers.IndexBuffer)
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);

@@ -1,5 +1,4 @@
 #version 460 core
-#extension GL_EXT_scalar_block_layout : require
 
 struct SVertex {
 	vec3 Position;
@@ -10,7 +9,7 @@ struct SVertex {
 };
 
 // UBO
-layout (binding = 0, std430) uniform SceneData {
+layout (binding = 0, std140) uniform SceneData {
 	vec4 CameraPos;
 	vec4 AmbientColor;
 	vec4 SunlightDirection;
@@ -25,7 +24,7 @@ layout (binding = 0, std430) readonly buffer VertexBuffer {
 	SVertex vertices[];
 };
 
-uniform mat4 Model;
+layout (location = 0) uniform mat4 Model;
 
 out vec3 fsNormal;
 out vec3 fsFragPos;
