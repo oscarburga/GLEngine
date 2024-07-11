@@ -11,79 +11,79 @@ std::filesystem::path CAssetLoader::ContentRoot = "C:\\Users\\51956\\Documents\\
 
 namespace
 {
-    template<typename T> 
-    inline bool HasGltfError(fastgltf::Expected<T> const& value, std::filesystem::path const& filePath, const bool bAbortOnFail = false)
-    {
+	template<typename T>
+	inline bool HasGltfError(fastgltf::Expected<T> const& value, std::filesystem::path const& filePath, const bool bAbortOnFail = false)
+	{
 		if (value.error() != fastgltf::Error::None)
-        {
+		{
 			std::cout << std::format("ERROR LOADING GLTF {}\n: {}: {}", filePath.string(), fastgltf::getErrorName(value.error()), fastgltf::getErrorMessage(value.error()));
-            if (bAbortOnFail)
-            {
-                std::abort();
-            }
-            return true;
+			if (bAbortOnFail)
+			{
+				std::abort();
+			}
+			return true;
 		}
-        return false;
-    }
+		return false;
+	}
 
-    inline GLenum ConvertGltfFilter(fastgltf::Filter filter)
-    {
-        const GLenum value = static_cast<GLenum>(filter);
+	inline GLenum ConvertGltfFilter(fastgltf::Filter filter)
+	{
+		const GLenum value = static_cast<GLenum>(filter);
 #ifndef NDEBUG // assert that these can be cast directly to the GLenum
-        switch (filter)
-        {
+		switch (filter)
+		{
 			// nearest samplers
 			case fastgltf::Filter::Nearest: assert(value == GL_NEAREST); break;
 			case fastgltf::Filter::NearestMipMapNearest: assert(value == GL_NEAREST_MIPMAP_NEAREST); break;
 			case fastgltf::Filter::NearestMipMapLinear: assert(value == GL_NEAREST_MIPMAP_LINEAR); break;
-			// linear samplers
+				// linear samplers
 			case fastgltf::Filter::Linear: assert(value == GL_LINEAR); break;
 			case fastgltf::Filter::LinearMipMapNearest: assert(value == GL_LINEAR_MIPMAP_NEAREST); break;
 			case fastgltf::Filter::LinearMipMapLinear: assert(value == GL_LINEAR_MIPMAP_LINEAR); break;
-        }
+		}
 #endif
-        return value;
-    }
+		return value;
+	}
 }
 
 CAssetLoader::~CAssetLoader()
 {
-    // TODO: Free all resources.
+	// TODO: Free all resources.
 }
 
-void CAssetLoader::Create() 
-{ 
-    if (!AssetLoader)
-    {
-        AssetLoader = new CAssetLoader(); 
-        AssetLoader->LoadDefaultAssets();
-    }
+void CAssetLoader::Create()
+{
+	if (!AssetLoader)
+	{
+		AssetLoader = new CAssetLoader();
+		AssetLoader->LoadDefaultAssets();
+	}
 }
 
 void CAssetLoader::Destroy()
 {
-    if (AssetLoader)
-    {
-        delete AssetLoader;
-        AssetLoader = nullptr;
-    }
+	if (AssetLoader)
+	{
+		delete AssetLoader;
+		AssetLoader = nullptr;
+	}
 }
 
 void CAssetLoader::LoadDefaultAssets()
 {
 	// White texture
 	{
-        {
+		{
 			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
 			glCreateTextures(GL_TEXTURE_2D, 1, &*WhiteTexture);
 			glTextureStorage2D(*WhiteTexture, 1, GL_RGBA8, 1, 1);
 			glTextureSubImage2D(*WhiteTexture, 0, 0, 0, 1, 1, GL_RGBA, GL_FLOAT, &white);
-        }
-        WhiteMaterial = std::make_shared<SPbrMaterial>();
-        WhiteMaterial->Name = "DefaultWhite";
-        WhiteMaterial->UboData = SPbrMaterialUboData {};
-        WhiteMaterial->ColorTex.Texture = WhiteTexture;
-        WhiteMaterial->MetalRoughTex.Texture = WhiteTexture;
+		}
+		WhiteMaterial = std::make_shared<SPbrMaterial>();
+		WhiteMaterial->Name = "DefaultWhite";
+		WhiteMaterial->UboData = SPbrMaterialUboData {};
+		WhiteMaterial->ColorTex.Texture = WhiteTexture;
+		WhiteMaterial->MetalRoughTex.Texture = WhiteTexture;
 		uint32_t ubo;
 		glCreateBuffers(1, &ubo);
 		glNamedBufferStorage(ubo, sizeof(SPbrMaterial), WhiteMaterial.get(), 0);
@@ -91,7 +91,7 @@ void CAssetLoader::LoadDefaultAssets()
 	}
 	// Error checkerboard
 	{
-        {
+		{
 			constexpr size_t num64 = (16 * 16 * sizeof(uint32_t)) / sizeof(uint64_t);
 			std::array<uint64_t, num64> pixels;
 			uint64_t gray = glm::packUnorm4x8(glm::vec4(0.3, 0.3, 0.3, 1));
@@ -100,23 +100,23 @@ void CAssetLoader::LoadDefaultAssets()
 			uint64_t grayMag = (magenta << uint64_t(32)) | gray;
 			for (auto it = pixels.begin(); it != pixels.end(); it += 8)
 			{
-				std::fill(it, it+8, magGray);
+				std::fill(it, it + 8, magGray);
 				std::swap(magGray, grayMag);
 			}
 			ErrorTexture = RegisterTexture2D(pixels.data(), 16, 16, 4);
-        }
+		}
 		// glCreateTextures(GL_TEXTURE_2D, 1, &*ErrorTexture);
 		// glTextureStorage2D(*ErrorTexture, 1, GL_RGBA8, 16, 16);
 		// glTextureSubImage2D(*ErrorTexture, 0, 0, 0, 16, 16, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-        ErrorMaterial = std::make_shared<SPbrMaterial>();
-        ErrorMaterial->Name = "DefaultChecker";
-        ErrorMaterial->UboData = SPbrMaterialUboData {};
-        ErrorMaterial->ColorTex.Texture = ErrorTexture;
-        ErrorMaterial->MetalRoughTex.Texture = WhiteTexture;
-        uint32_t ubo;
-        glCreateBuffers(1, &ubo);
-        glNamedBufferStorage(ubo, sizeof(SPbrMaterial), ErrorMaterial.get(), 0);
-        ErrorMaterial->DataBuffer = ubo;
+		ErrorMaterial = std::make_shared<SPbrMaterial>();
+		ErrorMaterial->Name = "DefaultChecker";
+		ErrorMaterial->UboData = SPbrMaterialUboData {};
+		ErrorMaterial->ColorTex.Texture = ErrorTexture;
+		ErrorMaterial->MetalRoughTex.Texture = WhiteTexture;
+		uint32_t ubo;
+		glCreateBuffers(1, &ubo);
+		glNamedBufferStorage(ubo, sizeof(SPbrMaterial), ErrorMaterial.get(), 0);
+		ErrorMaterial->DataBuffer = ubo;
 	}
 	// TODO: XYZ debug axis mesh
 	{
@@ -131,69 +131,69 @@ void CAssetLoader::LoadDefaultAssets()
 		}
 		glCreateBuffers(1, &*axisMesh.MeshBuffers.VertexBuffer);
 		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, GL_DYNAMIC_STORAGE_BIT);
-        auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
-        axisMaterial->bIgnoreLighting = true;
-        axisMaterial->PrimitiveType = GL_LINES;
-        SGeoSurface surface { .Count = 12, .Material = axisMaterial };
+		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
+		axisMaterial->bIgnoreLighting = true;
+		axisMaterial->PrimitiveType = GL_LINES;
+		SGeoSurface surface { .Count = 12, .Material = axisMaterial };
 		axisMesh.Surfaces.push_back(surface);
-        AxisMesh = std::make_shared<SMeshNode>();
-        AxisMesh->LocalTransform = glm::scale(glm::mat4(1.f), glm::vec3(100.f));
-        AxisMesh->RefreshTransform(glm::mat4(1.f));
-        AxisMesh->Mesh = std::make_shared_for_overwrite<SMeshAsset>();
-        AxisMesh->bIgnoreLighting = true;
-        *(AxisMesh->Mesh) = std::move(axisMesh);
+		AxisMesh = std::make_shared<SMeshNode>();
+		AxisMesh->LocalTransform = glm::scale(glm::mat4(1.f), glm::vec3(100.f));
+		AxisMesh->RefreshTransform(glm::mat4(1.f));
+		AxisMesh->Mesh = std::make_shared_for_overwrite<SMeshAsset>();
+		AxisMesh->bIgnoreLighting = true;
+		*(AxisMesh->Mesh) = std::move(axisMesh);
 	}
 }
 
 std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesystem::path filePath)
 {
-    using fastgltf::Expected;
-    using fastgltf::GltfDataBuffer;
+	using fastgltf::Expected;
+	using fastgltf::GltfDataBuffer;
 
-    filePath = ContentRoot / filePath;
-    std::cout << std::format("Loading GLTF: {}\n", filePath.string());
-    Expected<GltfDataBuffer> data = GltfDataBuffer::FromPath(filePath);
+	filePath = ContentRoot / filePath;
+	std::cout << std::format("Loading GLTF: {}\n", filePath.string());
+	Expected<GltfDataBuffer> data = GltfDataBuffer::FromPath(filePath);
 
-    if (HasGltfError(data, filePath))
-        return std::nullopt;
+	if (HasGltfError(data, filePath))
+		return std::nullopt;
 
-    constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::LoadGLBBuffers;
-    fastgltf::Parser parser {};
-    Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
-    if (HasGltfError(gltf, filePath))
-        return std::nullopt;
+	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::LoadGLBBuffers;
+	fastgltf::Parser parser {};
+	Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
+	if (HasGltfError(gltf, filePath))
+		return std::nullopt;
 
-    std::vector<SMeshAsset> meshes;
-    std::vector<uint32_t> indices;
-    std::vector<SVertex> vertices;
+	std::vector<SMeshAsset> meshes;
+	std::vector<uint32_t> indices;
+	std::vector<SVertex> vertices;
 
-    for (fastgltf::Mesh& mesh : gltf->meshes)
-    {
-        indices.clear();
-        vertices.clear();
+	for (fastgltf::Mesh& mesh : gltf->meshes)
+	{
+		indices.clear();
+		vertices.clear();
 
-        SMeshAsset newMesh;
-        newMesh.Name = mesh.name; // Possibly can just move the name?
+		SMeshAsset newMesh;
+		newMesh.Name = mesh.name; // Possibly can just move the name?
 
-        for (auto& primitive : mesh.primitives)
-        {
-            SGeoSurface surface;
-            surface.StartIndex = (uint32_t)indices.size();
-            surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
-            newMesh.Surfaces.push_back(surface);
+		for (auto& primitive : mesh.primitives)
+		{
+			SGeoSurface surface;
+			surface.StartIndex = (uint32_t)indices.size();
+			surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
+			newMesh.Surfaces.push_back(surface);
 
-            size_t startVertex = vertices.size();
-            // Load indices
-            {
-                fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
-                fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
-                {
-                    indices.push_back(index + uint32_t(startVertex));
-                });
-            }
+			size_t startVertex = vertices.size();
+			// Load indices
+			{
+				fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
+				fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
+				{
+					indices.push_back(index + uint32_t(startVertex));
+				});
+			}
 
-            // Load vertex positions
-            {
+			// Load vertex positions
+			{
 				fastgltf::Accessor& posAccessor = gltf->accessors[primitive.findAttribute("POSITION")->accessorIndex];
 				vertices.resize(vertices.size() + posAccessor.count);
 				fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), posAccessor, [&](glm::vec3 v, size_t index)
@@ -206,90 +206,93 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
 						.Color = { 1, 1, 1, 1 }
 					};
 				});
-            }
+			}
 
-            // Load vertex normals
-            if (fastgltf::Attribute* normals = primitive.findAttribute("NORMAL"); normals != primitive.attributes.end())
-            {
-                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), gltf->accessors[normals->accessorIndex], [&](glm::vec3 v, size_t index) 
-                {
-                    vertices[startVertex + index].Normal = v;
-                });
-            }
+			// Load vertex normals
+			if (fastgltf::Attribute* normals = primitive.findAttribute("NORMAL"); normals != primitive.attributes.end())
+			{
+				fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), gltf->accessors[normals->accessorIndex], [&](glm::vec3 v, size_t index)
+				{
+					vertices[startVertex + index].Normal = v;
+				});
+			}
 
-            // Load UVs
-            if (fastgltf::Attribute* uvs = primitive.findAttribute("TEXCOORD_0"); uvs != primitive.attributes.end())
-            {
-                fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf.get(), gltf->accessors[uvs->accessorIndex], [&](glm::vec2 v, size_t index) 
-                {
-                    vertices[startVertex + index].uv_x = v.x;
-                    vertices[startVertex + index].uv_y = v.y;
-                });
-            }
+			// Load UVs
+			if (fastgltf::Attribute* uvs = primitive.findAttribute("TEXCOORD_0"); uvs != primitive.attributes.end())
+			{
+				fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf.get(), gltf->accessors[uvs->accessorIndex], [&](glm::vec2 v, size_t index)
+				{
+					vertices[startVertex + index].uv_x = v.x;
+					vertices[startVertex + index].uv_y = v.y;
+				});
+			}
 
-            // Load vertex colors
-            if (fastgltf::Attribute* colors = primitive.findAttribute("COLOR_0"); colors != primitive.attributes.end())
-            {
-                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[colors->accessorIndex], [&](glm::vec4 v, size_t index) 
-                {
+			// Load vertex colors
+			if (fastgltf::Attribute* colors = primitive.findAttribute("COLOR_0"); colors != primitive.attributes.end())
+			{
+				fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[colors->accessorIndex], [&](glm::vec4 v, size_t index)
+				{
 					vertices[startVertex + index].Color = v;
-                });
-            }
-            // TODO: Load textures
-        }
+				});
+			}
+			// TODO: Load textures
+		}
 		constexpr bool bNormalsAsColors = false;
 		if constexpr (bNormalsAsColors)
 		{
-            for (auto& vtx : vertices)
-                vtx.Color = glm::vec4(vtx.Normal, 1.f);
+			for (auto& vtx : vertices)
+				vtx.Color = glm::vec4(vtx.Normal, 1.f);
 		}
-        GLuint buffers[2] = { 0, 0 }; // vbo, ibo
-        glCreateBuffers(1 + !indices.empty(), buffers);
-        glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), GL_DYNAMIC_STORAGE_BIT);
+		GLuint buffers[2] = { 0, 0 }; // vbo, ibo
+		glCreateBuffers(1 + !indices.empty(), buffers);
+		glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), GL_DYNAMIC_STORAGE_BIT);
 
-        if (!indices.empty())
+		if (!indices.empty())
 			glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), GL_DYNAMIC_STORAGE_BIT);
 
-        newMesh.MeshBuffers.VertexBuffer = buffers[0];
-        newMesh.MeshBuffers.IndexBuffer = buffers[1];
+		newMesh.MeshBuffers.VertexBuffer = buffers[0];
+		newMesh.MeshBuffers.IndexBuffer = buffers[1];
 
-        meshes.emplace_back(std::move(newMesh));
-    }
-    return meshes;
+		meshes.emplace_back(std::move(newMesh));
+	}
+	return meshes;
 }
 
 std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::path& gltfPath)
 {
-    // First check if we've cached this before
-    std::filesystem::path filePath = gltfPath.is_absolute() ? gltfPath : ContentRoot / gltfPath;
-    filePath = filePath.make_preferred().lexically_normal();
-    const std::string filePathStr = filePath.string();
-    if (auto it = SceneCache.find(filePathStr); it != SceneCache.end())
-        return it->second;
+	// First check if we've cached this before
+	std::filesystem::path filePath = gltfPath.is_absolute() ? gltfPath : ContentRoot / gltfPath;
+	filePath = filePath.make_preferred().lexically_normal();
+	const std::string filePathStr = filePath.string();
+	if (auto it = SceneCache.find(filePathStr); it != SceneCache.end())
+	{
+		std::cout << std::format("Found GLTF {} in cache - skipping load\n", gltfPath.string());
+		return it->second;
+	}
 
-    using fastgltf::Expected;
-    using fastgltf::GltfDataBuffer;
+	using fastgltf::Expected;
+	using fastgltf::GltfDataBuffer;
 
-    filePath = ContentRoot / filePath;
-    std::cout << std::format("Loading GLTF: {}\n\tFull path = {}\n", filePathStr, filePath.string());
-    Expected<GltfDataBuffer> data = GltfDataBuffer::FromPath(filePath);
+	filePath = ContentRoot / filePath;
+	std::cout << std::format("Loading GLTF: {}\n\tFull path = {}\n", gltfPath.string(), filePathStr);
+	Expected<GltfDataBuffer> data = GltfDataBuffer::FromPath(filePath);
 
-    if (HasGltfError(data, filePath))
-        return nullptr;
+	if (HasGltfError(data, filePath))
+		return nullptr;
 
-    // TODO: just use TRS instead of matrices later
-    constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::DecomposeNodeMatrices;
-    fastgltf::Parser parser {};
-    Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
-    if (HasGltfError(gltf, filePath))
-        return nullptr;
+	// TODO: just use TRS instead of matrices later
+	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::DecomposeNodeMatrices;
+	fastgltf::Parser parser {};
+	Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
+	if (HasGltfError(gltf, filePath))
+		return nullptr;
 
 
-    std::shared_ptr<SLoadedGLTF> scene_ptr = std::make_shared<SLoadedGLTF>();
-    auto& scene = *scene_ptr.get();
+	std::shared_ptr<SLoadedGLTF> scene_ptr = std::make_shared<SLoadedGLTF>();
+	auto& scene = *scene_ptr.get();
 
-    // Samplers
-    {
+	// Samplers
+	{
 		for (fastgltf::Sampler& sampler : gltf->samplers)
 		{
 			// break; // TEMP while materials are pending, not using the samplers.
@@ -300,188 +303,207 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			GLenum minFilter = ConvertGltfFilter(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
 			GLenum magFilter = ConvertGltfFilter(sampler.magFilter.value_or(fastgltf::Filter::Nearest));
 			glTextureParameteri(*id, GL_TEXTURE_MIN_FILTER, minFilter);
-			glTextureParameteri(*id, GL_TEXTURE_MAG_FILTER, magFilter); 
+			glTextureParameteri(*id, GL_TEXTURE_MAG_FILTER, magFilter);
 			scene.Samplers.emplace_back(id);
 		}
-    }
+	}
 
-    // TODO: proper texture loading
-    std::vector<SGlTextureId> textures;
-    {
+	std::vector<SGlTextureId> textures;
+	{
 		for (fastgltf::Image& image : gltf->images)
 		{
-            std::visit(fastgltf::visitor {
-					[&](auto& arg) 
-					{
-                        std::cerr << std::format("\tError processing image \"{}\"\n", image.name); 
-                        textures.emplace_back(ErrorTexture);
-					},
-					[&](fastgltf::sources::URI& imagePath)
-					{
-                        assert(imagePath.fileByteOffset == 0);
-                        assert(imagePath.uri.isLocalPath());
-                        std::filesystem::path fullImagePath = filePath;
-                        fullImagePath.remove_filename();
-                        fullImagePath /= imagePath.uri.c_str();
-						std::cout << std::format("\tLoading image with path {}\n", imagePath.uri.c_str());
-                        std::cout << std::format("\tFull path = {}\n", fullImagePath.string());
-						if (auto texture = LoadTexture2DFromFile(fullImagePath))
-						{
-                            std::cout << std::format("\t\tsuccessfully loaded {}\n", imagePath.uri.c_str());
-                            textures.emplace_back(*texture);
-						}
-                        else
-                        {
-                            std::cout << "kapoot\n";
-                        }
-					},
-                }, image.data);
+			std::string errMsg {};
+			auto FailLoad = [&](auto&... args)
+			{
+				std::cerr << std::format("\tError processing image \"{}\"\n\t{}", image.name, errMsg);
+				textures.emplace_back(ErrorTexture);
+			};
+			auto LoadFromURI = [&](fastgltf::sources::URI& imagePath)
+			{
+				assert(imagePath.fileByteOffset == 0);
+				assert(imagePath.uri.isLocalPath());
+				std::filesystem::path fullImagePath = filePath;
+				fullImagePath.remove_filename();
+				fullImagePath /= imagePath.uri.c_str();
+				// std::cout << std::format("\tLoading image with path {}\n", imagePath.uri.c_str());
+				// std::cout << std::format("\tFull path = {}\n", fullImagePath.string());
+				if (auto texture = LoadTexture2DFromFile(fullImagePath, false))
+				{
+					// std::cout << std::format("\t\tsuccessfully loaded {}\n", imagePath.uri.c_str());
+					textures.emplace_back(*texture);
+				}
+				else
+				{
+					errMsg = std::format("\tFailed to load URI image {}\n", imagePath.uri.c_str());
+					FailLoad();
+				}
+			};
+			auto LoadFromVector = [&](fastgltf::sources::Vector& vector)
+			{
+				if (auto texture = LoadTexture2DFromBuffer(vector.bytes.data(), (int)vector.bytes.size(), false))
+				{
+					textures.emplace_back(*texture);
+				}
+				else
+				{
+					errMsg = std::format("\tFailed to load image {} from vector\n", image.name);
+					FailLoad();
+				}
+			};
+			auto LoadFromBufferView = [&](fastgltf::sources::BufferView& view)
+			{
+				auto& bufferView = gltf->bufferViews[view.bufferViewIndex];
+				auto& buffer = gltf->buffers[bufferView.bufferIndex];
+				std::visit(fastgltf::visitor { FailLoad, LoadFromVector }, buffer.data);
+			};
+
+			std::visit(fastgltf::visitor { FailLoad, LoadFromURI, LoadFromVector, LoadFromBufferView }, image.data);
 		}
-    }
+	}
 
-    // Material
-    std::vector<std::shared_ptr<SPbrMaterial>> materials;
-    for (fastgltf::Material& gltfMat : gltf->materials)
-    {
-        std::shared_ptr<SPbrMaterial> PbrMaterial = std::make_shared<SPbrMaterial>();
-        SPbrMaterial& outMat = *PbrMaterial;
-        outMat.Name = gltfMat.name;
-        scene.Materials[outMat.Name] = PbrMaterial;
-        materials.emplace_back(PbrMaterial);
+	// Material
+	std::vector<std::shared_ptr<SPbrMaterial>> materials;
+	for (fastgltf::Material& gltfMat : gltf->materials)
+	{
+		std::shared_ptr<SPbrMaterial> PbrMaterial = std::make_shared<SPbrMaterial>();
+		SPbrMaterial& outMat = *PbrMaterial;
+		outMat.Name = gltfMat.name;
+		scene.Materials[outMat.Name] = PbrMaterial;
+		materials.emplace_back(PbrMaterial);
 
-        outMat.UboData.ColorFactor.x = gltfMat.pbrData.baseColorFactor[0];
-        outMat.UboData.ColorFactor.y = gltfMat.pbrData.baseColorFactor[1];
-        outMat.UboData.ColorFactor.z = gltfMat.pbrData.baseColorFactor[2];
-        outMat.UboData.ColorFactor.w = gltfMat.pbrData.baseColorFactor[3];
+		outMat.UboData.ColorFactor.x = gltfMat.pbrData.baseColorFactor[0];
+		outMat.UboData.ColorFactor.y = gltfMat.pbrData.baseColorFactor[1];
+		outMat.UboData.ColorFactor.z = gltfMat.pbrData.baseColorFactor[2];
+		outMat.UboData.ColorFactor.w = gltfMat.pbrData.baseColorFactor[3];
 
-        outMat.UboData.MetalFactor = gltfMat.pbrData.metallicFactor;
-        outMat.UboData.RoughFactor = gltfMat.pbrData.roughnessFactor;
+		outMat.UboData.MetalFactor = gltfMat.pbrData.metallicFactor;
+		outMat.UboData.RoughFactor = gltfMat.pbrData.roughnessFactor;
 
 		// TODO blending
-        // if (gltfMat.alphaMode == fastgltf::AlphaMode::Blend) 
+		// if (gltfMat.alphaMode == fastgltf::AlphaMode::Blend) 
 
-        // Default textures
-        outMat.ColorTex.Texture = ErrorTexture;
-        outMat.MetalRoughTex.Texture = WhiteTexture;
+		// Default textures
+		outMat.ColorTex.Texture = ErrorTexture;
+		outMat.MetalRoughTex.Texture = WhiteTexture;
 
-        // Textures
-        if (gltfMat.pbrData.baseColorTexture)
-        {
-            size_t texIndex = gltf->textures[gltfMat.pbrData.baseColorTexture->textureIndex].imageIndex.value();
-            size_t samplerIndex = gltf->textures[gltfMat.pbrData.baseColorTexture->textureIndex].samplerIndex.value();
+		// Textures
+		if (gltfMat.pbrData.baseColorTexture)
+		{
+			size_t texIndex = gltf->textures[gltfMat.pbrData.baseColorTexture->textureIndex].imageIndex.value();
+			size_t samplerIndex = gltf->textures[gltfMat.pbrData.baseColorTexture->textureIndex].samplerIndex.value();
 
-            outMat.ColorTex.Texture = textures[texIndex];
-            outMat.ColorTex.Sampler = scene.Samplers[samplerIndex];
-        }
+			outMat.ColorTex.Texture = textures[texIndex];
+			outMat.ColorTex.Sampler = scene.Samplers[samplerIndex];
+		}
 
-        // Uniform buffer setup
-        glCreateBuffers(1, &*outMat.DataBuffer);
-        glNamedBufferStorage(*outMat.DataBuffer, sizeof(SPbrMaterialUboData), &outMat.UboData, GL_DYNAMIC_STORAGE_BIT);
-    };
+		// Uniform buffer setup
+		glCreateBuffers(1, &*outMat.DataBuffer);
+		glNamedBufferStorage(*outMat.DataBuffer, sizeof(SPbrMaterialUboData), &outMat.UboData, GL_DYNAMIC_STORAGE_BIT);
+	};
 
-    // Load meshes
-    std::vector<std::shared_ptr<SMeshAsset>> meshes;
-    {
-        std::vector<uint32_t> indices;
-        std::vector<SVertex> vertices;
-        for (fastgltf::Mesh& mesh : gltf->meshes)
-        {
-            indices.clear();
-            vertices.clear();
+	// Load meshes
+	std::vector<std::shared_ptr<SMeshAsset>> meshes;
+	{
+		std::vector<uint32_t> indices;
+		std::vector<SVertex> vertices;
+		for (fastgltf::Mesh& mesh : gltf->meshes)
+		{
+			indices.clear();
+			vertices.clear();
 
-            std::shared_ptr<SMeshAsset> newMesh_ptr = std::make_shared<SMeshAsset>();
-            SMeshAsset& newMesh = *newMesh_ptr.get();
-            newMesh.Name = mesh.name;
-            scene.Meshes[newMesh.Name] = newMesh_ptr;
+			std::shared_ptr<SMeshAsset> newMesh_ptr = std::make_shared<SMeshAsset>();
+			SMeshAsset& newMesh = *newMesh_ptr.get();
+			newMesh.Name = mesh.name;
+			scene.Meshes[newMesh.Name] = newMesh_ptr;
 
-            for (auto& primitive : mesh.primitives)
-            {
-                SGeoSurface surface;
-                surface.StartIndex = (uint32_t)indices.size();
-                surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
-                size_t startVertex = vertices.size();
-                // Load indices
-                {
-                    fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
-                    fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
-                    {
-                        indices.push_back(index + uint32_t(startVertex));
-                    });
-                }
+			for (auto& primitive : mesh.primitives)
+			{
+				SGeoSurface surface;
+				surface.StartIndex = (uint32_t)indices.size();
+				surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
+				size_t startVertex = vertices.size();
+				// Load indices
+				{
+					fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
+					fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
+					{
+						indices.push_back(index + uint32_t(startVertex));
+					});
+				}
 
-                // Load vertex positions
-                {
-                    fastgltf::Accessor& posAccessor = gltf->accessors[primitive.findAttribute("POSITION")->accessorIndex];
-                    vertices.resize(vertices.size() + posAccessor.count);
-                    fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), posAccessor, [&](glm::vec3 v, size_t index)
-                    {
-                        vertices[startVertex + index] = {
-                            .Position = v,
-                            .uv_x = 0.0f,
-                            .Normal = { 1, 0, 0 },
-                            .uv_y = 0.0f,
-                            .Color = { 1, 1, 1, 1 }
-                        };
-                    });
-                }
+				// Load vertex positions
+				{
+					fastgltf::Accessor& posAccessor = gltf->accessors[primitive.findAttribute("POSITION")->accessorIndex];
+					vertices.resize(vertices.size() + posAccessor.count);
+					fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), posAccessor, [&](glm::vec3 v, size_t index)
+					{
+						vertices[startVertex + index] = {
+							.Position = v,
+							.uv_x = 0.0f,
+							.Normal = { 1, 0, 0 },
+							.uv_y = 0.0f,
+							.Color = { 1, 1, 1, 1 }
+						};
+					});
+				}
 
-                // Load vertex normals
-                if (fastgltf::Attribute* normals = primitive.findAttribute("NORMAL"); normals != primitive.attributes.end())
-                {
-                    fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), gltf->accessors[normals->accessorIndex], [&](glm::vec3 v, size_t index)
-                    {
-                        vertices[startVertex + index].Normal = v;
-                    });
-                }
+				// Load vertex normals
+				if (fastgltf::Attribute* normals = primitive.findAttribute("NORMAL"); normals != primitive.attributes.end())
+				{
+					fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), gltf->accessors[normals->accessorIndex], [&](glm::vec3 v, size_t index)
+					{
+						vertices[startVertex + index].Normal = v;
+					});
+				}
 
-                // Load UVs
-                if (fastgltf::Attribute* uvs = primitive.findAttribute("TEXCOORD_0"); uvs != primitive.attributes.end())
-                {
-                    fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf.get(), gltf->accessors[uvs->accessorIndex], [&](glm::vec2 v, size_t index)
-                    {
-                        vertices[startVertex + index].uv_x = v.x;
-                        vertices[startVertex + index].uv_y = v.y;
-                    });
-                }
+				// Load UVs
+				if (fastgltf::Attribute* uvs = primitive.findAttribute("TEXCOORD_0"); uvs != primitive.attributes.end())
+				{
+					fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf.get(), gltf->accessors[uvs->accessorIndex], [&](glm::vec2 v, size_t index)
+					{
+						vertices[startVertex + index].uv_x = v.x;
+						vertices[startVertex + index].uv_y = v.y;
+					});
+				}
 
-                // Load vertex colors
-                if (fastgltf::Attribute* colors = primitive.findAttribute("COLOR_0"); colors != primitive.attributes.end())
-                {
-                    fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[colors->accessorIndex], [&](glm::vec4 v, size_t index)
-                    {
-                        vertices[startVertex + index].Color = v;
-                    });
-                }
+				// Load vertex colors
+				if (fastgltf::Attribute* colors = primitive.findAttribute("COLOR_0"); colors != primitive.attributes.end())
+				{
+					fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[colors->accessorIndex], [&](glm::vec4 v, size_t index)
+					{
+						vertices[startVertex + index].Color = v;
+					});
+				}
 
-                surface.Material = primitive.materialIndex ? materials[*primitive.materialIndex] : ErrorMaterial;
-                newMesh.Surfaces.push_back(surface);
-            }
-            constexpr bool bNormalsAsColors = false;
-            if constexpr (bNormalsAsColors)
-            {
-                for (auto& vtx : vertices)
-                    vtx.Color = glm::vec4(vtx.Normal, 1.f);
-            }
+				surface.Material = primitive.materialIndex ? materials[*primitive.materialIndex] : ErrorMaterial;
+				newMesh.Surfaces.push_back(surface);
+			}
+			constexpr bool bNormalsAsColors = false;
+			if constexpr (bNormalsAsColors)
+			{
+				for (auto& vtx : vertices)
+					vtx.Color = glm::vec4(vtx.Normal, 1.f);
+			}
 
-            // Create and submit glbuffers
-            {
-                GLuint buffers[2] = { 0, 0 }; // vbo, ibo
-                glCreateBuffers(1 + !indices.empty(), buffers);
-                glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), GL_DYNAMIC_STORAGE_BIT);
+			// Create and submit glbuffers
+			{
+				GLuint buffers[2] = { 0, 0 }; // vbo, ibo
+				glCreateBuffers(1 + !indices.empty(), buffers);
+				glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), GL_DYNAMIC_STORAGE_BIT);
 
-                if (!indices.empty())
-                    glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), GL_DYNAMIC_STORAGE_BIT);
+				if (!indices.empty())
+					glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), GL_DYNAMIC_STORAGE_BIT);
 
-                newMesh.MeshBuffers.VertexBuffer = buffers[0];
-                newMesh.MeshBuffers.IndexBuffer = buffers[1];
-            }
+				newMesh.MeshBuffers.VertexBuffer = buffers[0];
+				newMesh.MeshBuffers.IndexBuffer = buffers[1];
+			}
 
-            meshes.emplace_back(newMesh_ptr);
-        }
-    }
+			meshes.emplace_back(newMesh_ptr);
+		}
+	}
 
-    // Load Nodes
-    {
+	// Load Nodes
+	{
 		std::vector<std::shared_ptr<SNode>> nodes;
 		for (fastgltf::Node& node : gltf->nodes)
 		{
@@ -499,13 +521,13 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			scene.Nodes[node.name.c_str()] = newNode;
 
 			std::visit(
-				fastgltf::visitor 
-				{ 
-					[&](fastgltf::math::fmat4x4 matrix) 
-					{ 
+				fastgltf::visitor
+				{
+					[&](fastgltf::math::fmat4x4 matrix)
+					{
 						memcpy(&newNode->LocalTransform, matrix.data(), sizeof(matrix));
-					}, 
-					[&](fastgltf::TRS transform) 
+					},
+					[&](fastgltf::TRS transform)
 					{
 						glm::vec3 tl(transform.translation[0], transform.translation[1], transform.translation[2]);
 						glm::quat rot(transform.rotation[3], transform.rotation[0], transform.rotation[1], transform.rotation[2]);
@@ -514,11 +536,11 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 						glm::mat4 rm = glm::mat4_cast(rot);
 						glm::mat4 sm = glm::scale(glm::mat4(1.f), sc);
 						newNode->LocalTransform = tm * rm * sm;
-					} 
+					}
 				},
 				node.transform);
 		}
-        // Set children and parents
+		// Set children and parents
 		for (int i = 0; i < gltf->nodes.size(); i++)
 		{
 			fastgltf::Node& node = gltf->nodes[i];
@@ -526,81 +548,81 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			for (size_t& child : node.children)
 			{
 				sceneNode->Children.emplace_back(nodes[child]);
-                nodes[child]->Parent = sceneNode;
+				nodes[child]->Parent = sceneNode;
 			}
 		}
-        // Get root nodes
-        for (auto& node : nodes)
-        {
-            if (node->Parent.lock() == nullptr)
-            {
-                scene.RootNodes.emplace_back(node);
-                node->RefreshTransform(glm::mat4(1.f));
-            }
-        }
-    }
-    SceneCache[filePathStr] = scene_ptr;
-    std::cout << std::format("Loaded GLTF successfully: {}\n", filePathStr);
-    return scene_ptr;
+		// Get root nodes
+		for (auto& node : nodes)
+		{
+			if (node->Parent.lock() == nullptr)
+			{
+				scene.RootNodes.emplace_back(node);
+				node->RefreshTransform(glm::mat4(1.f));
+			}
+		}
+	}
+	SceneCache[filePathStr] = scene_ptr;
+	std::cout << std::format("Loaded GLTF successfully: {}\n", gltfPath.string());
+	return scene_ptr;
 }
 
-std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromFile(std::filesystem::path const& texturePath)
+std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromFile(std::filesystem::path const& texturePath, bool bFlipVertical)
 {
-	stbi_set_flip_vertically_on_load(true);
+	stbi_set_flip_vertically_on_load(bFlipVertical);
 	std::filesystem::path p = texturePath.is_absolute() ? texturePath : CAssetLoader::ContentRoot / texturePath;
 	p.make_preferred();
-    int w, h, c;
+	int w, h, c;
 	if (stbi_uc* texData = stbi_load(p.string().c_str(), &w, &h, &c, 0))
 	{
-        SGlTextureId id = RegisterTexture2D(texData, w, h, c);
+		SGlTextureId id = RegisterTexture2D(texData, w, h, c);
 		stbi_image_free(texData);
-        return id;
+		return id;
 	}
-    return std::nullopt;
+	return std::nullopt;
 }
 
-std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, int size)
+std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, int size, bool bFlipVertical)
 {
-	stbi_set_flip_vertically_on_load(true);
-    int w, h, c;
+	stbi_set_flip_vertically_on_load(bFlipVertical);
+	int w, h, c;
 	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, size, &w, &h, &c, 0))
 	{
-        SGlTextureId id = RegisterTexture2D(texData, w, h, c);
+		SGlTextureId id = RegisterTexture2D(texData, w, h, c);
 		stbi_image_free(texData);
-        return id;
+		return id;
 	}
-    return std::nullopt;
+	return std::nullopt;
 }
 
 std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath)
 {
-    auto vs = LoadSingleShader(vsPath, GL_VERTEX_SHADER);
-    auto fs = LoadSingleShader(fsPath, GL_FRAGMENT_SHADER);
-    auto destroyShaders = Defer([&]()
-    {
-        if (vs)
-            glDeleteShader(*vs);
+	auto vs = LoadSingleShader(vsPath, GL_VERTEX_SHADER);
+	auto fs = LoadSingleShader(fsPath, GL_FRAGMENT_SHADER);
+	auto destroyShaders = Defer([&]()
+	{
+		if (vs)
+			glDeleteShader(*vs);
 
-        if (fs)
-            glDeleteShader(*fs);
-    });
+		if (fs)
+			glDeleteShader(*fs);
+	});
 
-    unsigned int program = glCreateProgram();
+	unsigned int program = glCreateProgram();
 	glAttachShader(program, *vs);
-    glAttachShader(program, *fs);
-    glLinkProgram(program);
+	glAttachShader(program, *fs);
+	glLinkProgram(program);
 
 	int success;
 	glGetProgramiv(program, GL_LINK_STATUS, &success);
 	if (!success)
 	{
 		glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
-        std::cerr << std::format("Program failed to link:\nVertex Shader:{}\nFragment Shader: {}\nLog:\n{}\n", 
-            vsPath.string(), fsPath.string(), infoLog);
-        glDeleteProgram(program);
-        return std::nullopt;
+		std::cerr << std::format("Program failed to link:\nVertex Shader:{}\nFragment Shader: {}\nLog:\n{}\n",
+			vsPath.string(), fsPath.string(), infoLog);
+		glDeleteProgram(program);
+		return std::nullopt;
 	}
-    return CGlShader(program);
+	return CGlShader(program);
 }
 
 std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType)
@@ -608,16 +630,16 @@ std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem
 	// shaderCode.clear();
 	std::stringstream shaderStream;
 	// open at end, read as binary since we just want the flat raw content, don't care about any text format.
-    std::filesystem::path path = ContentRoot / shaderPath;
-	std::ifstream shaderFile(path, std::ios_base::ate | std::ios_base::binary); 
+	std::filesystem::path path = ContentRoot / shaderPath;
+	std::ifstream shaderFile(path, std::ios_base::ate | std::ios_base::binary);
 	if (!shaderFile)
 	{
 		std::cerr << "Failed to open shader file " << path << '\n';
 		return std::nullopt;
 	}
 	size_t codeLen = shaderFile.tellg();
-    std::string shaderCode(codeLen + 1, 0);
-    shaderCode.resize(codeLen + 1); // +1 for null terminator
+	std::string shaderCode(codeLen + 1, 0);
+	shaderCode.resize(codeLen + 1); // +1 for null terminator
 	shaderFile.seekg(0);
 	shaderFile.read(shaderCode.data(), codeLen);
 	shaderCode.back() = 0; // null-terminated string
@@ -627,35 +649,35 @@ std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem
 	const char* shaderStr = shaderCode.c_str();
 	glShaderSource(shader, 1, &shaderStr, nullptr);
 	glCompileShader(shader);
-    if (!CheckShaderCompilation(shader, path))
-    {
-        glDeleteShader(shader);
-        return std::nullopt;
-    }
-    return shader;
+	if (!CheckShaderCompilation(shader, path))
+	{
+		glDeleteShader(shader);
+		return std::nullopt;
+	}
+	return shader;
 }
 
 SGlTextureId CAssetLoader::RegisterTexture2D(void* stbiTexData, int width, int height, int channels)
 {
 	// Set sensible defaults and generate mipmaps
-    SGlTextureId Id;
-    assert(channels > 0 && channels != 2 && channels < 5);
-    static constexpr GLenum inputFormatsByChannels[5] = { GL_NONE, GL_RED, GL_NONE, GL_RGB, GL_RGBA };
-    static constexpr GLenum storageFormatsByChannels[5] = { GL_NONE, GL_R8, GL_NONE, GL_RGB8, GL_RGBA8 };
-    const GLenum inputFormat = inputFormatsByChannels[channels];
-    const GLenum storageFormat = storageFormatsByChannels[channels];
-    glCreateTextures(GL_TEXTURE_2D, 1, &*Id);
-	const int numLevels = 1 + (int)std::floor(std::log2(std::max(width, height))); 
+	SGlTextureId Id;
+	assert(channels > 0 && channels != 2 && channels < 5);
+	static constexpr GLenum inputFormatsByChannels[5] = { GL_NONE, GL_RED, GL_NONE, GL_RGB, GL_RGBA };
+	static constexpr GLenum storageFormatsByChannels[5] = { GL_NONE, GL_R8, GL_NONE, GL_RGB8, GL_RGBA8 };
+	const GLenum inputFormat = inputFormatsByChannels[channels];
+	const GLenum storageFormat = storageFormatsByChannels[channels];
+	glCreateTextures(GL_TEXTURE_2D, 1, &*Id);
+	const int numLevels = 1 + (int)std::floor(std::log2(std::max(width, height)));
 	glTextureParameteri(Id, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTextureParameteri(Id, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	// float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
 	// glTextureParameterfv(gpuTex.Texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
 	glTextureParameteri(Id, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-	glTextureParameteri(Id, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
+	glTextureParameteri(Id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTextureStorage2D(Id, numLevels, storageFormat, width, height);
 	glTextureSubImage2D(Id, 0, 0, 0, width, height, inputFormat, GL_UNSIGNED_BYTE, stbiTexData);
 	glGenerateTextureMipmap(Id);
-    return Id;
+	return Id;
 }
 
 bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesystem::path& shaderPath)
@@ -665,10 +687,10 @@ bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesy
 	if (!success)
 	{
 		glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
-        std::cerr << std::format("Error - Shader compilation failed\nShaderPath: {}\n Error log:\n{}\n",
-            shaderPath.string(),
-            infoLog);
-        return false;
+		std::cerr << std::format("Error - Shader compilation failed\nShaderPath: {}\n Error log:\n{}\n",
+			shaderPath.string(),
+			infoLog);
+		return false;
 	}
-    return true;
+	return true;
 }

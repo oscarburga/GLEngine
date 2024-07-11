@@ -5,11 +5,13 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
     "Shaders/*.vert"
     "Shaders/*.comp"
 )
+
 # GLTF files
 file(GLOB_RECURSE GLTF_FILES
     "GLTF/*.gltf"
     "GLTF/*.glb"
 )
+
 # Texture files
 file(GLOB_RECURSE TEXTURE_FILES
     "Textures/*.png"
