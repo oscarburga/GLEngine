@@ -17,9 +17,10 @@ using SGlTextureId = TId<uint32_t, struct TexIdTag, 0>;
 using SGlSamplerId = TId<uint32_t, struct TexIdTag, 0>;
 using SGlShaderId = TId<uint32_t, struct ShaderIdTag, 0>;
 
-struct SGlOffsetBuffer : public SGlBufferId
+struct SGlBufferRangeId : public SGlBufferId
 {
-	uint32_t Offset = 0;
+	uint32_t StartOffset = 0;
+	uint32_t Size = 0;
 };
 
 namespace GlBindPoints

@@ -21,6 +21,8 @@ class CAssetLoader
 public:
 	SGlTextureId WhiteTexture;
 	SGlTextureId ErrorTexture;
+	std::shared_ptr<SPbrMaterial> WhiteMaterial;
+	std::shared_ptr<SPbrMaterial> ErrorMaterial;
 	std::shared_ptr<SMeshNode> AxisMesh; // Probably move this one to GlRenderer?
 	static void Create();
 	static void Destroy();
@@ -28,11 +30,14 @@ public:
 
 	void LoadDefaultAssets();
 
+private:
 	static std::optional<std::vector<SMeshAsset>> LoadGLTFMeshes(std::filesystem::path filePath);
-	std::shared_ptr<SLoadedGLTF> LoadGLTFScene(std::filesystem::path filePath);
+public:
+	std::shared_ptr<SLoadedGLTF> LoadGLTFScene(const std::filesystem::path& filePath);
 
-	static std::optional<SGlTexture> LoadTexture2DFromFile(std::filesystem::path const& texturePath);
-	static std::optional<SGlTexture> LoadTexture2DFromBuffer(void* buffer, int size);
+	// TODO: these return SGlTextureId
+	static std::optional<SGlTextureId> LoadTexture2DFromFile(std::filesystem::path const& texturePath);
+	static std::optional<SGlTextureId> LoadTexture2DFromBuffer(void* buffer, int size);
 
 	static std::optional<CGlShader> LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath);
 

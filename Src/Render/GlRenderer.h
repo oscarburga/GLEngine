@@ -33,4 +33,6 @@ private:
 	SGlVaoId EmptyVao {};
 	SGlBufferId SceneDataBuffer;
 	static CGlRenderer* Renderer;
+public:
+	static int UBOOffsetAlignment;
 };

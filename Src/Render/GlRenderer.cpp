@@ -6,6 +6,7 @@
 #include <Assets/AssetLoader.h>
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
+int CGlRenderer::UBOOffsetAlignment = 16;
 
 namespace
 {
@@ -89,12 +90,19 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	}
 	{
 		int value;
+		glGetIntegerv(GL_MAX_UNIFORM_LOCATIONS, &value);
+		std::cout << std::format("Max Uniform Variable Locations : {}\n", value);
+		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &value);
+		std::cout << std::format("Max Uniform Buffer Bindings: {}\n", value);
 		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &value);
 		std::cout << std::format("Max Uniform Block Size: {} bytes ({} Mb)\n", value, value / (1'000'000));
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &value);
 		std::cout << std::format("Max Uniform Blocks (VERTEX SHADER): {}\n", value);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &value);
 		std::cout << std::format("Max Uniform Blocks (FRAGMENT SHADER): {}\n", value);
+		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value);
+		std::cout << std::format("Uniform Block Buffer Offset Alignment: {}\n", value);
+		UBOOffsetAlignment = value;
 	}
 	// Create & bind empty VAO
 	{
@@ -144,19 +152,19 @@ void CGlRenderer::RenderScene(float deltaTime)
 		PvpShaderTextured.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
 		PvpShaderTextured.SetUniform(GlUniformLocs::PhongDiffuseTex, GlTexUnits::PhongDiffuse);
 		PvpShaderTextured.SetUniform(GlUniformLocs::PhongSpecularTex, GlTexUnits::PhongSpecular);
-		PvpShaderTextured.SetUniform(GlUniformLocs::PhongShininess, surface.Material.Shininess);
-		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material.bIgnoreLighting); // this one will be moved to material UBO soon
+		PvpShaderTextured.SetUniform(GlUniformLocs::PhongShininess, 32.f); 
+		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
-		glBindTextureUnit(GlTexUnits::PhongDiffuse, *surface.Material.Diffuse.Texture);
-		glBindTextureUnit(GlTexUnits::PhongSpecular, *surface.Material.Specular.Texture);
+		glBindTextureUnit(GlTexUnits::PhongDiffuse, *surface.Material->ColorTex.Texture);
+		glBindTextureUnit(GlTexUnits::PhongSpecular, *surface.Material->ColorTex.Texture);
 		if (surface.Buffers.IndexBuffer)
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
-			glDrawElements(surface.Material.PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+			glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
 		}
 		else
 		{
-			glDrawArrays(surface.Material.PrimitiveType, surface.FirstIndex, surface.IndexCount);
+			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
 		}
 	}
 	MainDrawContext.OpaqueSurfaces.clear();

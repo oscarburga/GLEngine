@@ -59,8 +59,8 @@ struct STexturedMaterial
 struct SPbrMaterialUboData
 {
 	glm::vec4 ColorFactor { 1.f, 1.f, 1.f, 1.f };
-	float MetalFactor = 0.f;
-	float RoughFactor = 0.f;
+	float MetalFactor = 1.f;
+	float RoughFactor = 1.f;
 	// float NormalScale = 0.0f;
 	// float OcclusionStrength = 0.0f;
 	// glm::vec3 EmissiveFactor {};
@@ -79,13 +79,16 @@ struct SPbrMaterialUboData
 
 struct SPbrMaterial
 {
+	bool bIgnoreLighting = false;
+	uint32_t PrimitiveType = 4; // GL_TRIANGLES
+	std::string Name;
 	SPbrMaterialUboData UboData;
 	SGlTexture ColorTex {}; // Also known as "Albedo"
 	SGlTexture MetalRoughTex {}; // Metal in blue channel, Roughness in green.
 	// SGPUTexture NormalTex {};
 	// SGPUTexture OcclusionText {};
 	// SGPUTexture EmissiveTex {};
-	SGlOffsetBuffer DataBuffer {};
+	SGlBufferId DataBuffer {};
 };
 
 
@@ -93,8 +96,7 @@ struct SGeoSurface
 {
 	uint32_t StartIndex = 0;
 	uint32_t Count = 0;
-	// Temp: this eventually needs to be replaced by a ref/ptr to a material
-	STexturedMaterial Material = {}; 
+	std::shared_ptr<SPbrMaterial> Material {};
 };
 
 // template<typename Base, typename Derived>
@@ -133,7 +135,7 @@ struct SRenderObject
 	uint32_t IndexCount;
 	uint32_t FirstIndex;
 	SGPUMeshBuffers Buffers;
-	STexturedMaterial Material;
+	std::shared_ptr<SPbrMaterial> Material;
 	glm::mat4 Transform;
 };
 
@@ -162,6 +164,7 @@ struct SNode : public IRenderable
 
 struct SMeshNode : public SNode
 {
+	bool bIgnoreLighting = false;
 	std::shared_ptr<SMeshAsset> Mesh;
 	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
 };
@@ -171,6 +174,7 @@ struct SLoadedGLTF : public IRenderable
 	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
 	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
 	std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures;
+	std::unordered_map<std::string, std::shared_ptr<SPbrMaterial>> Materials;
 	std::vector<SGlSamplerId> Samplers;
 	std::vector<std::shared_ptr<SNode>> RootNodes;
 	// TODO: Materials
@@ -181,5 +185,3 @@ struct SLoadedGLTF : public IRenderable
 	void ClearAll();
 	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override; // TODO
 };
-
-struct SGLTFMaterial; // TODO
