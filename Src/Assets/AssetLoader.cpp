@@ -10,7 +10,7 @@
 std::filesystem::path CAssetLoader::ContentRoot = "C:\\Users\\51956\\Documents\\OpenGLProjects\\GLEngine\\Content";
 
 namespace
-{
+{ 
 	template<typename T>
 	inline bool HasGltfError(fastgltf::Expected<T> const& value, std::filesystem::path const& filePath, const bool bAbortOnFail = false)
 	{
@@ -36,7 +36,7 @@ namespace
 			case fastgltf::Filter::Nearest: assert(value == GL_NEAREST); break;
 			case fastgltf::Filter::NearestMipMapNearest: assert(value == GL_NEAREST_MIPMAP_NEAREST); break;
 			case fastgltf::Filter::NearestMipMapLinear: assert(value == GL_NEAREST_MIPMAP_LINEAR); break;
-				// linear samplers
+			// linear samplers
 			case fastgltf::Filter::Linear: assert(value == GL_LINEAR); break;
 			case fastgltf::Filter::LinearMipMapNearest: assert(value == GL_LINEAR_MIPMAP_NEAREST); break;
 			case fastgltf::Filter::LinearMipMapLinear: assert(value == GL_LINEAR_MIPMAP_LINEAR); break;
@@ -75,18 +75,15 @@ void CAssetLoader::LoadDefaultAssets()
 	{
 		{
 			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
-			glCreateTextures(GL_TEXTURE_2D, 1, &*WhiteTexture);
-			glTextureStorage2D(*WhiteTexture, 1, GL_RGBA8, 1, 1);
-			glTextureSubImage2D(*WhiteTexture, 0, 0, 0, 1, 1, GL_RGBA, GL_FLOAT, &white);
+			WhiteTexture = RegisterTexture2D(&white, 1, 1, 4);
 		}
 		WhiteMaterial = std::make_shared<SPbrMaterial>();
 		WhiteMaterial->Name = "DefaultWhite";
-		WhiteMaterial->UboData = SPbrMaterialUboData {};
+		WhiteMaterial->UboData = SPbrMaterialUboData { .bColorBound = true };
 		WhiteMaterial->ColorTex.Texture = WhiteTexture;
-		WhiteMaterial->MetalRoughTex.Texture = WhiteTexture;
 		uint32_t ubo;
 		glCreateBuffers(1, &ubo);
-		glNamedBufferStorage(ubo, sizeof(SPbrMaterial), WhiteMaterial.get(), 0);
+		glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &WhiteMaterial->UboData, 0);
 		WhiteMaterial->DataBuffer = ubo;
 	}
 	// Error checkerboard
@@ -110,12 +107,11 @@ void CAssetLoader::LoadDefaultAssets()
 		// glTextureSubImage2D(*ErrorTexture, 0, 0, 0, 16, 16, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
 		ErrorMaterial = std::make_shared<SPbrMaterial>();
 		ErrorMaterial->Name = "DefaultChecker";
-		ErrorMaterial->UboData = SPbrMaterialUboData {};
+		ErrorMaterial->UboData = SPbrMaterialUboData { .bColorBound = true };
 		ErrorMaterial->ColorTex.Texture = ErrorTexture;
-		ErrorMaterial->MetalRoughTex.Texture = WhiteTexture;
 		uint32_t ubo;
 		glCreateBuffers(1, &ubo);
-		glNamedBufferStorage(ubo, sizeof(SPbrMaterial), ErrorMaterial.get(), 0);
+		glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &ErrorMaterial->UboData, 0);
 		ErrorMaterial->DataBuffer = ubo;
 	}
 	// TODO: XYZ debug axis mesh
@@ -130,17 +126,22 @@ void CAssetLoader::LoadDefaultAssets()
 			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
 		}
 		glCreateBuffers(1, &*axisMesh.MeshBuffers.VertexBuffer);
-		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, GL_DYNAMIC_STORAGE_BIT);
+		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, 0);
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
 		axisMaterial->bIgnoreLighting = true;
 		axisMaterial->PrimitiveType = GL_LINES;
+		{
+			uint32_t ubo;
+			glCreateBuffers(1, &ubo);
+			glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &axisMaterial->UboData, 0);
+			axisMaterial->DataBuffer = ubo;
+		}
 		SGeoSurface surface { .Count = 12, .Material = axisMaterial };
 		axisMesh.Surfaces.push_back(surface);
 		AxisMesh = std::make_shared<SMeshNode>();
 		AxisMesh->LocalTransform = glm::scale(glm::mat4(1.f), glm::vec3(100.f));
 		AxisMesh->RefreshTransform(glm::mat4(1.f));
 		AxisMesh->Mesh = std::make_shared_for_overwrite<SMeshAsset>();
-		AxisMesh->bIgnoreLighting = true;
 		*(AxisMesh->Mesh) = std::move(axisMesh);
 	}
 }
@@ -245,10 +246,10 @@ std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesys
 		}
 		GLuint buffers[2] = { 0, 0 }; // vbo, ibo
 		glCreateBuffers(1 + !indices.empty(), buffers);
-		glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), GL_DYNAMIC_STORAGE_BIT);
+		glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), 0);
 
 		if (!indices.empty())
-			glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), GL_DYNAMIC_STORAGE_BIT);
+			glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), 0);
 
 		newMesh.MeshBuffers.VertexBuffer = buffers[0];
 		newMesh.MeshBuffers.IndexBuffer = buffers[1];
@@ -338,26 +339,31 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					FailLoad();
 				}
 			};
-			auto LoadFromVector = [&](fastgltf::sources::Vector& vector)
+			size_t byteOffset = 0; // a bit hacky, i don't like it, but it will get the job done
+			auto LoadFromBytesAndSize = [&](void* bytes, size_t size)
 			{
-				if (auto texture = LoadTexture2DFromBuffer(vector.bytes.data(), (int)vector.bytes.size(), false))
+				void* buffer = reinterpret_cast<uint8_t*>(bytes) + byteOffset;
+				if (auto texture = LoadTexture2DFromBuffer(buffer, size, false))
 				{
 					textures.emplace_back(*texture);
 				}
 				else
 				{
-					errMsg = std::format("\tFailed to load image {} from vector\n", image.name);
+					errMsg = std::format("\tFailed to load image {} from ptr and size\n", image.name);
 					FailLoad();
 				}
 			};
+			auto LoadFromVector = [&](fastgltf::sources::Vector& vector) { LoadFromBytesAndSize(vector.bytes.data(), vector.bytes.size()); };
+			auto LoadFromArray = [&](fastgltf::sources::Array& vector) { LoadFromBytesAndSize(vector.bytes.data(), vector.bytes.size()); };
 			auto LoadFromBufferView = [&](fastgltf::sources::BufferView& view)
 			{
 				auto& bufferView = gltf->bufferViews[view.bufferViewIndex];
 				auto& buffer = gltf->buffers[bufferView.bufferIndex];
-				std::visit(fastgltf::visitor { FailLoad, LoadFromVector }, buffer.data);
+				byteOffset = bufferView.byteOffset;
+				std::visit(fastgltf::visitor { FailLoad, LoadFromVector, LoadFromArray }, buffer.data);
 			};
 
-			std::visit(fastgltf::visitor { FailLoad, LoadFromURI, LoadFromVector, LoadFromBufferView }, image.data);
+			std::visit(fastgltf::visitor { FailLoad, LoadFromURI, LoadFromVector, LoadFromArray, LoadFromBufferView }, image.data);
 		}
 	}
 
@@ -379,26 +385,57 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		outMat.UboData.MetalFactor = gltfMat.pbrData.metallicFactor;
 		outMat.UboData.RoughFactor = gltfMat.pbrData.roughnessFactor;
 
-		// TODO blending
-		// if (gltfMat.alphaMode == fastgltf::AlphaMode::Blend) 
+		switch (gltfMat.alphaMode)
+		{
+			case fastgltf::AlphaMode::Opaque:
+			{
+				outMat.UboData.AlphaCutoff = 1.f; 
+				outMat.MaterialPass = EMaterialPass::MainColor; 
+				break;
+			}
+			case fastgltf::AlphaMode::Mask:
+			{
+				outMat.UboData.AlphaCutoff = gltfMat.alphaCutoff;
+				outMat.MaterialPass = EMaterialPass::MainColorMasked; 
+				break;
+			}
+			case fastgltf::AlphaMode::Blend:
+			{
+				outMat.UboData.AlphaCutoff = 0.01f;
+				outMat.MaterialPass = EMaterialPass::Transparent; 
+				break;
+			}
+		}
 
 		// Default textures
 		outMat.ColorTex.Texture = ErrorTexture;
 		outMat.MetalRoughTex.Texture = WhiteTexture;
 
 		// Textures
-		if (gltfMat.pbrData.baseColorTexture)
+		auto SetTexture = [&](std::optional<fastgltf::TextureInfo>& gltfTexture, SGlTexture& outTex, const char* texType = "")
 		{
-			size_t texIndex = gltf->textures[gltfMat.pbrData.baseColorTexture->textureIndex].imageIndex.value();
-			size_t samplerIndex = gltf->textures[gltfMat.pbrData.baseColorTexture->textureIndex].samplerIndex.value();
+			if (gltfTexture)
+			{
+				size_t texIndex = gltf->textures[gltfTexture->textureIndex].imageIndex.value();
+				size_t samplerIndex = gltf->textures[gltfTexture->textureIndex].samplerIndex.value();
 
-			outMat.ColorTex.Texture = textures[texIndex];
-			outMat.ColorTex.Sampler = scene.Samplers[samplerIndex];
-		}
+				outTex.Texture = textures[texIndex];
+				outTex.Sampler = scene.Samplers[samplerIndex];
+				return true;
+			}
+			const std::string alphaMode = gltfMat.alphaMode == fastgltf::AlphaMode::Opaque ? "Opaque" : 
+				(gltfMat.alphaMode == fastgltf::AlphaMode::Mask ? "Masked" : "Transparent");
+			std::cerr << std::format("\tMaterial {} has no {} texture (alpha mode is {})\n", gltfMat.name, texType, alphaMode);
+			return false;
+		};
+
+		outMat.UboData.bColorBound = SetTexture(gltfMat.pbrData.baseColorTexture, outMat.ColorTex, "color");
+		outMat.UboData.bMetalRoughBound = SetTexture(gltfMat.pbrData.metallicRoughnessTexture, outMat.MetalRoughTex, "metalRough");
+		// TODO normal map, AO, emissive, etc
 
 		// Uniform buffer setup
 		glCreateBuffers(1, &*outMat.DataBuffer);
-		glNamedBufferStorage(*outMat.DataBuffer, sizeof(SPbrMaterialUboData), &outMat.UboData, GL_DYNAMIC_STORAGE_BIT);
+		glNamedBufferStorage(*outMat.DataBuffer, sizeof(SPbrMaterialUboData), &outMat.UboData, 0);
 	};
 
 	// Load meshes
@@ -489,10 +526,10 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			{
 				GLuint buffers[2] = { 0, 0 }; // vbo, ibo
 				glCreateBuffers(1 + !indices.empty(), buffers);
-				glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), GL_DYNAMIC_STORAGE_BIT);
+				glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), 0);
 
 				if (!indices.empty())
-					glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), GL_DYNAMIC_STORAGE_BIT);
+					glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), 0);
 
 				newMesh.MeshBuffers.VertexBuffer = buffers[0];
 				newMesh.MeshBuffers.IndexBuffer = buffers[1];
@@ -578,18 +615,26 @@ std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromFile(std::filesystem:
 		stbi_image_free(texData);
 		return id;
 	}
+	else
+	{
+		std::cerr << std::format("LoadTexture2DFromFile failed:\n\t{}\n", stbi_failure_reason());
+	}
 	return std::nullopt;
 }
 
-std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, int size, bool bFlipVertical)
+std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, size_t size, bool bFlipVertical)
 {
 	stbi_set_flip_vertically_on_load(bFlipVertical);
 	int w, h, c;
-	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, size, &w, &h, &c, 0))
+	if (stbi_uc* texData = stbi_load_from_memory((stbi_uc*)buffer, (int)size, &w, &h, &c, 0))
 	{
 		SGlTextureId id = RegisterTexture2D(texData, w, h, c);
 		stbi_image_free(texData);
 		return id;
+	}
+	else
+	{
+		std::cerr << std::format("LoadTexture2DFromBuffer failed:\n\t{}\n", stbi_failure_reason());
 	}
 	return std::nullopt;
 }
@@ -668,8 +713,8 @@ SGlTextureId CAssetLoader::RegisterTexture2D(void* stbiTexData, int width, int h
 	const GLenum storageFormat = storageFormatsByChannels[channels];
 	glCreateTextures(GL_TEXTURE_2D, 1, &*Id);
 	const int numLevels = 1 + (int)std::floor(std::log2(std::max(width, height)));
-	glTextureParameteri(Id, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTextureParameteri(Id, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	glTextureParameteri(Id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTextureParameteri(Id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
 	// glTextureParameterfv(gpuTex.Texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
 	glTextureParameteri(Id, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);

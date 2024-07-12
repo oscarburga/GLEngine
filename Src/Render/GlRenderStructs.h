@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <unordered_map>
 #include "glm/glm.hpp"
 #include "GlIdTypes.h"
@@ -48,24 +49,29 @@ struct STexturedMaterial
 	float Shininess = 32.f;
 };
 
-// enum class EMaterialPass : uint8_t
-// {
-// 	MainColor,
-// 	Transparent,
-// 	Other,
-// 	Count
-// };
+namespace EMaterialPass
+{
+	enum Pass : uint8_t
+	{
+		First,
+		MainColor = First,
+		MainColorMasked,
+		Transparent,
+		Count
+	};
+}
 
 struct SPbrMaterialUboData
 {
 	glm::vec4 ColorFactor { 1.f, 1.f, 1.f, 1.f };
 	float MetalFactor = 1.f;
 	float RoughFactor = 1.f;
+	float AlphaCutoff = 0.f;
 	// float NormalScale = 0.0f;
 	// float OcclusionStrength = 0.0f;
 	// glm::vec3 EmissiveFactor {};
-	// bool bColorBound = false;
-	// bool bMetalRoughBound = false;
+	uint32_t bColorBound = false;
+	uint32_t bMetalRoughBound = false;
 	// bool bNormalBound = false;
 	// bool bOcclusionBound = false;
 	// bool bEmissiveBound = false;
@@ -80,15 +86,16 @@ struct SPbrMaterialUboData
 struct SPbrMaterial
 {
 	bool bIgnoreLighting = false;
+	EMaterialPass::Pass MaterialPass {};
 	uint32_t PrimitiveType = 4; // GL_TRIANGLES
-	std::string Name;
-	SPbrMaterialUboData UboData;
+	std::string Name {};
 	SGlTexture ColorTex {}; // Also known as "Albedo"
 	SGlTexture MetalRoughTex {}; // Metal in blue channel, Roughness in green.
 	// SGPUTexture NormalTex {};
 	// SGPUTexture OcclusionText {};
 	// SGPUTexture EmissiveTex {};
 	SGlBufferId DataBuffer {};
+	SPbrMaterialUboData UboData {};
 };
 
 
@@ -141,6 +148,7 @@ struct SRenderObject
 
 struct SDrawContext
 {
+	std::array<std::vector<SRenderObject>, EMaterialPass::Count> Surfaces;
 	std::vector<SRenderObject> OpaqueSurfaces;
 };
 
@@ -164,7 +172,6 @@ struct SNode : public IRenderable
 
 struct SMeshNode : public SNode
 {
-	bool bIgnoreLighting = false;
 	std::shared_ptr<SMeshAsset> Mesh;
 	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
 };

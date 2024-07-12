@@ -25,7 +25,7 @@ void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
         glm::mat4 nodeMatrix = topMatrix * WorldTransform;
         for (auto& surface : Mesh->Surfaces)
         {
-            auto& draw = drawCtx.OpaqueSurfaces.emplace_back();
+            auto& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
             draw.IndexCount = surface.Count;
             draw.FirstIndex = surface.StartIndex;
             draw.Material = surface.Material;
@@ -38,7 +38,7 @@ void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
 
 void SLoadedGLTF::ClearAll()
 {
-    // This might be a bad idea... its fine if noone else is using buffers from this node graph
+    // This might be a bad idea... its fine if noone else is using buffers/etc from this graph though.
     for (auto& [name, meshPtr] : Meshes)
     {
         if (meshPtr->MeshBuffers.IndexBuffer)
@@ -48,6 +48,12 @@ void SLoadedGLTF::ClearAll()
     }
     Meshes.clear();
 
+    // Delete samplers
+    static_assert(sizeof(SGlSamplerId) == sizeof(uint32_t));
+    glDeleteSamplers((GLsizei)Samplers.size(), reinterpret_cast<uint32_t*>(Samplers.data()));
+    Samplers.clear();
+
+    // Delete textures
     for (auto& [name, texPtr] : Textures)
     {
         if (texPtr->Id)
@@ -55,9 +61,13 @@ void SLoadedGLTF::ClearAll()
     }
     Textures.clear();
 
-    static_assert(sizeof(SGlSamplerId) == sizeof(uint32_t));
-    glDeleteSamplers((GLsizei)Samplers.size(), reinterpret_cast<uint32_t*>(Samplers.data()));
-    Samplers.clear();
+    // Delete materials
+    for (auto& [name, matPtr] : Materials)
+    {
+        if (matPtr->DataBuffer)
+            glDeleteBuffers(1, &*matPtr->DataBuffer);
+    }
+
 }
 
 void SLoadedGLTF::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)

@@ -30,6 +30,7 @@ namespace GlBindPoints
 		enum 
 		{
 			SceneData = 0,
+			PbrMaterial = 1,
 			Count
 		};
 	}

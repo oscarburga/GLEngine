@@ -12,7 +12,7 @@
 int main(int argc, char** argv)
 {
 	CEngine* engine = CEngine::Create();
-	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/shiba/scene.gltf");
+	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/anxiety/source/vefq.glb");
 	assert(gltf);
 	CGlRenderer* renderer = CGlRenderer::Get();
 	engine->PreRenderFuncs.emplace_back([&](float deltaTime)

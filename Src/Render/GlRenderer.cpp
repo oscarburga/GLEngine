@@ -120,7 +120,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	}
 
 	CAssetLoader::Create();
-	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_textured.frag"))
+	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_pbr.frag"))
 	{
 		PvpShaderTextured = *pvpShader;
 	}
@@ -147,27 +147,33 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShaderTextured.Use();
 	ActiveCamera.UpdateSceneData(SceneData);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
-	for (auto& surface : MainDrawContext.OpaqueSurfaces)
+	for (uint8_t pass = EMaterialPass::First; pass < EMaterialPass::Count; pass++)
 	{
-		PvpShaderTextured.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-		PvpShaderTextured.SetUniform(GlUniformLocs::PhongDiffuseTex, GlTexUnits::PhongDiffuse);
-		PvpShaderTextured.SetUniform(GlUniformLocs::PhongSpecularTex, GlTexUnits::PhongSpecular);
-		PvpShaderTextured.SetUniform(GlUniformLocs::PhongShininess, 32.f); 
-		PvpShaderTextured.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
-		glBindTextureUnit(GlTexUnits::PhongDiffuse, *surface.Material->ColorTex.Texture);
-		glBindTextureUnit(GlTexUnits::PhongSpecular, *surface.Material->ColorTex.Texture);
-		if (surface.Buffers.IndexBuffer)
+		for (auto& surface : MainDrawContext.Surfaces[pass])
 		{
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
-			glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+			PvpShaderTextured.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+			// PvpShaderTextured.SetUniform(GlUniformLocs::PhongDiffuseTex, GlTexUnits::PhongDiffuse);
+			// PvpShaderTextured.SetUniform(GlUniformLocs::PhongSpecularTex, GlTexUnits::PhongSpecular);
+			// PvpShaderTextured.SetUniform(GlUniformLocs::PhongShininess, 32.f);
+			PvpShaderTextured.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
+			PvpShaderTextured.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
+			PvpShaderTextured.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
+			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->ColorTex.Texture);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
+			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
+			if (surface.Buffers.IndexBuffer)
+			{
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
+				glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+			}
+			else
+			{
+				glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
+			}
 		}
-		else
-		{
-			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
-		}
+		MainDrawContext.Surfaces[pass].clear();
 	}
-	MainDrawContext.OpaqueSurfaces.clear();
 }
 
 void CGlRenderer::OnWindowResize(CEngine* Engine, const SViewport& Viewport)
