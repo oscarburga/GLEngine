@@ -10,7 +10,7 @@ void SNode::RefreshTransform(const glm::mat4& parentMatrix)
 {
     WorldTransform = parentMatrix * LocalTransform;
     for (auto& child : Children)
-        child->RefreshTransform(parentMatrix);
+        child->RefreshTransform(WorldTransform);
 }
 
 void SNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)

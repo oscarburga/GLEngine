@@ -20,6 +20,11 @@ struct SSceneData
 	glm::mat4 ViewProj {};
 };
 
+struct SSceneLights
+{
+
+};
+
 struct SGPUMeshBuffers
 {
 	SGlBufferId IndexBuffer {};

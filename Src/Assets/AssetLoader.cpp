@@ -412,7 +412,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		outMat.MetalRoughTex.Texture = WhiteTexture;
 
 		// Textures
-		auto SetTexture = [&](std::optional<fastgltf::TextureInfo>& gltfTexture, SGlTexture& outTex, const char* texType = "")
+		auto SetTexture = [&](std::optional<fastgltf::TextureInfo>& gltfTexture, SGlTexture& outTex, const char* texType = "") -> bool
 		{
 			if (gltfTexture)
 			{
@@ -706,9 +706,9 @@ SGlTextureId CAssetLoader::RegisterTexture2D(void* stbiTexData, int width, int h
 {
 	// Set sensible defaults and generate mipmaps
 	SGlTextureId Id;
-	assert(channels > 0 && channels != 2 && channels < 5);
-	static constexpr GLenum inputFormatsByChannels[5] = { GL_NONE, GL_RED, GL_NONE, GL_RGB, GL_RGBA };
-	static constexpr GLenum storageFormatsByChannels[5] = { GL_NONE, GL_R8, GL_NONE, GL_RGB8, GL_RGBA8 };
+	assert(channels > 0 && channels < 5);
+	static constexpr GLenum inputFormatsByChannels[5] = { GL_NONE, GL_RED, GL_RG, GL_RGB, GL_RGBA };
+	static constexpr GLenum storageFormatsByChannels[5] = { GL_NONE, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8 };
 	const GLenum inputFormat = inputFormatsByChannels[channels];
 	const GLenum storageFormat = storageFormatsByChannels[channels];
 	glCreateTextures(GL_TEXTURE_2D, 1, &*Id);
