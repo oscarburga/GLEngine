@@ -159,9 +159,11 @@ void CGlRenderer::RenderScene(float deltaTime)
 			PvpShaderTextured.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
 			PvpShaderTextured.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
 			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
-			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->ColorTex.Texture);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
+			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
+			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
+			glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
 			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
 			if (surface.Buffers.IndexBuffer)
 			{
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
