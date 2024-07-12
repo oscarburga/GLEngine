@@ -120,7 +120,7 @@ vec3 CalcDirLight()
 {
 	vec3 L = normalize(-sceneData.SunlightDirection.xyz);
 	vec3 H = normalize(V + L);
-	vec3 radiance = sceneData.SunlightColor.xyz;
+	vec3 radiance = sceneData.SunlightColor.xyz * sceneData.SunlightDirection.w;
 	return CalcReflectance(L, H, radiance);
 }
 

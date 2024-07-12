@@ -113,7 +113,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	{
 		glCreateBuffers(1, &*SceneDataBuffer);
 		SceneData.AmbientColor = glm::vec4(0.1f);
-		SceneData.SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 1.f);
+		SceneData.SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 2.f);
 		SceneData.SunlightColor = glm::vec4(1.f);
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
