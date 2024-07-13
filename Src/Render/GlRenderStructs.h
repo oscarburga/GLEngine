@@ -153,8 +153,8 @@ struct SRenderObject
 
 struct SDrawContext
 {
+	std::vector<size_t> BlendIndices;
 	std::array<std::vector<SRenderObject>, EMaterialPass::Count> Surfaces;
-	std::vector<SRenderObject> OpaqueSurfaces;
 };
 
 class IRenderable

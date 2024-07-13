@@ -7,6 +7,13 @@
 #include <glm/gtc/random.hpp>
 #include <optional>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#define GLM_GTX_norm
+
+#ifdef GLM_GTX_norm
+#include <glm/gtx/norm.hpp>
+#endif
+
 
 using glm::vec2;
 using glm::vec3;

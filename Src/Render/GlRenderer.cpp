@@ -3,6 +3,7 @@
 #include <iostream>
 #include <format>
 #include "Engine.h"
+#include "Math/EngineMath.h"
 #include <Assets/AssetLoader.h>
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
@@ -122,7 +123,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	CAssetLoader::Create();
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_pbr.frag"))
 	{
-		PvpShaderTextured = *pvpShader;
+		PvpShader = *pvpShader;
 	}
 	else assert(false);
 
@@ -144,20 +145,18 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	
 	// Refresh SceneData
-	PvpShaderTextured.Use();
+	PvpShader.Use();
 	ActiveCamera.UpdateSceneData(SceneData);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
-	for (uint8_t pass = EMaterialPass::First; pass < EMaterialPass::Count; pass++)
+	// Draw main color & masked objects
+	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
 		for (auto& surface : MainDrawContext.Surfaces[pass])
 		{
-			PvpShaderTextured.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-			// PvpShaderTextured.SetUniform(GlUniformLocs::PhongDiffuseTex, GlTexUnits::PhongDiffuse);
-			// PvpShaderTextured.SetUniform(GlUniformLocs::PhongSpecularTex, GlTexUnits::PhongSpecular);
-			// PvpShaderTextured.SetUniform(GlUniformLocs::PhongShininess, 32.f);
-			PvpShaderTextured.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
-			PvpShaderTextured.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
-			PvpShaderTextured.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+			PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
+			PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
+			PvpShader.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
 			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
 			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
 			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
@@ -175,6 +174,50 @@ void CGlRenderer::RenderScene(float deltaTime)
 			}
 		}
 		MainDrawContext.Surfaces[pass].clear();
+	}
+
+	// Draw Blend, unoptimized sort. Could keep a sorted map and only update objects that move
+	// Basic blend, no OIT
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		auto& blendObjects = MainDrawContext.Surfaces[EMaterialPass::Transparent];
+		auto& indices = MainDrawContext.BlendIndices;
+		indices.resize(blendObjects.size());
+		std::iota(indices.begin(), indices.end(), 0); 
+		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](size_t& i, size_t& j)
+		{
+			const glm::vec3& loci = blendObjects[i].Transform[3];
+			const glm::vec3& locj = blendObjects[j].Transform[3];
+			const float di = glm::length2(camPos - loci);
+			const float dj = glm::length2(camPos - locj);
+			return di > dj;
+		});
+		for (size_t& idx : indices)
+		{
+			auto& surface = blendObjects[idx];
+			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+			PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
+			PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
+			PvpShader.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
+			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
+			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
+			glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
+			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
+			if (surface.Buffers.IndexBuffer)
+			{
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
+				glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+			}
+			else
+			{
+				glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
+			}
+		}
+		blendObjects.clear();
+		glDisable(GL_BLEND);
 	}
 }
 

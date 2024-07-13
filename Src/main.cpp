@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 {
 	CEngine* engine = CEngine::Create();
 	// auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/anxiety/source/vefq.glb");
-	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/tacos.glb");
+	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/fighterjet/scene.gltf");
 	auto anxiety = CAssetLoader::Get()->LoadGLTFScene("GLTF/anxiety/source/vefq.glb");
 	assert(gltf && anxiety);
 	CGlRenderer* renderer = CGlRenderer::Get();

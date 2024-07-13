@@ -18,7 +18,7 @@ class CGlRenderer
 public:
 	SGlCamera ActiveCamera {};
 	SSceneData SceneData {};
-	CGlShader PvpShaderTextured { 0 };
+	CGlShader PvpShader { 0 };
 	static CGlRenderer* Create(GlFunctionLoaderFuncType func);
 	void Init(GlFunctionLoaderFuncType func);
 	static void Destroy();

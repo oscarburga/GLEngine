@@ -172,5 +172,5 @@ void main()
 
 	InitPbr(srcColor);
 	vec3 result = CalcPbr();
-	FragColor = vec4(result, 1.0) * fsColor;
+	FragColor = vec4(result, srcColor.a) * fsColor;
 }
