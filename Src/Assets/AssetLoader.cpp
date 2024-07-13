@@ -16,7 +16,7 @@ namespace
 	{
 		if (value.error() != fastgltf::Error::None)
 		{
-			std::cout << std::format("ERROR LOADING GLTF {}\n: {}: {}", filePath.string(), fastgltf::getErrorName(value.error()), fastgltf::getErrorMessage(value.error()));
+			std::cout << std::format("ERROR LOADING GLTF {}:\n\t{}: {}\n", filePath.string(), fastgltf::getErrorName(value.error()), fastgltf::getErrorMessage(value.error()));
 			if (bAbortOnFail)
 			{
 				std::abort();
@@ -144,119 +144,6 @@ void CAssetLoader::LoadDefaultAssets()
 		AxisMesh->Mesh = std::make_shared_for_overwrite<SMeshAsset>();
 		*(AxisMesh->Mesh) = std::move(axisMesh);
 	}
-}
-
-std::optional<std::vector<SMeshAsset>> CAssetLoader::LoadGLTFMeshes(std::filesystem::path filePath)
-{
-	using fastgltf::Expected;
-	using fastgltf::GltfDataBuffer;
-
-	filePath = ContentRoot / filePath;
-	std::cout << std::format("Loading GLTF: {}\n", filePath.string());
-	Expected<GltfDataBuffer> data = GltfDataBuffer::FromPath(filePath);
-
-	if (HasGltfError(data, filePath))
-		return std::nullopt;
-
-	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::LoadGLBBuffers;
-	fastgltf::Parser parser {};
-	Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
-	if (HasGltfError(gltf, filePath))
-		return std::nullopt;
-
-	std::vector<SMeshAsset> meshes;
-	std::vector<uint32_t> indices;
-	std::vector<SVertex> vertices;
-
-	for (fastgltf::Mesh& mesh : gltf->meshes)
-	{
-		indices.clear();
-		vertices.clear();
-
-		SMeshAsset newMesh;
-		newMesh.Name = mesh.name; // Possibly can just move the name?
-
-		for (auto& primitive : mesh.primitives)
-		{
-			SGeoSurface surface;
-			surface.StartIndex = (uint32_t)indices.size();
-			surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
-			newMesh.Surfaces.push_back(surface);
-
-			size_t startVertex = vertices.size();
-			// Load indices
-			{
-				fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
-				fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
-				{
-					indices.push_back(index + uint32_t(startVertex));
-				});
-			}
-
-			// Load vertex positions
-			{
-				fastgltf::Accessor& posAccessor = gltf->accessors[primitive.findAttribute("POSITION")->accessorIndex];
-				vertices.resize(vertices.size() + posAccessor.count);
-				fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), posAccessor, [&](glm::vec3 v, size_t index)
-				{
-					vertices[startVertex + index] = {
-						.Position = v,
-						.uv_x = 0.0f,
-						.Normal = { 1, 0, 0 },
-						.uv_y = 0.0f,
-						.Color = { 1, 1, 1, 1 }
-					};
-				});
-			}
-
-			// Load vertex normals
-			if (fastgltf::Attribute* normals = primitive.findAttribute("NORMAL"); normals != primitive.attributes.end())
-			{
-				fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), gltf->accessors[normals->accessorIndex], [&](glm::vec3 v, size_t index)
-				{
-					vertices[startVertex + index].Normal = v;
-				});
-			}
-
-			// Load UVs
-			if (fastgltf::Attribute* uvs = primitive.findAttribute("TEXCOORD_0"); uvs != primitive.attributes.end())
-			{
-				fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf.get(), gltf->accessors[uvs->accessorIndex], [&](glm::vec2 v, size_t index)
-				{
-					vertices[startVertex + index].uv_x = v.x;
-					vertices[startVertex + index].uv_y = v.y;
-				});
-			}
-
-			// Load vertex colors
-			if (fastgltf::Attribute* colors = primitive.findAttribute("COLOR_0"); colors != primitive.attributes.end())
-			{
-				fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[colors->accessorIndex], [&](glm::vec4 v, size_t index)
-				{
-					vertices[startVertex + index].Color = v;
-				});
-			}
-			// TODO: Load textures
-		}
-		constexpr bool bNormalsAsColors = false;
-		if constexpr (bNormalsAsColors)
-		{
-			for (auto& vtx : vertices)
-				vtx.Color = glm::vec4(vtx.Normal, 1.f);
-		}
-		GLuint buffers[2] = { 0, 0 }; // vbo, ibo
-		glCreateBuffers(1 + !indices.empty(), buffers);
-		glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), 0);
-
-		if (!indices.empty())
-			glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), 0);
-
-		newMesh.MeshBuffers.VertexBuffer = buffers[0];
-		newMesh.MeshBuffers.IndexBuffer = buffers[1];
-
-		meshes.emplace_back(std::move(newMesh));
-	}
-	return meshes;
 }
 
 std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::path& gltfPath)

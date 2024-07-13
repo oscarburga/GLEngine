@@ -30,8 +30,6 @@ public:
 
 	void LoadDefaultAssets();
 
-private:
-	static std::optional<std::vector<SMeshAsset>> LoadGLTFMeshes(std::filesystem::path filePath);
 public:
 	std::shared_ptr<SLoadedGLTF> LoadGLTFScene(const std::filesystem::path& filePath);
 
