@@ -28,6 +28,7 @@ void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
             auto& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
             draw.IndexCount = surface.Count;
             draw.FirstIndex = surface.StartIndex;
+            draw.Bounds = surface.Bounds;
             draw.Material = surface.Material;
             draw.Buffers = Mesh->MeshBuffers;
             draw.Transform = nodeMatrix;

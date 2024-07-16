@@ -148,11 +148,23 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.Use();
 	ActiveCamera.UpdateSceneData(SceneData);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
+
+	// Culling... lots of room for optimization here
+	SFrustum mainCameraFrustum; 
+	ActiveCamera.CalcFrustum(mainCameraFrustum);
+	size_t totalObjects = 0;
+	uint32_t culledObjects = 0;
 	// Draw main color & masked objects
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
+		totalObjects += MainDrawContext.Surfaces[pass].size();
 		for (auto& surface : MainDrawContext.Surfaces[pass])
 		{
+			if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
+			{
+				++culledObjects;
+				continue;
+			}
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
 			PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
 			PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
@@ -183,6 +195,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		auto& blendObjects = MainDrawContext.Surfaces[EMaterialPass::Transparent];
 		auto& indices = MainDrawContext.BlendIndices;
+		totalObjects += blendObjects.size();
 		indices.resize(blendObjects.size());
 		std::iota(indices.begin(), indices.end(), 0); 
 		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](size_t& i, size_t& j)
@@ -196,6 +209,11 @@ void CGlRenderer::RenderScene(float deltaTime)
 		for (size_t& idx : indices)
 		{
 			auto& surface = blendObjects[idx];
+			if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
+			{
+				++culledObjects;
+				continue;
+			}
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
 			PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
 			PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
@@ -219,6 +237,8 @@ void CGlRenderer::RenderScene(float deltaTime)
 		blendObjects.clear();
 		glDisable(GL_BLEND);
 	}
+
+	std::cout << std::format("Culled objects {} / {}\n", culledObjects, totalObjects);
 }
 
 void CGlRenderer::OnWindowResize(CEngine* Engine, const SViewport& Viewport)

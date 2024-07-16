@@ -20,11 +20,6 @@ struct SSceneData
 	glm::mat4 ViewProj {};
 };
 
-struct SSceneLights
-{
-
-};
-
 struct SGPUMeshBuffers
 {
 	SGlBufferId IndexBuffer {};
@@ -103,22 +98,20 @@ struct SPbrMaterial
 	SPbrMaterialUboData UboData {};
 };
 
+struct SBounds
+{
+	float Radius; 
+	glm::vec3 Origin;
+	glm::vec3 Extent;
+};
 
 struct SGeoSurface 
 {
 	uint32_t StartIndex = 0;
 	uint32_t Count = 0;
+	SBounds Bounds {};
 	std::shared_ptr<SPbrMaterial> Material {};
 };
-
-// template<typename Base, typename Derived>
-// concept IsBaseOf = std::is_base_of_v<Base, Derived>;
-
-// struct SMaterialPipeline 
-// { 
-// 	SMaterialId Material;
-// 	SShaderId Shader;
-// };
 
 struct SVertex
 {
@@ -127,6 +120,7 @@ struct SVertex
 	glm::vec3 Normal = {};
 	float uv_y = 0.0f;
 	glm::vec4 Color = {};
+	// glm::vec4 Tangent = {};
 };
 
 struct STextureAsset
@@ -147,8 +141,9 @@ struct SRenderObject
 	uint32_t IndexCount;
 	uint32_t FirstIndex;
 	SGPUMeshBuffers Buffers;
-	std::shared_ptr<SPbrMaterial> Material;
+	SBounds Bounds;
 	glm::mat4 Transform;
+	std::shared_ptr<SPbrMaterial> Material;
 };
 
 struct SDrawContext

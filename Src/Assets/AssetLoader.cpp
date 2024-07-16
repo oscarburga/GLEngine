@@ -136,7 +136,14 @@ void CAssetLoader::LoadDefaultAssets()
 			glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &axisMaterial->UboData, 0);
 			axisMaterial->DataBuffer = ubo;
 		}
-		SGeoSurface surface { .Count = 12, .Material = axisMaterial };
+		SGeoSurface surface { 
+			.Count = 12,
+			.Bounds = {
+				.Radius = 1,
+				.Extent = { 1.f, 1.f, 1.f }
+			},
+			.Material = axisMaterial
+		};
 		axisMesh.Surfaces.push_back(surface);
 		AxisMesh = std::make_shared<SMeshNode>();
 		AxisMesh->LocalTransform = glm::scale(glm::mat4(1.f), glm::vec3(100.f));
@@ -196,6 +203,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		}
 	}
 
+	// Textures
 	std::vector<SGlTextureId> textures;
 	{
 		for (fastgltf::Image& image : gltf->images)
@@ -345,18 +353,13 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				SGeoSurface surface;
 				surface.StartIndex = (uint32_t)indices.size();
 				surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
-				size_t startVertex = vertices.size();
-				// Load indices
-				{
-					fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
-					fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
-					{
-						indices.push_back(index + uint32_t(startVertex));
-					});
-				}
+				surface.Material = primitive.materialIndex ? materials[*primitive.materialIndex] : ErrorMaterial;
 
-				// Load vertex positions
+				size_t startVertex = vertices.size();
+				// Load vertex positions & bounds, surface is ready
 				{
+					glm::vec3 minPos(std::numeric_limits<float>::max());
+					glm::vec3 maxPos(std::numeric_limits<float>::min());
 					fastgltf::Accessor& posAccessor = gltf->accessors[primitive.findAttribute("POSITION")->accessorIndex];
 					vertices.resize(vertices.size() + posAccessor.count);
 					fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf.get(), posAccessor, [&](glm::vec3 v, size_t index)
@@ -368,6 +371,21 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 							.uv_y = 0.0f,
 							.Color = { 1, 1, 1, 1 }
 						};
+						minPos = glm::min(minPos, v);
+						maxPos = glm::max(maxPos, v);
+					});
+					surface.Bounds.Origin = (maxPos + minPos) / 2.f;
+					surface.Bounds.Extent = (maxPos - minPos) / 2.f;
+					surface.Bounds.Radius = glm::length(surface.Bounds.Extent);
+					newMesh.Surfaces.push_back(surface);
+				}
+
+				// Load indices
+				{
+					fastgltf::Accessor& indexAccessor = gltf->accessors[primitive.indicesAccessor.value()];
+					fastgltf::iterateAccessor<uint32_t>(gltf.get(), indexAccessor, [&](uint32_t index)
+					{
+						indices.push_back(index + uint32_t(startVertex));
 					});
 				}
 
@@ -399,8 +417,6 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					});
 				}
 
-				surface.Material = primitive.materialIndex ? materials[*primitive.materialIndex] : ErrorMaterial;
-				newMesh.Surfaces.push_back(surface);
 			}
 			constexpr bool bNormalsAsColors = false;
 			if constexpr (bNormalsAsColors)

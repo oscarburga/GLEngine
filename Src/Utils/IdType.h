@@ -17,4 +17,8 @@ struct TId
 	inline operator bool() const { return !IsNull(); }
 	inline TId& operator =(IntType id) { Id = id; return *this; }
 	IntType Id;
+
+	bool operator<(const TId& other) const { return Id < other.Id; }
+	bool operator==(const TId& other) const { return Id == other.Id; }
+	bool operator>(const TId& other) const { return Id > other.Id; }
 };
