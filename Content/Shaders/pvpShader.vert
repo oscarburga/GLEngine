@@ -6,6 +6,7 @@ struct SVertex {
 	vec3 Normal;
 	float uv_y;
 	vec4 Color;
+	vec4 Tangent;
 };
 
 // UBO
@@ -26,18 +27,27 @@ layout (binding = 0, std430) readonly buffer VertexBuffer {
 
 layout (location = 0) uniform mat4 Model;
 
-out vec3 fsNormal;
-out vec3 fsFragPos;
-out vec2 fsTexCoords;
-out vec4 fsColor;
+out VS_OUT {
+	vec3 Normal;
+	vec3 FragPos;
+	vec2 TexCoords;
+	vec4 Color;
+	mat3 TBN;
+} fs;
 
 void main()
 {
 	const SVertex vertex = vertices[gl_VertexID];
 	gl_Position = sceneData.ViewProj * Model * vec4(vertex.Position, 1.0);
-	fsFragPos = (Model * vec4(vertex.Position, 1.0)).xyz;
+	fs.FragPos = (Model * vec4(vertex.Position, 1.0)).xyz;
 	// Inneficient, ideally pass this as a uniform.
-	fsNormal = mat3(transpose(inverse(Model))) * vertex.Normal;
-	fsTexCoords = vec2(vertex.uv_x, vertex.uv_y);
-	fsColor = vertex.Color;
+	fs.Normal = mat3(transpose(inverse(Model))) * vertex.Normal;
+	fs.TexCoords = vec2(vertex.uv_x, vertex.uv_y);
+	fs.Color = vertex.Color;
+
+	vec3 T = normalize((Model * vec4(vertex.Tangent.xyz, 0)).xyz); 
+	vec3 N = normalize((Model * vec4(vertex.Normal, 0)).xyz);
+	T = normalize(T - dot(T, N) * N); // reorthogonalize
+	vec3 B = cross(N, T);// * vertex.Tangent.w; // w is gltf handedness
+	fs.TBN = mat3(T, B, N);
 }

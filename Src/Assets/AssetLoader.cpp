@@ -307,7 +307,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		outMat.MetalRoughTex.Texture = WhiteTexture;
 
 		// Textures
-		auto SetTexture = [&](std::optional<fastgltf::TextureInfo>& gltfTexture, SGlTexture& outTex, const char* texType = "") -> bool
+		auto SetTexture = [&](auto& gltfTexture, SGlTexture& outTex, const char* texType = "") -> bool
 		{
 			if (gltfTexture)
 			{
@@ -326,7 +326,13 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 		outMat.UboData.bColorBound = SetTexture(gltfMat.pbrData.baseColorTexture, outMat.ColorTex, "color");
 		outMat.UboData.bMetalRoughBound = SetTexture(gltfMat.pbrData.metallicRoughnessTexture, outMat.MetalRoughTex, "metalRough");
-		// TODO normal map, AO, emissive, etc
+
+		if (outMat.UboData.bNormalBound = SetTexture(gltfMat.normalTexture, outMat.NormalTex, "normal"))
+			outMat.UboData.NormalScale = gltfMat.normalTexture->scale;
+
+		if (outMat.UboData.bOcclusionBound = SetTexture(gltfMat.occlusionTexture, outMat.OcclusionTex, "occlusion"))
+			outMat.UboData.OcclusionStrength = gltfMat.occlusionTexture->strength;
+		// TODO emissive
 
 		// Uniform buffer setup
 		glCreateBuffers(1, &*outMat.DataBuffer);
@@ -338,6 +344,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 	{
 		std::vector<uint32_t> indices;
 		std::vector<SVertex> vertices;
+		bool bMultipleTexCoords = false;
 		for (fastgltf::Mesh& mesh : gltf->meshes)
 		{
 			indices.clear();
@@ -350,6 +357,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 			for (auto& primitive : mesh.primitives)
 			{
+				if (!bMultipleTexCoords && primitive.findAttribute("TEXCOORD_1") != primitive.attributes.end())
+				{
+					bMultipleTexCoords = true;
+					std::cerr << std::format("\tError: some primitive(s) use more than one texcoord set (only 1 supported).\n");
+				}
+
 				SGeoSurface surface;
 				surface.StartIndex = (uint32_t)indices.size();
 				surface.Count = (uint32_t)gltf->accessors[primitive.indicesAccessor.value()].count;
@@ -396,6 +409,25 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					{
 						vertices[startVertex + index].Normal = v;
 					});
+				}
+
+				// Load vertex tangents
+				if (surface.Material->UboData.bNormalBound)
+				{
+					if (fastgltf::Attribute* tangents = primitive.findAttribute("TANGENT"); tangents != primitive.attributes.end())
+					{
+						fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[tangents->accessorIndex], [&](glm::vec4 v, size_t index)
+						{
+							vertices[startVertex + index].Tangent = v;
+						});
+					}
+					else
+					{
+						// No tangents found and don't want to implement calculating them, just disable normals on this material.
+						surface.Material->UboData.bNormalBound = false;
+						std::cerr << std::format("\tOne of the primitives uses a normal-mapped material, but provides no tangents.\n"
+							"\t\tFallback: setting material {} to not use normal map\n", surface.Material->Name);
+					}
 				}
 
 				// Load UVs

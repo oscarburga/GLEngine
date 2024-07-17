@@ -67,11 +67,14 @@ struct SPbrMaterialUboData
 	float MetalFactor = 1.f;
 	float RoughFactor = 1.f;
 	float AlphaCutoff = 0.f;
-	// float NormalScale = 0.0f;
-	// float OcclusionStrength = 0.0f;
+	float NormalScale = 1.0f;
+	float OcclusionStrength = 0.0f;
 	// glm::vec3 EmissiveFactor {};
+	// TODO: Merge all of these into a bitmask so we don't have to pass so much data to the GPU (each bool in std140 GPU is 4 bytes)
 	uint32_t bColorBound = false;
 	uint32_t bMetalRoughBound = false;
+	uint32_t bNormalBound = false;
+	uint32_t bOcclusionBound = false;
 	// bool bNormalBound = false;
 	// bool bOcclusionBound = false;
 	// bool bEmissiveBound = false;
@@ -91,8 +94,8 @@ struct SPbrMaterial
 	std::string Name {};
 	SGlTexture ColorTex {}; // Also known as "Albedo"
 	SGlTexture MetalRoughTex {}; // Metal in blue channel, Roughness in green.
-	// SGPUTexture NormalTex {};
-	// SGPUTexture OcclusionText {};
+	SGlTexture NormalTex {};
+	SGlTexture OcclusionTex {};
 	// SGPUTexture EmissiveTex {};
 	SGlBufferId DataBuffer {};
 	SPbrMaterialUboData UboData {};
@@ -120,7 +123,7 @@ struct SVertex
 	glm::vec3 Normal = {};
 	float uv_y = 0.0f;
 	glm::vec4 Color = {};
-	// glm::vec4 Tangent = {};
+	glm::vec4 Tangent = {}; // xyz normalized, W is the sign (+-1) indicating tangent handedness
 };
 
 struct STextureAsset

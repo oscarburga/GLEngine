@@ -155,6 +155,12 @@ void CGlRenderer::RenderScene(float deltaTime)
 	size_t totalObjects = 0;
 	uint32_t culledObjects = 0;
 	// Draw main color & masked objects
+	// PvpShader.SetUniform(GlUniformLocs::ShowDebugNormals, true);
+
+	PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
+	PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
+	PvpShader.SetUniform(GlUniformLocs::NormalTex, GlTexUnits::Normal);
+	PvpShader.SetUniform(GlUniformLocs::OcclusionTex, GlTexUnits::PbrOcclusion);
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
 		totalObjects += MainDrawContext.Surfaces[pass].size();
@@ -166,13 +172,20 @@ void CGlRenderer::RenderScene(float deltaTime)
 				continue;
 			}
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-			PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
-			PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
-			PvpShader.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+
 			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
 			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
+
 			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
 			glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
+
+			glBindTextureUnit(GlTexUnits::Normal, *surface.Material->NormalTex.Texture);
+			glBindSampler(GlTexUnits::Normal, *surface.Material->NormalTex.Sampler);
+
+			glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
+			glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
+
 			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
 			if (surface.Buffers.IndexBuffer)
@@ -215,13 +228,22 @@ void CGlRenderer::RenderScene(float deltaTime)
 				continue;
 			}
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-			PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
-			PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
-			PvpShader.SetUniform("ignoreLighting", surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+
+			// TODO: these texture swaps are painnnnnnnnnnnnnnnnnnnnnnnnnn
+			// Ideally use bindless textures extension
 			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
 			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
+
 			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
 			glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
+
+			glBindTextureUnit(GlTexUnits::Normal, *surface.Material->NormalTex.Texture);
+			glBindSampler(GlTexUnits::Normal, *surface.Material->NormalTex.Sampler);
+
+			glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
+			glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
+
 			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
 			if (surface.Buffers.IndexBuffer)
@@ -238,7 +260,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glDisable(GL_BLEND);
 	}
 
-	std::cout << std::format("Culled objects {} / {}\n", culledObjects, totalObjects);
+	// std::cout << std::format("Culled objects {} / {}\n", culledObjects, totalObjects);
 }
 
 void CGlRenderer::OnWindowResize(CEngine* Engine, const SViewport& Viewport)

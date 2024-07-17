@@ -1,9 +1,12 @@
 #version 460 core
 
-in vec3 fsNormal;
-in vec3 fsFragPos;
-in vec2 fsTexCoords;
-in vec4 fsColor;
+in VS_OUT {
+	vec3 Normal;
+	vec3 FragPos;
+	vec2 TexCoords;
+	vec4 Color;
+	mat3 TBN;
+} fs;
 
 out vec4 FragColor;
 
@@ -23,13 +26,20 @@ layout (binding = 1, std140) uniform PbrMaterial {
 	float MetalFactor;
 	float RoughFactor;
 	float AlphaCutoff;
+	float NormalScale;
+	float OcclusionStrength;
 	bool bColorBound;
 	bool bMetalRoughBound;
+	bool bNormalBound;
+	bool bOcclusionBound;
 } pbrMaterial;
 
 layout (location = 1) uniform sampler2D ColorTex;
 layout (location = 2) uniform sampler2D MetalRoughTex;
-uniform bool ignoreLighting;
+layout (location = 3) uniform sampler2D NormalTex;
+layout (location = 4) uniform sampler2D OcclusionTex;
+layout (location = 32) uniform bool bIgnoreLighting;
+layout (location = 33) uniform bool bShowDebugNormals;
 
 const float PI = 3.14159265359;
 
@@ -39,9 +49,9 @@ vec3 N;
 vec3 V;
 vec3 PbrF0;
 vec3 PbrAlbedo;
-vec3 PbrAmbientOcclusion;
 float PbrMetalness;
 float PbrRoughness;
+float PbrAmbientOcclusion;
 
 float DistributionGGX(vec3 N, vec3 H)
 {
@@ -106,7 +116,7 @@ vec3 CalcReflectance(vec3 L, vec3 H, vec3 radiance)
 
 vec3 CalcPointLight(vec3 lightPos, vec3 lightColor)
 {
-	vec3 fragToLight = lightPos - fsFragPos;
+	vec3 fragToLight = lightPos - fs.FragPos;
 	vec3 L = normalize(fragToLight);
 	vec3 H = normalize(V + L);
 	float dist = length(fragToLight);
@@ -127,19 +137,26 @@ vec3 CalcDirLight()
 void InitPbr(vec4 srcColor) 
 {
 	PbrAlbedo = pow(srcColor.rgb, vec3(2.2f));
-	N = normalize(fsNormal);
-	V = normalize(sceneData.CameraPos.xyz - fsFragPos);
+	N = normalize(fs.Normal); 
+	if (pbrMaterial.bNormalBound) {
+		N = texture(NormalTex, fs.TexCoords).rgb;
+		N = (N * 2.f) - 1.f;
+		N = normalize(fs.TBN * N);
+	}
+	V = normalize(sceneData.CameraPos.xyz - fs.FragPos);
 	PbrMetalness  = pbrMaterial.MetalFactor;
 	PbrRoughness = pbrMaterial.RoughFactor;
 	if (pbrMaterial.bMetalRoughBound) {
-		vec4 metalRough = texture(MetalRoughTex, fsTexCoords);
+		vec4 metalRough = texture(MetalRoughTex, fs.TexCoords);
 		PbrMetalness *= metalRough.b;
 		PbrRoughness *= metalRough.g;
 	}
-	PbrAmbientOcclusion = vec3(1.f); // temp
+	PbrAmbientOcclusion = 1.f; // temp
+	if (pbrMaterial.bOcclusionBound) {
+		PbrAmbientOcclusion = pbrMaterial.OcclusionStrength * texture(OcclusionTex, fs.TexCoords).r;
+	}
 
-	PbrF0 = vec3(0.04); 
-	PbrF0 = mix(PbrF0, PbrAlbedo, PbrMetalness);
+	PbrF0 = mix(vec3(0.04), PbrAlbedo, PbrMetalness);
 }
 
 vec3 CalcPbr() 
@@ -157,20 +174,26 @@ vec3 CalcPbr()
 
 void main()
 {
-	vec4 srcColor = pbrMaterial.ColorFactor;
+	vec4 srcColor = pbrMaterial.ColorFactor * fs.Color;
 
 	if (pbrMaterial.bColorBound)
-		srcColor *= texture(ColorTex, fsTexCoords);
+		srcColor *= texture(ColorTex, fs.TexCoords);
 
-	if (srcColor.a * fsColor.a < pbrMaterial.AlphaCutoff)
+	if (srcColor.a < pbrMaterial.AlphaCutoff)
 		discard;
 
-	if (ignoreLighting) {
-		FragColor = srcColor * fsColor;
+	if (bIgnoreLighting) {
+		FragColor = srcColor;
 		return;
 	}
 
 	InitPbr(srcColor);
+
+	if (bShowDebugNormals) {
+		FragColor = vec4(N, srcColor.a);
+		return;
+	}
+
 	vec3 result = CalcPbr();
-	FragColor = vec4(result, srcColor.a) * fsColor;
+	FragColor = vec4(result, srcColor.a) * fs.Color;
 }

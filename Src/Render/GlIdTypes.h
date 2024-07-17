@@ -62,10 +62,16 @@ namespace GlUniformLocs
 		PbrMetalRoughTex = 2,
 		PhongSpecularTex = 2,
 
+		NormalTex = 3,
 		PhongShininess = 3,
 
+		OcclusionTex = 4,
 
-		Count
+		Count,
+
+		// DEBUG LOCS GO HERE
+		DebugIgnoreLighting = 32,
+		ShowDebugNormals = 33
 	};
 }
 
