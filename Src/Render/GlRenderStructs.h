@@ -187,11 +187,9 @@ struct SLoadedGLTF : public IRenderable
 	std::unordered_map<std::string, std::shared_ptr<SPbrMaterial>> Materials;
 	std::vector<SGlSamplerId> Samplers;
 	std::vector<std::shared_ptr<SNode>> RootNodes;
-	// TODO: Materials
-	//std::unordered_map<std::string, std::shared_ptr<SGLTFMaterial>> Materials;
-	//SGlBufferId MaterialDataBuffer
+	glm::mat4 UserTransform;
 
 	~SLoadedGLTF() { ClearAll(); }
 	void ClearAll();
-	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override; // TODO
+	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
 };

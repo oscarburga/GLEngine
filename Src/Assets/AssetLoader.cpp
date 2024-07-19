@@ -533,6 +533,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			}
 		}
 	}
+	scene.UserTransform = glm::mat4(1.0f);
 	SceneCache[filePathStr] = scene_ptr;
 	std::cout << std::format("Loaded GLTF successfully: {}\n", gltfPath.string());
 	return scene_ptr;

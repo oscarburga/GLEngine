@@ -14,7 +14,6 @@
 #include <glm/gtx/norm.hpp>
 #endif
 
-
 using glm::vec2;
 using glm::vec3;
 using glm::vec4;
@@ -37,6 +36,9 @@ namespace World
 
 namespace glm
 {
+	constexpr mat4 IMat(1.0f);
+	constexpr quat IQuat(1.0f, 0.0f, 0.0f, 0.0f);
+
 	inline vec3 rotateByQuat(const vec3& v, const quat& q) { return q * v; };
 	inline vec3 rotateByQuatInverse(const vec3& v, const quat& q) { return v * q; };
 	quat fromYawPitchRoll(const vec3& yawPitchRoll); // Constructs quat applying yaw->pitch->roll

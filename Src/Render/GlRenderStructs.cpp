@@ -73,9 +73,10 @@ void SLoadedGLTF::ClearAll()
 
 void SLoadedGLTF::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
 {
+    const glm::mat4 rootTransform = UserTransform * topMatrix;
     for (auto& root : RootNodes)
     {
-        root->Draw(topMatrix, drawCtx);
+        root->Draw(rootTransform, drawCtx);
     }
 }
 

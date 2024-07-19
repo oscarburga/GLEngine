@@ -48,6 +48,6 @@ void main()
 	vec3 T = normalize((Model * vec4(vertex.Tangent.xyz, 0)).xyz); 
 	vec3 N = normalize((Model * vec4(vertex.Normal, 0)).xyz);
 	T = normalize(T - dot(T, N) * N); // reorthogonalize
-	vec3 B = cross(N, T);// * vertex.Tangent.w; // w is gltf handedness
+	vec3 B = cross(N, T) * vertex.Tangent.w; // w is gltf handedness
 	fs.TBN = mat3(T, B, N);
 }

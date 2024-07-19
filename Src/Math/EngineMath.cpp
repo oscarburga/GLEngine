@@ -7,11 +7,8 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #endif
 
-namespace
-{
-	mat4 IMat(1.0f);
-	quat IQuat(1.0f, 0.0f, 0.0f, 0.0f);
-}
+using glm::IMat;
+using glm::IQuat;
 
 quat glm::fromYawPitchRoll(const vec3& yawPitchRoll)
 {
