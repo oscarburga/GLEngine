@@ -59,7 +59,9 @@ namespace
 
 CGlRenderer::~CGlRenderer()
 {
-	// Nothing for now
+	glDeleteBuffers(1, &*SceneDataBuffer);
+	glDeleteVertexArrays(1, &*EmptyVao);
+	CAssetLoader::Destroy();
 }
 
 CGlRenderer* CGlRenderer::Create(GlFunctionLoaderFuncType func)
@@ -119,6 +121,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
+	// Scene
 
 	CAssetLoader::Create();
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_pbr.frag"))

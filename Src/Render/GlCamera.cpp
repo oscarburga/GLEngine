@@ -40,8 +40,15 @@ void SGlCamera::CalcViewMatrix(glm::mat4& outMat) const
 
 void SGlCamera::CalcProjMatrix(glm::mat4& outMat) const
 {
-	const float aspectRatio = CEngine::Get()->Viewport.AspectRatio;
-	outMat = glm::perspectiveLH(FOV, aspectRatio, NearPlane, FarPlane);
+	const SViewport& viewport = CEngine::Get()->Viewport;
+	if (bIsPerspective)
+	{
+		outMat = glm::perspectiveLH(FOV, viewport.AspectRatio, NearPlane, FarPlane);
+	}
+	else
+	{
+		// TODO: OrthoMat
+	}
 }
 
 void SGlCamera::CalcFrustum(SFrustum& outFrustum) const
@@ -50,16 +57,27 @@ void SGlCamera::CalcFrustum(SFrustum& outFrustum) const
 	const vec3 up = glm::rotateByQuat(World::Up, Rotation);
 	const vec3 right = glm::rotateByQuat(World::Right, Rotation);
 
-    const float halfFarHeight = FarPlane * tanf(FOV * .5f); // tan(FOV) = opposite / adjacent = halfVSide / FarPlane
-    const float halfFarWidth = halfFarHeight * CEngine::Get()->Viewport.AspectRatio;
-    const vec3 frontMultFar = FarPlane * front;
+	if (bIsPerspective)
+	{
+		const float halfFarHeight = FarPlane * tanf(FOV * .5f); // tan(FOV) = opposite / adjacent = halfVSide / FarPlane
+		const float halfFarWidth = halfFarHeight * CEngine::Get()->Viewport.AspectRatio;
+		const vec3 frontMultNear = NearPlane * front;
+		const vec3 frontMultFar = FarPlane * front;
 
-    outFrustum.Far = { -front, Position + frontMultFar };
-    outFrustum.Left = { glm::cross(up, frontMultFar - (right * halfFarWidth)), Position };
-    outFrustum.Right = { glm::cross(frontMultFar + (right * halfFarWidth), up), Position };
-	outFrustum.Bottom = { glm::cross(-right, frontMultFar - (up * halfFarHeight)), Position };
-	outFrustum.Top = { glm::cross(right, frontMultFar + (up * halfFarHeight)), Position };
-	std::for_each(outFrustum.Planes.begin(), outFrustum.Planes.end(), [&](auto& p) { p.Normal = glm::normalize(p.Normal); });
+		outFrustum.Near = { front, Position + frontMultNear };
+		outFrustum.Far = { -front, Position + frontMultFar };
+		outFrustum.Left = { glm::cross(up, frontMultFar - (right * halfFarWidth)), Position };
+		outFrustum.Right = { glm::cross(frontMultFar + (right * halfFarWidth), up), Position };
+		outFrustum.Bottom = { glm::cross(-right, frontMultFar - (up * halfFarHeight)), Position };
+		outFrustum.Top = { glm::cross(right, frontMultFar + (up * halfFarHeight)), Position };
+		std::for_each(outFrustum.Planes.begin(), outFrustum.Planes.end(), [&](auto& p) { p.Normal = glm::normalize(p.Normal); });
+	}
+	else
+	{
+		// TODO: orthographic frustum
+		std::abort();
+	}
+
 }
 
 void SGlCamera::UpdateSceneData(SSceneData& sceneData)

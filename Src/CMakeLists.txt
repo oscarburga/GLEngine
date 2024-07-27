@@ -19,6 +19,8 @@ set(SOURCE_LIST
 	Render/GlRenderer.cpp
 	Render/GlShader.h
 	Render/GlShader.cpp
+	Render/GlShadowDepth.cpp
+	Render/GlShadowDepth.h
 
 	# UTILS
 	Utils/Defer.h

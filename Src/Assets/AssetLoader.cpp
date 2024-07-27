@@ -48,7 +48,15 @@ namespace
 
 CAssetLoader::~CAssetLoader()
 {
-	// TODO: Free all resources.
+	if (ErrorMaterial)
+		glDeleteBuffers(1, &*ErrorMaterial->DataBuffer);
+	if (WhiteMaterial)
+		glDeleteBuffers(1, &*WhiteMaterial->DataBuffer);
+	if (AxisMesh)
+	{
+		glDeleteBuffers(1, &*AxisMesh->Mesh->MeshBuffers.VertexBuffer);
+		glDeleteBuffers(1, &*AxisMesh->Mesh->Surfaces[0].Material->DataBuffer);
+	}
 }
 
 void CAssetLoader::Create()
@@ -114,7 +122,6 @@ void CAssetLoader::LoadDefaultAssets()
 		glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &ErrorMaterial->UboData, 0);
 		ErrorMaterial->DataBuffer = ubo;
 	}
-	// TODO: XYZ debug axis mesh
 	{
 		SMeshAsset axisMesh {};
 		SVertex vertices[12] = {};

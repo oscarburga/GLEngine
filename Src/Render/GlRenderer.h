@@ -3,6 +3,7 @@
 #include "GlRenderStructs.h"
 #include "GlShader.h"
 #include "GlCamera.h"
+#include "GlShadowDepth.h"
 
 class CEngine;
 struct SViewport;
@@ -17,6 +18,7 @@ class CGlRenderer
 	~CGlRenderer();
 public:
 	SGlCamera ActiveCamera {};
+	CGlShadowDepthPass ShadowPass {};
 	SSceneData SceneData {};
 	CGlShader PvpShader { 0 };
 	static CGlRenderer* Create(GlFunctionLoaderFuncType func);

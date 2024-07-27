@@ -10,7 +10,7 @@ struct SPlane
 	glm::vec3 Normal { 0.f, 1.f, 0.f };
 	glm::vec3 Point { 0.0f, 0.0f, 0.0f };
 	float GetSignedDistance(glm::vec3 point);
-	bool IsSphereOnPlane(glm::vec3 sphereLoc, float radius);
+	bool IsSphereOnPlane(glm::vec3 sphereLoc, float radius); // IsSphereOnHalfspace would be more accurate but w/e...
 };
 
 /*
@@ -24,14 +24,14 @@ struct SFrustum
 	{
 		struct
 		{
-			// SPlane Near;
+			SPlane Near;
 			SPlane Far;
 			SPlane Left;
 			SPlane Right;
 			SPlane Bottom;
 			SPlane Top;
 		};
-		std::array<SPlane, 5> Planes {};
+		std::array<SPlane, 6> Planes {};
 	};
 	bool IsSphereInFrustum(const SBounds& bounds, const glm::mat4& transform);
 };
@@ -39,10 +39,9 @@ struct SFrustum
 class SGlCamera 
 {
 public:
+	bool bIsPerspective = true;
 	float FOV = glm::radians(80.f); // Field of view in radians
 	float Speed = 5.0f;
-	float YawSens = 1.f;
-	float PitchSens = 1.f;
 	float NearPlane = 0.1f;
 	float FarPlane = 100.f;
 	glm::vec3 Position {};
@@ -58,5 +57,7 @@ public:
 	// TEMP: input, eventually this should be moved somewhere else. SGlCamera should just hold the data for the camera used for rendering.
 	float Yaw = 0.0f;
 	float Pitch = 0.0f;
+	float YawSens = 1.f;
+	float PitchSens = 1.f;
 	void UpdateCameraFromInput(GLFWwindow* window, float deltax, float deltay, float deltaTime);
 };

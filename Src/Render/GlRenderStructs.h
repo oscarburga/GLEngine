@@ -18,6 +18,7 @@ struct SSceneData
 	glm::mat4 View {};
 	glm::mat4 Proj {};
 	glm::mat4 ViewProj {};
+	glm::mat4 LightSpaceTransform {};
 };
 
 struct SGPUMeshBuffers
@@ -139,7 +140,7 @@ struct SMeshAsset
 	SGPUMeshBuffers MeshBuffers;
 };
 
-struct SRenderObject
+struct SRenderObject // TODO: some bCastShadows bool
 {
 	uint32_t IndexCount;
 	uint32_t FirstIndex;
