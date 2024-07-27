@@ -18,6 +18,7 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 View;
 	mat4 Proj;
 	mat4 ViewProj;
+	mat4 LightSpaceTransform;
 } sceneData;
 
 // SSBO

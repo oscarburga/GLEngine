@@ -19,6 +19,7 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 View;
 	mat4 Proj;
 	mat4 ViewProj;
+	mat4 LightSpaceTransform;
 } sceneData;
 
 layout (binding = 1, std140) uniform PbrMaterial {

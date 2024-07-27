@@ -20,7 +20,9 @@ public:
 	SGlCamera ActiveCamera {};
 	CGlShadowDepthPass ShadowPass {};
 	SSceneData SceneData {};
+	inline SGlBufferId GetSceneDataUbo() const { return SceneDataBuffer; }
 	CGlShader PvpShader { 0 };
+	CGlShader QuadShader { 0 };
 	static CGlRenderer* Create(GlFunctionLoaderFuncType func);
 	void Init(GlFunctionLoaderFuncType func);
 	static void Destroy();
@@ -33,6 +35,7 @@ public:
 	SDrawContext MainDrawContext {};
 private:
 	SGlVaoId EmptyVao {};
+	SGlBufferId Quad2DBuffer {};
 	SGlBufferId SceneDataBuffer;
 	static CGlRenderer* Renderer;
 public:

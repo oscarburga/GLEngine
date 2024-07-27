@@ -68,6 +68,8 @@ namespace GlUniformLocs
 
 		OcclusionTex = 4,
 
+		ShadowDepthTexture = 5,
+
 		Count,
 
 		// DEBUG LOCS GO HERE
@@ -87,6 +89,7 @@ namespace GlTexUnits
 		Normal = 2,
 		PbrOcclusion = 3,
 		Emissive = 4,
+		ShadowMap = 5,
 		Count
 	};
 }

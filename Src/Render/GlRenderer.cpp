@@ -121,15 +121,31 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
-	// Scene
+	// Simple quad2d
+	{
+		float quadVertices[] = {
+			// positions   // texCoords
+			-1.0f,  1.0f,  0.0f, 1.0f,
+			-1.0f, -1.0f,  0.0f, 0.0f,
+			 1.0f, -1.0f,  1.0f, 0.0f,
+
+			-1.0f,  1.0f,  0.0f, 1.0f,
+			 1.0f, -1.0f,  1.0f, 0.0f,
+			 1.0f,  1.0f,  1.0f, 1.0f
+		};	
+		glCreateBuffers(1, &*Quad2DBuffer);
+		glNamedBufferStorage(*Quad2DBuffer, sizeof(quadVertices), quadVertices, 0);
+	}
 
 	CAssetLoader::Create();
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_pbr.frag"))
-	{
 		PvpShader = *pvpShader;
-	}
-	else assert(false);
 
+	if (auto quadShader = CAssetLoader::LoadShaderProgram("Shaders/simplequad.vert", "Shaders/simplequad.frag"))
+		QuadShader = *quadShader;
+
+	assert(PvpShader.Id && QuadShader.Id);
+	ShadowPass.Init();
 }
 
 void CGlRenderer::Destroy()
@@ -148,9 +164,28 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	
 	// Refresh SceneData
-	PvpShader.Use();
 	ActiveCamera.UpdateSceneData(SceneData);
+	ShadowPass.UpdateSceneData(SceneData);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
+	// TODO frustum cull shadow depth
+	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
+
+	constexpr bool bShowShadowDepthMap = false;
+	if constexpr (bShowShadowDepthMap)
+	{
+		// render shadow depth onto quad to screen
+		QuadShader.Use();
+		glBindTextureUnit(GlTexUnits::ShadowMap, ShadowPass.ShadowsTexture);
+		QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// Clear all
+		std::for_each(MainDrawContext.Surfaces.begin(), MainDrawContext.Surfaces.end(), [&](auto& vec)
+		{
+			vec.clear();
+		});
+		return;
+	}
 
 	// Culling... lots of room for optimization here
 	SFrustum mainCameraFrustum; 
@@ -160,6 +195,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	// Draw main color & masked objects
 	// PvpShader.SetUniform(GlUniformLocs::ShowDebugNormals, true);
 
+	PvpShader.Use();
 	PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
 	PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
 	PvpShader.SetUniform(GlUniformLocs::NormalTex, GlTexUnits::Normal);
@@ -206,6 +242,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	// Draw Blend, unoptimized sort. Could keep a sorted map and only update objects that move
 	// Basic blend, no OIT
+	// horrible, need to deduplicate a lot of this code with the color pass
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
