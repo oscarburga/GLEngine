@@ -17,10 +17,14 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	glCreateFramebuffers(1, &*ShadowsFbo);
 	glCreateTextures(GL_TEXTURE_2D, 1, &*ShadowsTexture);
 	glTextureStorage2D(*ShadowsTexture, 1, GL_DEPTH_COMPONENT32F, width, height);
+	// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
+	glTextureParameterfv(*ShadowsTexture, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexture, 0);
 	glNamedFramebufferDrawBuffer(*ShadowsFbo, GL_NONE);

@@ -200,6 +200,8 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
 	PvpShader.SetUniform(GlUniformLocs::NormalTex, GlTexUnits::Normal);
 	PvpShader.SetUniform(GlUniformLocs::OcclusionTex, GlTexUnits::PbrOcclusion);
+	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
+	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexture);
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
 		totalObjects += MainDrawContext.Surfaces[pass].size();

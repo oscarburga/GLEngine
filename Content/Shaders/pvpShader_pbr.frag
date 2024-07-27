@@ -5,6 +5,7 @@ in VS_OUT {
 	vec3 FragPos;
 	vec2 TexCoords;
 	vec4 Color;
+	vec4 FragPosSunSpace;
 	mat3 TBN;
 } fs;
 
@@ -39,6 +40,7 @@ layout (location = 1) uniform sampler2D ColorTex;
 layout (location = 2) uniform sampler2D MetalRoughTex;
 layout (location = 3) uniform sampler2D NormalTex;
 layout (location = 4) uniform sampler2D OcclusionTex;
+layout (location = 5) uniform sampler2D ShadowDepthTex;
 layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
 
@@ -127,12 +129,39 @@ vec3 CalcPointLight(vec3 lightPos, vec3 lightColor)
 	return result;
 }
 
+float DirLightShadowFactor() 
+{
+	vec3 projCoords = fs.FragPosSunSpace.xyz / fs.FragPosSunSpace.w;
+	projCoords = projCoords * 0.5f + 0.5f;
+
+	vec3 sunlightDir = normalize(-sceneData.SunlightDirection.xyz);
+	float bias = max(0.05f * (1.0f - dot(N, sunlightDir)), 0.005f);
+	float curDepth = projCoords.z; // depth of this fragment
+
+	// simple PCF
+	float shadow = 0.0f;
+	vec2 texelSize = 1.0 / textureSize(ShadowDepthTex, 0);
+	for (int x = -1; x <= 1; ++x) {
+		for (int y = -1; y <= 1; ++y) {
+			vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
+			float pcfDepth = texture(ShadowDepthTex, pcfCoords).r;
+			shadow += float(((curDepth - bias) > pcfDepth)); 
+		}
+	}
+	shadow *= float(projCoords.z <= 1.0f) / 9.0f;
+	// float closestDepth = texture(ShadowDepthTex, projCoords.xy).r; // closest to sun
+	// float curDepth = projCoords.z; // depth of this fragment
+	// float shadow = float( ((curDepth - bias) > closestDepth) && (projCoords.z <= 1.0f) ); 
+	return 1.0f - shadow;
+}
+
 vec3 CalcDirLight() 
 {
 	vec3 L = normalize(-sceneData.SunlightDirection.xyz);
 	vec3 H = normalize(V + L);
 	vec3 radiance = sceneData.SunlightColor.xyz * sceneData.SunlightDirection.w;
-	return CalcReflectance(L, H, radiance);
+	float shadowFactor = DirLightShadowFactor();
+	return CalcReflectance(L, H, radiance) * shadowFactor;
 }
 
 void InitPbr(vec4 srcColor) 

@@ -33,6 +33,7 @@ out VS_OUT {
 	vec3 FragPos;
 	vec2 TexCoords;
 	vec4 Color;
+	vec4 FragPosSunSpace;
 	mat3 TBN;
 } fs;
 
@@ -51,4 +52,6 @@ void main()
 	T = normalize(T - dot(T, N) * N); // reorthogonalize
 	vec3 B = cross(N, T) * vertex.Tangent.w; // w is gltf handedness
 	fs.TBN = mat3(T, B, N);
+
+	fs.FragPosSunSpace = sceneData.LightSpaceTransform * vec4(fs.FragPos, 1.0f);
 }
