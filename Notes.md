@@ -1,3 +1,5 @@
+Old notes from when I was first starting to learn stuff. 
+Most of it I pulled from old university course notes.
 
 ## Alpha test and blending stage
 
