@@ -3,7 +3,6 @@
 #include "Math/EngineMath.h"
 #include "GlShadowDepth.h"
 #include "Assets/AssetLoader.h"
-#include <Utils/Defer.h>
 #include "GlRenderer.h"
 
 CGlShadowDepthPass::~CGlShadowDepthPass()
@@ -35,15 +34,17 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	ShadowsShader = *shader;
 }
 
-void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData)
+void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
+	glm::vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
+
 	float shadowsNear = 0.1f, shadowsFar = 30.f;
 	glm::mat4 lightProj = glm::orthoLH(-16.f, 22.f, -16.f, 18.f, shadowsNear, shadowsFar);
 	glm::mat4 lightView = glm::lookAtLH(glm::vec3(-2.f, 10.f, -1.f), glm::vec3(0.0f), World::Up);
 	SceneData.LightSpaceTransform = lightProj * lightView;
 }
 
-void CGlShadowDepthPass::RenderShadowDepth(SSceneData& SceneData, SDrawContext& DrawContext)
+void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
 {
 	glViewport(0, 0, Width, Height);
 	glBindFramebuffer(GL_FRAMEBUFFER, *ShadowsFbo);

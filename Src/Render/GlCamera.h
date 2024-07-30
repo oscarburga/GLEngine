@@ -36,14 +36,22 @@ struct SFrustum
 	bool IsSphereInFrustum(const SBounds& bounds, const glm::mat4& transform);
 };
 
+// May want to eventually differentiate orthographic from ortho2d (for like UI/quad stuff)...
+// enum class ECameraType : uint8_t
+// {
+// 	Perspective,
+// 	Ortho,
+// 	Ortho2D
+// };
+
 class SGlCamera 
 {
 public:
 	bool bIsPerspective = true;
-	float FOV = glm::radians(80.f); // Field of view in radians
-	float Speed = 5.0f;
 	float NearPlane = 0.1f;
 	float FarPlane = 100.f;
+	float PerspectiveFOV = glm::radians(80.f); // Field of view in radians
+	glm::vec2 OrthoSize { 1.f, 1.f };
 	glm::vec3 Position {};
 	glm::quat Rotation {};
 
@@ -59,5 +67,6 @@ public:
 	float Pitch = 0.0f;
 	float YawSens = 1.f;
 	float PitchSens = 1.f;
+	float Speed = 5.0f;
 	void UpdateCameraFromInput(GLFWwindow* window, float deltax, float deltay, float deltaTime);
 };

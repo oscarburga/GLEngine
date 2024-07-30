@@ -165,7 +165,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	
 	// Refresh SceneData
 	ActiveCamera.UpdateSceneData(SceneData);
-	ShadowPass.UpdateSceneData(SceneData);
+	ShadowPass.UpdateSceneData(SceneData, ActiveCamera);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
 	// TODO frustum cull shadow depth
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);

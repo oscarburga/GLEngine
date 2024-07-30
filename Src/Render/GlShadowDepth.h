@@ -16,6 +16,6 @@ public:
 	glm::mat4 LightSpaceMatrix;
 
 	void Init(uint32_t width = 2048, uint32_t height = 2048);
-	void UpdateSceneData(SSceneData& SceneData);
-	void RenderShadowDepth(SSceneData& SceneData, SDrawContext& DrawContext);
+	void UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera);
+	void RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext);
 };
