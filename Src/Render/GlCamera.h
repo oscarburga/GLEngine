@@ -50,14 +50,14 @@ public:
 	bool bIsPerspective = true;
 	float NearPlane = 0.1f;
 	float FarPlane = 100.f;
-	float PerspectiveFOV = glm::radians(80.f); // Field of view in radians
+	float PerspectiveFOV = glm::radians(80.f); // Field of view in radians (y-axis)
 	glm::vec2 OrthoSize { 1.f, 1.f };
 	glm::vec3 Position {};
 	glm::quat Rotation {};
 
 	void CalcViewMatrix(glm::mat4& outMat) const;
 	void CalcProjMatrix(glm::mat4& outMat) const;
-	void CalcFrustum(SFrustum& outFrustum) const;
+	void CalcFrustum(SFrustum* outFrustum, std::array<glm::vec3, 8>* outCorners) const;
 	void UpdateSceneData(SSceneData& sceneData);
 	// glm::mat4 GetViewMatrix() const { glm::mat4 m; CalcViewMatrix(m); return m; } // View transforms from world space to view/camera space.
 	// glm::mat4 GetProjectionMatrix() const { glm::mat4 m; CalcProjMatrix(m); return m; } // Projection transforms from camera/view space to clip space (applies perspective)

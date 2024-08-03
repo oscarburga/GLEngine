@@ -13,6 +13,7 @@ public:
 	SGlFramebufferId ShadowsFbo {};
 	SGlTextureId ShadowsTexture {};
 	CGlShader ShadowsShader { 0 };
+	SGlCamera ShadowsCamera {};
 	glm::mat4 LightSpaceMatrix;
 
 	void Init(uint32_t width = 2048, uint32_t height = 2048);

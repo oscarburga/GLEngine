@@ -35,45 +35,85 @@ void SGlCamera::CalcViewMatrix(glm::mat4& outMat) const
 {
 	const glm::vec3 front = glm::rotateByQuat(World::Front, Rotation);
 	const glm::vec3 up = glm::rotateByQuat(World::Up, Rotation);
-    outMat = glm::lookAtLH(Position, Position + front, up);
+    outMat = glm::lookAt(Position, Position + front, up);
 }
 
 void SGlCamera::CalcProjMatrix(glm::mat4& outMat) const
 {
 	const SViewport& viewport = CEngine::Get()->Viewport;
 	outMat = bIsPerspective ?
-		glm::perspectiveLH(PerspectiveFOV, viewport.AspectRatio, NearPlane, FarPlane) :
-		glm::orthoLH(-OrthoSize.x, OrthoSize.x, -OrthoSize.y, OrthoSize.y, NearPlane, FarPlane);
+		glm::perspective(PerspectiveFOV, viewport.AspectRatio, NearPlane, FarPlane) :
+		glm::ortho(-OrthoSize.x, OrthoSize.x, -OrthoSize.y, OrthoSize.y, NearPlane, FarPlane);
 }
 
-void SGlCamera::CalcFrustum(SFrustum& outFrustum) const
+void SGlCamera::CalcFrustum(SFrustum* outFrustum, std::array<vec3, 8>* outCorners) const
 {    
 	const vec3 front = glm::rotateByQuat(World::Front, Rotation);
+	const vec3 frontNear = NearPlane * front;
+	const vec3 frontFar = FarPlane * front;
 	const vec3 up = glm::rotateByQuat(World::Up, Rotation);
 	const vec3 right = glm::rotateByQuat(World::Right, Rotation);
-
-	const vec3 frontMultNear = NearPlane * front;
-	const vec3 frontMultFar = FarPlane * front;
-	outFrustum.Near = { front, Position + frontMultNear };
-	outFrustum.Far = { -front, Position + frontMultFar };
-
-	if (bIsPerspective)
+	vec2 frustumSizes[2]; // near, far
 	{
-		const float halfFarHeight = FarPlane * tanf(PerspectiveFOV * .5f); // tan(FOV) = opposite / adjacent = halfVSide / FarPlane
-		const float halfFarWidth = halfFarHeight * CEngine::Get()->Viewport.AspectRatio;
-		outFrustum.Left = { glm::cross(up, frontMultFar - (right * halfFarWidth)), Position };
-		outFrustum.Right = { glm::cross(frontMultFar + (right * halfFarWidth), up), Position };
-		outFrustum.Bottom = { glm::cross(-right, frontMultFar - (up * halfFarHeight)), Position };
-		outFrustum.Top = { glm::cross(right, frontMultFar + (up * halfFarHeight)), Position };
+		if (bIsPerspective)
+		{
+			const float aspectRatio = CEngine::Get()->Viewport.AspectRatio;
+			const float tanFov = glm::tan(PerspectiveFOV * 0.5f);
+			const float halfNearHeight = NearPlane * tanFov; // tan(FOV) = opposite / adjacent = halfVSide / FarPlane
+			const float halfFarHeight = FarPlane * tanFov; // tan(FOV) = opposite / adjacent = halfVSide / FarPlane
+			// const float halfFarWidth = halfFarHeight * CEngine::Get()->Viewport.AspectRatio;
+			frustumSizes[0] = { halfNearHeight * aspectRatio , halfNearHeight };
+			frustumSizes[1] = { halfFarHeight * aspectRatio, halfFarHeight };
+		}
+		else
+		{
+			frustumSizes[0] = frustumSizes[1] = OrthoSize;
+		}
 	}
-	else
+
+	// Corners
+	if (outCorners)
 	{
-		outFrustum.Left = { right, outFrustum.Near.Point - (right * OrthoSize.x) };
-		outFrustum.Right = { -right, outFrustum.Near.Point + (right * OrthoSize.x) };
-		outFrustum.Bottom = { up, outFrustum.Near.Point - (up * OrthoSize.y) };
-		outFrustum.Top = { -up, outFrustum.Near.Point + (up * OrthoSize.y) };
+		constexpr float dx[] = { -1, 1, 1, -1 };
+		constexpr float dy[] = { -1, -1, 1, 1 };
+		for (int far = 0; far <= 1; ++far)
+		{
+			const vec3 faceCenter = Position + (far ? frontFar : frontNear);
+			for (int corner = 0; corner < 4; corner++)
+			{
+				const int cornerIdx = (far * 4) + corner;
+				const vec3 xOffset = right * (frustumSizes[far].x * dx[corner]);
+				const vec3 yOffset = up * (frustumSizes[far].y * dy[corner]);
+				outCorners->at(cornerIdx) = faceCenter + xOffset + yOffset;
+			}
+		}
 	}
-	std::for_each(outFrustum.Planes.begin(), outFrustum.Planes.end(), [&](auto& p) { p.Normal = glm::normalize(p.Normal); });
+
+	if (outFrustum)
+	{
+
+		outFrustum->Near = { front, Position + frontNear };
+		outFrustum->Far = { -front, Position + frontFar };
+
+		if (bIsPerspective)
+		{
+			outFrustum->Left = { glm::cross(frontFar - (right * frustumSizes[1].x), up), Position};
+			outFrustum->Right = { glm::cross(up, frontFar + (right * frustumSizes[1].x)), Position};
+			outFrustum->Bottom = { glm::cross(right, frontFar - (up * frustumSizes[1].y)), Position};
+			outFrustum->Top = { glm::cross(frontFar + (up * frustumSizes[1].y), right), Position};
+			std::for_each(outFrustum->Planes.begin(), outFrustum->Planes.end(), [&](auto& p) 
+			{ 
+				p.Normal = glm::normalize(p.Normal); 
+			});
+		}
+		else
+		{
+			outFrustum->Left = { right, outFrustum->Near.Point - (right * OrthoSize.x) };
+			outFrustum->Right = { -right, outFrustum->Near.Point + (right * OrthoSize.x) };
+			outFrustum->Bottom = { up, outFrustum->Near.Point - (up * OrthoSize.y) };
+			outFrustum->Top = { -up, outFrustum->Near.Point + (up * OrthoSize.y) };
+		}
+	}
 }
 
 void SGlCamera::UpdateSceneData(SSceneData& sceneData)
@@ -114,8 +154,8 @@ void SGlCamera::UpdateCameraFromInput(GLFWwindow* window, float deltax, float de
 		vec3(0.0f);
 
 	Position += positionDelta;
-	Yaw += deltax * deltaTime * YawSens;
-	Pitch += deltay * deltaTime * PitchSens;
+	Yaw -= deltax * deltaTime * YawSens;
+	Pitch -= deltay * deltaTime * PitchSens;
 	constexpr float minPitch = glm::radians(-89.f);
 	constexpr float maxPitch = glm::radians(89.f);
 	Pitch = glm::clamp(Pitch, minPitch, maxPitch);

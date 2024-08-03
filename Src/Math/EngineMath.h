@@ -24,11 +24,12 @@ constexpr float pi = glm::pi<float>();
 constexpr float SMALLER_NUMBER = 1.e-8f;
 constexpr float SMALL_NUMBER = 1.e-4f;
 
+// Left-handed coordinate system
 namespace World
 {
 	constexpr glm::vec3 Front = glm::vec3(0.0f, 0.0f, 1.0f);
 	constexpr glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
-	constexpr glm::vec3 Right = glm::vec3(1.0f, 0.0f, 0.0f);
+	constexpr glm::vec3 Right = glm::vec3(-1.0f, 0.0f, 0.0f);
 	constexpr glm::vec3 X = Right;
 	constexpr glm::vec3 Y = Up;
 	constexpr glm::vec3 Z = Front;

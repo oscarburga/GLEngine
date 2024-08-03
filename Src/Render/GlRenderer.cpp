@@ -189,7 +189,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	// Culling... lots of room for optimization here
 	SFrustum mainCameraFrustum; 
-	ActiveCamera.CalcFrustum(mainCameraFrustum);
+	ActiveCamera.CalcFrustum(&mainCameraFrustum, nullptr);
 	size_t totalObjects = 0;
 	uint32_t culledObjects = 0;
 	// Draw main color & masked objects

@@ -37,6 +37,11 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
 	glm::vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
+	SFrustum camFrustum;
+	std::array<vec3, 8> frustumCorners;
+	Camera.CalcFrustum(&camFrustum, &frustumCorners);
+	vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f});
+
 
 	float shadowsNear = 0.1f, shadowsFar = 30.f;
 	glm::mat4 lightProj = glm::orthoLH(-16.f, 22.f, -16.f, 18.f, shadowsNear, shadowsFar);
