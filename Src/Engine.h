@@ -8,9 +8,9 @@ struct GLFWwindow;
 struct SViewport
 {
 	GLFWwindow* Window = nullptr;
-	uint32_t SizeX = 800;
-	uint32_t SizeY = 600;
-	float AspectRatio = 800.f / 600.f;
+	uint32_t SizeX = 1280;
+	uint32_t SizeY = 720;
+	float AspectRatio = 1280.f / 720.f;
 };
 
 class CEngine
@@ -43,4 +43,5 @@ public:
 protected:
 	static void OnWindowResize(GLFWwindow* window, int width, int height);
 	static CEngine* Engine;
+	bool bGlfwCapturesMouse = false;
 };

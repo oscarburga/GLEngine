@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <Render/GlRenderer.h>
+#include "Tools/ImguiTools.h"
 
 #include <cassert>
 #include <iostream>
@@ -29,6 +30,7 @@ void CEngine::Init()
 	glfwSetInputMode(Viewport.Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	CGlRenderer::Create((GlFunctionLoaderFuncType)glfwGetProcAddress);
+	CImguiManager::Create(Viewport.Window);
 
 	CurrentTime = (float)glfwGetTime();
 }
@@ -36,6 +38,7 @@ void CEngine::Init()
 CEngine::~CEngine()
 {
 	CGlRenderer::Destroy();
+	CImguiManager::Destroy();
 	glfwTerminate();
 }
 
@@ -62,9 +65,10 @@ void CEngine::MainLoop()
 		CurrentTime = newTime;
 		glfwPollEvents();
 		ProcessInput(deltaTime);
+		CImguiManager::Get()->NewFrame(deltaTime);
 		PreRenderFuncs.Execute(deltaTime);
 		CGlRenderer::Get()->RenderScene(deltaTime);
-		//RenderFunc(deltaTime);
+		CImguiManager::Get()->EndNewFrame(deltaTime);
 		glfwSwapBuffers(Viewport.Window);
 	}
 }
@@ -73,6 +77,12 @@ void CEngine::ProcessInput(float deltaTime)
 {
 	if (glfwGetKey(Viewport.Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(Viewport.Window, true);
+
+	if (glfwGetKey(Viewport.Window, GLFW_KEY_F11) == GLFW_PRESS)
+		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+	if (glfwGetKey(Viewport.Window, GLFW_KEY_F10) == GLFW_PRESS)
+		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	double xpos, ypos;
 	glfwGetCursorPos(Viewport.Window, &xpos, &ypos);
@@ -85,6 +95,11 @@ void CEngine::ProcessInput(float deltaTime)
 	lastx = (float)xpos;
 	lasty = (float)ypos;
 
+	if (CImguiManager::Get()->IsCapturingInput())
+		return;
+
+	if (glfwGetInputMode(Viewport.Window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+		return;
 	CGlRenderer::Get()->ActiveCamera.UpdateCameraFromInput(Viewport.Window, deltax, deltay, deltaTime);
 }
 

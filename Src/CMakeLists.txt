@@ -28,6 +28,10 @@ set(SOURCE_LIST
 	Utils/MultiTypeContainer.h
 	Utils/RefIgnore.h
 	Utils/IdType.h
+
+	# TOOLS
+	Tools/ImguiTools.h
+	Tools/ImguiTools.cpp
 	
 	# GAME / UNCATEGORIZED
 	Engine.h
@@ -40,7 +44,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST})
 
 set_property(TARGET GLEngine PROPERTY CXX_STANDARD 20)
 target_include_directories(GLEngine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(GLEngine PUBLIC glm glad stb_image glfw fastgltf::fastgltf)
+target_link_libraries(GLEngine PUBLIC glm glad stb_image glfw fastgltf::fastgltf imgui)
 target_precompile_headers(GLEngine PUBLIC
 	<optional>
 	<vector>
