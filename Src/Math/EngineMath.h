@@ -14,6 +14,7 @@
 #include <glm/gtx/norm.hpp>
 #endif
 
+// TODO: Decide if I'm keeping or removing these. In some places I use vec3, in others I use glm::vec3. Should standarize.
 using glm::vec2;
 using glm::vec3;
 using glm::vec4;

@@ -7,10 +7,17 @@
 
 CGlShadowDepthPass::~CGlShadowDepthPass()
 {
+	if (ShadowsFbo)
+		glDeleteFramebuffers(1, &*ShadowsFbo);
+	if (ShadowsTexture)
+		glDeleteTextures(1, &*ShadowsTexture);
+	if (ShadowsShader.Id)
+		glDeleteProgram(ShadowsShader.Id);
 }
 
 void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 {
+	ShadowsCamera.bIsPerspective = true;
 	Width = width;
 	Height = height;
 	glCreateFramebuffers(1, &*ShadowsFbo);
@@ -40,12 +47,17 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	SFrustum camFrustum;
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(&camFrustum, &frustumCorners);
-	vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f});
+	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f}) / 8.f;
 
-
-	float shadowsNear = 0.1f, shadowsFar = 30.f;
-	glm::mat4 lightProj = glm::orthoLH(-16.f, 22.f, -16.f, 18.f, shadowsNear, shadowsFar);
-	glm::mat4 lightView = glm::lookAtLH(glm::vec3(-2.f, 10.f, -1.f), glm::vec3(0.0f), World::Up);
+	glm::vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+	const glm::mat4 lightView = glm::lookAt(frustumCenter - vec3(SceneData.SunlightDirection), frustumCenter, World::Up);
+	for (auto& corner : frustumCorners)
+	{
+		const glm::vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
+		min = glm::min(min, cornerLVspace);
+		max = glm::max(max, cornerLVspace);
+	}
+	glm::mat4 lightProj = glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z);
 	SceneData.LightSpaceTransform = lightProj * lightView;
 }
 
