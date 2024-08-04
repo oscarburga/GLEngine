@@ -7,6 +7,7 @@
 #include <cassert>
 #include <iostream>
 #include <format>
+#include <array>
 
 CEngine* CEngine::Engine = nullptr;
 
@@ -75,14 +76,27 @@ void CEngine::MainLoop()
 
 void CEngine::ProcessInput(float deltaTime)
 {
-	if (glfwGetKey(Viewport.Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+	static std::array<bool, GLFW_KEY_LAST> keyState {};
+	static const auto UpdateKeyState = [&](const int key) -> int
+	{
+		assert(key >= 0);
+		const bool bOldState = keyState[key];
+		const bool bNewState = glfwGetKey(Viewport.Window, key) == GLFW_PRESS;
+		if (bOldState != bNewState)
+			return keyState[key] = bNewState;
+
+		return -1;
+	};
+
+	if (UpdateKeyState(GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(Viewport.Window, true);
 
-	if (glfwGetKey(Viewport.Window, GLFW_KEY_F11) == GLFW_PRESS)
-		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-	if (glfwGetKey(Viewport.Window, GLFW_KEY_F10) == GLFW_PRESS)
-		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	if (UpdateKeyState(GLFW_KEY_F1) == GLFW_PRESS)
+	{
+		int cursorMode = glfwGetInputMode(Viewport.Window, GLFW_CURSOR);
+		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, 
+			cursorMode == GLFW_CURSOR_NORMAL ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+	}
 
 	double xpos, ypos;
 	glfwGetCursorPos(Viewport.Window, &xpos, &ypos);
@@ -100,6 +114,7 @@ void CEngine::ProcessInput(float deltaTime)
 
 	if (glfwGetInputMode(Viewport.Window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
 		return;
+
 	CGlRenderer::Get()->ActiveCamera.UpdateCameraFromInput(Viewport.Window, deltax, deltay, deltaTime);
 }
 
