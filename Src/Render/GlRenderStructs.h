@@ -12,7 +12,6 @@ class CGlShader;
 struct SSceneData
 {
 	glm::vec4 CameraPos {};
-	glm::vec4 AmbientColor {};
 	glm::vec4 SunlightDirection {}; // 4th component for sun power
 	glm::vec4 SunlightColor {};
 	glm::mat4 View {};

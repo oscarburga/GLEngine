@@ -12,7 +12,6 @@ struct SVertex {
 // UBO
 layout (binding = 0, std140) uniform SceneData {
 	vec4 CameraPos;
-	vec4 AmbientColor;
 	vec4 SunlightDirection;
 	vec4 SunlightColor;
 	mat4 View;

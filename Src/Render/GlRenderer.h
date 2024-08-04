@@ -4,15 +4,16 @@
 #include "GlShader.h"
 #include "GlCamera.h"
 #include "GlShadowDepth.h"
+#include "Tools/ImguiTools.h"
 
 class CEngine;
 struct SViewport;
 
 typedef void (*GlFunctionLoaderFuncType)(const char*);
 
-class CGlRenderer
+class CGlRenderer : public IImguiObject
 {
-	CGlRenderer() {}
+	CGlRenderer() { bShowImguiPanel = true; };
 	CGlRenderer(const CGlRenderer&) = delete;
 	CGlRenderer(CGlRenderer&&) = delete;
 	~CGlRenderer();
@@ -32,12 +33,18 @@ public:
 
 	void OnWindowResize(CEngine* Engine, const SViewport& Viewport);
 
+	virtual void ShowImguiPanel() override;
 	SDrawContext MainDrawContext {};
 private:
 	SGlVaoId EmptyVao {};
 	SGlBufferId Quad2DBuffer {};
 	SGlBufferId SceneDataBuffer;
 	static CGlRenderer* Renderer;
+	struct
+	{
+		bool bShowShadowDepthMap = false;
+		glm::vec4 SunlightDirection {};
+	} ImguiParams;
 public:
 	static int UBOOffsetAlignment;
 };

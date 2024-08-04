@@ -5,6 +5,7 @@
 #include "Engine.h"
 #include "Math/EngineMath.h"
 #include <Assets/AssetLoader.h>
+#include <imgui.h>
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
 int CGlRenderer::UBOOffsetAlignment = 16;
@@ -115,9 +116,9 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	// Scene data uniform buffer
 	{
 		glCreateBuffers(1, &*SceneDataBuffer);
-		SceneData.AmbientColor = glm::vec4(0.1f);
 		SceneData.SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 2.f);
 		SceneData.SunlightColor = glm::vec4(1.f);
+		ImguiParams.SunlightDirection = SceneData.SunlightDirection;
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
@@ -164,14 +165,14 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	
 	// Refresh SceneData
+	SceneData.SunlightDirection = vec4(glm::normalize(vec3(ImguiParams.SunlightDirection)), ImguiParams.SunlightDirection.w);
 	ActiveCamera.UpdateSceneData(SceneData);
 	ShadowPass.UpdateSceneData(SceneData, ActiveCamera);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
 	// TODO frustum cull shadow depth
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
 
-	constexpr bool bShowShadowDepthMap = false;
-	if constexpr (bShowShadowDepthMap)
+	if (ImguiParams.bShowShadowDepthMap)
 	{
 		// render shadow depth onto quad to screen
 		QuadShader.Use();
@@ -308,4 +309,22 @@ void CGlRenderer::RenderScene(float deltaTime)
 void CGlRenderer::OnWindowResize(CEngine* Engine, const SViewport& Viewport)
 {
 	glViewport(0, 0, Viewport.SizeX, Viewport.SizeY);
+}
+
+void CGlRenderer::ShowImguiPanel()
+{
+	if (ImGui::Begin("Renderer, Scene Data, etc", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		if (ImGui::CollapsingHeader("Renderer"))
+		{
+			ImGui::Checkbox("Show shadow map", &ImguiParams.bShowShadowDepthMap);
+		}
+
+		if (ImGui::CollapsingHeader("Scene"))
+		{
+			ImGui::InputFloat4("SunlightDirection", &ImguiParams.SunlightDirection.x);
+			ImGui::ColorEdit3("Sunlight color", &SceneData.SunlightColor.x);
+		}
+	}
+	ImGui::End();
 }

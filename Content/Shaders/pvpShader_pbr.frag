@@ -14,7 +14,6 @@ out vec4 FragColor;
 // UBO
 layout (binding = 0, std140) uniform SceneData {
 	vec4 CameraPos;
-	vec4 AmbientColor;
 	vec4 SunlightDirection;
 	vec4 SunlightColor;
 	mat4 View;
@@ -135,7 +134,7 @@ float DirLightShadowFactor()
 	projCoords = projCoords * 0.5f + 0.5f;
 
 	vec3 sunlightDir = normalize(-sceneData.SunlightDirection.xyz);
-	float bias = max(0.05f * (1.0f - dot(N, sunlightDir)), 0.005f);
+	float bias = 0.005f;// max(0.01f * (1.0f - abs(dot(N, sunlightDir))), 0.005f);
 	float curDepth = projCoords.z; // depth of this fragment
 
 	// simple PCF

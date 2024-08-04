@@ -30,8 +30,8 @@ void CEngine::Init()
 	glfwSetFramebufferSizeCallback(Viewport.Window, &CEngine::OnWindowResize);
 	glfwSetInputMode(Viewport.Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+	CImguiManager::Get()->Init(Viewport.Window);
 	CGlRenderer::Create((GlFunctionLoaderFuncType)glfwGetProcAddress);
-	CImguiManager::Create(Viewport.Window);
 
 	CurrentTime = (float)glfwGetTime();
 }
@@ -39,7 +39,7 @@ void CEngine::Init()
 CEngine::~CEngine()
 {
 	CGlRenderer::Destroy();
-	CImguiManager::Destroy();
+	CImguiManager::Get()->Cleanup();
 	glfwTerminate();
 }
 
@@ -93,9 +93,9 @@ void CEngine::ProcessInput(float deltaTime)
 
 	if (UpdateKeyState(GLFW_KEY_F1) == GLFW_PRESS)
 	{
-		int cursorMode = glfwGetInputMode(Viewport.Window, GLFW_CURSOR);
-		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, 
-			cursorMode == GLFW_CURSOR_NORMAL ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+		int cursorModeToSet = glfwGetInputMode(Viewport.Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
+		glfwSetInputMode(Viewport.Window, GLFW_CURSOR, cursorModeToSet);
+		CImguiManager::Get()->SetCapturingInput(cursorModeToSet == GLFW_CURSOR_NORMAL);
 	}
 
 	double xpos, ypos;
