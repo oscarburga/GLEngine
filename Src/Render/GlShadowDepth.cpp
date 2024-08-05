@@ -43,22 +43,31 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
-	glm::vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
+	vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
 	SFrustum camFrustum;
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(&camFrustum, &frustumCorners);
 	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f}) / 8.f;
 
 	glm::vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
-	const glm::mat4 lightView = glm::lookAt(frustumCenter - vec3(SceneData.SunlightDirection), frustumCenter, World::Up);
+	const mat4 lightView = glm::lookAt(frustumCenter - vec3(SceneData.SunlightDirection), frustumCenter, World::Up);
 	for (auto& corner : frustumCorners)
 	{
-		const glm::vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
+		const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
 		min = glm::min(min, cornerLVspace);
 		max = glm::max(max, cornerLVspace);
 	}
+	min.x -= ImguiData.OrthoSizePadding.x;
+	min.y -= ImguiData.OrthoSizePadding.y;
+	max.x += ImguiData.OrthoSizePadding.x;
+	max.y += ImguiData.OrthoSizePadding.y;
+	min *= vec3(ImguiData.OrthoSizeScale, 1.f);
+	max *= vec3(ImguiData.OrthoSizeScale, 1.f);
 	glm::mat4 lightProj = glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z);
 	SceneData.LightSpaceTransform = lightProj * lightView;
+
+	// TODO: SETUP SHADOW PASS FRUSTUM CULLING
+	// Camera needs support for ortho size with diff bounds on each end (vec2 OrthoSize is not enough).
 }
 
 void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)

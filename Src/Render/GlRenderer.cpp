@@ -315,15 +315,17 @@ void CGlRenderer::ShowImguiPanel()
 {
 	if (ImGui::Begin("Renderer, Scene Data, etc", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		if (ImGui::CollapsingHeader("Renderer"))
+		if (ImGui::CollapsingHeader("Debug"))
 		{
 			ImGui::Checkbox("Show shadow map", &ImguiParams.bShowShadowDepthMap);
 		}
 
 		if (ImGui::CollapsingHeader("Scene"))
 		{
-			ImGui::InputFloat4("SunlightDirection", &ImguiParams.SunlightDirection.x);
+			ImGui::InputFloat4("Sunlight dir (w is intensity)", &ImguiParams.SunlightDirection.x);
 			ImGui::ColorEdit3("Sunlight color", &SceneData.SunlightColor.x);
+			ImGui::InputFloat2("Shadows ortho size scale", &ShadowPass.ImguiData.OrthoSizeScale.x);
+			ImGui::InputFloat2("Shadows ortho size pad", &ShadowPass.ImguiData.OrthoSizePadding.x);
 		}
 	}
 	ImGui::End();
