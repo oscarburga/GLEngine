@@ -4,6 +4,7 @@
 #include "GlShadowDepth.h"
 #include "Assets/AssetLoader.h"
 #include "GlRenderer.h"
+#include <iostream>
 
 CGlShadowDepthPass::~CGlShadowDepthPass()
 {
@@ -17,7 +18,7 @@ CGlShadowDepthPass::~CGlShadowDepthPass()
 
 void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 {
-	ShadowsCamera.bIsPerspective = true;
+	ShadowsCamera.bIsPerspective = false;
 	Width = width;
 	Height = height;
 	glCreateFramebuffers(1, &*ShadowsFbo);
@@ -49,8 +50,15 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	Camera.CalcFrustum(&camFrustum, &frustumCorners);
 	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f}) / 8.f;
 
+	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
+	const vec3 shadowsRight = glm::normalize(glm::cross(shadowsCamDir, World::Up));
+	const vec3 shadowsUp = glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
+
 	glm::vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
-	const mat4 lightView = glm::lookAt(frustumCenter - vec3(SceneData.SunlightDirection), frustumCenter, World::Up);
+	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
+	// const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
+	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, World::Up);
+	ShadowsCamera.Rotation = glm::quat_cast(lightView);
 	for (auto& corner : frustumCorners)
 	{
 		const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
@@ -63,11 +71,13 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	max.y += ImguiData.OrthoSizePadding.y;
 	min *= vec3(ImguiData.OrthoSizeScale, 1.f);
 	max *= vec3(ImguiData.OrthoSizeScale, 1.f);
-	glm::mat4 lightProj = glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z);
+	ShadowsCamera.OrthoMinBounds = vec2(min);
+	ShadowsCamera.OrthoMaxBounds = vec2(max);
+	ShadowsCamera.NearPlane = min.z;
+	ShadowsCamera.FarPlane = max.z;
+	mat4 lightProj;
+	ShadowsCamera.CalcProjMatrix(lightProj);
 	SceneData.LightSpaceTransform = lightProj * lightView;
-
-	// TODO: SETUP SHADOW PASS FRUSTUM CULLING
-	// Camera needs support for ortho size with diff bounds on each end (vec2 OrthoSize is not enough).
 }
 
 void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
@@ -76,9 +86,17 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	glBindFramebuffer(GL_FRAMEBUFFER, *ShadowsFbo);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
+	SFrustum shadowsFrustum;
+	ShadowsCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	ShadowsShader.Use();
+	uint32_t culled = 0;
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{
+		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
+		{
+			culled++;
+			continue;
+		}
 		// TODO: Frustum cull shadow pass
 		// TODO: SRenderObject shadows check
 		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
@@ -89,6 +107,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		else
 			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
 	}
+	std::cout << std::format("shadows culled {} / {}\n", culled, DrawContext.Surfaces[EMaterialPass::MainColor].size());
 
 	// Restore opengl viewport size to window size
 	auto& viewport = CEngine::Get()->Viewport;

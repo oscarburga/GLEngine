@@ -51,8 +51,8 @@ public:
 	float NearPlane = 0.1f;
 	float FarPlane = 25.f;
 	float PerspectiveFOV = glm::radians(80.f); // Field of view in radians (y-axis)
-	glm::vec2 OrthoSize { 1.f, 1.f };
-	glm::vec2 OrthoCenter { 0.f, 0.f };
+	glm::vec2 OrthoMinBounds { -1.f, -1.f };
+	glm::vec2 OrthoMaxBounds { 1.f, 1.f };
 	glm::vec3 Position {};
 	glm::quat Rotation {};
 

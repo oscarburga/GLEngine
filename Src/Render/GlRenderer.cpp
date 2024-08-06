@@ -313,15 +313,16 @@ void CGlRenderer::OnWindowResize(CEngine* Engine, const SViewport& Viewport)
 
 void CGlRenderer::ShowImguiPanel()
 {
-	if (ImGui::Begin("Renderer, Scene Data, etc", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::Begin("Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		if (ImGui::CollapsingHeader("Debug"))
 		{
 			ImGui::Checkbox("Show shadow map", &ImguiParams.bShowShadowDepthMap);
 		}
 
-		if (ImGui::CollapsingHeader("Scene"))
+		if (ImGui::CollapsingHeader("Scene settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			ImGui::InputFloat("Camera FOV", &ActiveCamera.PerspectiveFOV);
 			ImGui::InputFloat4("Sunlight dir (w is intensity)", &ImguiParams.SunlightDirection.x);
 			ImGui::ColorEdit3("Sunlight color", &SceneData.SunlightColor.x);
 			ImGui::InputFloat2("Shadows ortho size scale", &ShadowPass.ImguiData.OrthoSizeScale.x);
