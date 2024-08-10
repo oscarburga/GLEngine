@@ -44,7 +44,9 @@ private:
 	{
 		bool bShowShadowDepthMap = false;
 		glm::vec4 SunlightDirection {};
-	} ImguiParams;
+		uint32_t CulledNum = 0;
+		uint32_t TotalNum = 0;
+	} ImguiData;
 public:
 	static int UBOOffsetAlignment;
 };

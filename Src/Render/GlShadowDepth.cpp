@@ -89,15 +89,15 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	SFrustum shadowsFrustum;
 	ShadowsCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	ShadowsShader.Use();
-	uint32_t culled = 0;
+	ImguiData.TotalNum = (uint32_t)DrawContext.Surfaces[EMaterialPass::MainColor].size();
+	ImguiData.CulledNum = 0;
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{
 		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
 		{
-			culled++;
+			++ImguiData.CulledNum;
 			continue;
 		}
-		// TODO: Frustum cull shadow pass
 		// TODO: SRenderObject shadows check
 		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
@@ -107,7 +107,6 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		else
 			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
 	}
-	std::cout << std::format("shadows culled {} / {}\n", culled, DrawContext.Surfaces[EMaterialPass::MainColor].size());
 
 	// Restore opengl viewport size to window size
 	auto& viewport = CEngine::Get()->Viewport;

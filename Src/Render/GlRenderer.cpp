@@ -118,7 +118,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glCreateBuffers(1, &*SceneDataBuffer);
 		SceneData.SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 2.f);
 		SceneData.SunlightColor = glm::vec4(1.f);
-		ImguiParams.SunlightDirection = SceneData.SunlightDirection;
+		ImguiData.SunlightDirection = SceneData.SunlightDirection;
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
@@ -165,14 +165,14 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	
 	// Refresh SceneData
-	SceneData.SunlightDirection = vec4(glm::normalize(vec3(ImguiParams.SunlightDirection)), ImguiParams.SunlightDirection.w);
+	SceneData.SunlightDirection = vec4(glm::normalize(vec3(ImguiData.SunlightDirection)), ImguiData.SunlightDirection.w);
 	ActiveCamera.UpdateSceneData(SceneData);
 	ShadowPass.UpdateSceneData(SceneData, ActiveCamera);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
 	// TODO frustum cull shadow depth
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
 
-	if (ImguiParams.bShowShadowDepthMap)
+	if (ImguiData.bShowShadowDepthMap)
 	{
 		// render shadow depth onto quad to screen
 		QuadShader.Use();
@@ -191,8 +191,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 	// Culling... lots of room for optimization here
 	SFrustum mainCameraFrustum; 
 	ActiveCamera.CalcFrustum(&mainCameraFrustum, nullptr);
-	size_t totalObjects = 0;
-	uint32_t culledObjects = 0;
 	// Draw main color & masked objects
 	// PvpShader.SetUniform(GlUniformLocs::ShowDebugNormals, true);
 
@@ -203,14 +201,15 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::OcclusionTex, GlTexUnits::PbrOcclusion);
 	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexture);
+	ImguiData.CulledNum = ImguiData.TotalNum = 0;
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
-		totalObjects += MainDrawContext.Surfaces[pass].size();
+		ImguiData.TotalNum += (uint32_t)MainDrawContext.Surfaces[pass].size();
 		for (auto& surface : MainDrawContext.Surfaces[pass])
 		{
 			if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
 			{
-				++culledObjects;
+				++ImguiData.CulledNum;
 				continue;
 			}
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
@@ -251,7 +250,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		auto& blendObjects = MainDrawContext.Surfaces[EMaterialPass::Transparent];
 		auto& indices = MainDrawContext.BlendIndices;
-		totalObjects += blendObjects.size();
 		indices.resize(blendObjects.size());
 		std::iota(indices.begin(), indices.end(), 0); 
 		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](size_t& i, size_t& j)
@@ -262,12 +260,14 @@ void CGlRenderer::RenderScene(float deltaTime)
 			const float dj = glm::length2(camPos - locj);
 			return di > dj;
 		});
+
+		ImguiData.TotalNum += (uint32_t)MainDrawContext.Surfaces[EMaterialPass::Transparent].size();
 		for (size_t& idx : indices)
 		{
 			auto& surface = blendObjects[idx];
 			if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
 			{
-				++culledObjects;
+				++ImguiData.CulledNum;
 				continue;
 			}
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
@@ -315,15 +315,18 @@ void CGlRenderer::ShowImguiPanel()
 {
 	if (ImGui::Begin("Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
+		ImGui::Text("Shadows culling %u/%u", ShadowPass.ImguiData.CulledNum, ShadowPass.ImguiData.TotalNum);
+		ImGui::Text("Color pass culling %u/%u", ImguiData.CulledNum, ImguiData.TotalNum);
+
 		if (ImGui::CollapsingHeader("Debug"))
 		{
-			ImGui::Checkbox("Show shadow map", &ImguiParams.bShowShadowDepthMap);
+			ImGui::Checkbox("Show shadow map", &ImguiData.bShowShadowDepthMap);
 		}
 
 		if (ImGui::CollapsingHeader("Scene settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::InputFloat("Camera FOV", &ActiveCamera.PerspectiveFOV);
-			ImGui::InputFloat4("Sunlight dir (w is intensity)", &ImguiParams.SunlightDirection.x);
+			ImGui::InputFloat4("Sunlight dir (w is intensity)", &ImguiData.SunlightDirection.x);
 			ImGui::ColorEdit3("Sunlight color", &SceneData.SunlightColor.x);
 			ImGui::InputFloat2("Shadows ortho size scale", &ShadowPass.ImguiData.OrthoSizeScale.x);
 			ImGui::InputFloat2("Shadows ortho size pad", &ShadowPass.ImguiData.OrthoSizePadding.x);

@@ -20,6 +20,8 @@ public:
 	{
 		glm::vec2 OrthoSizeScale { 1.f, 1.f };
 		glm::vec2 OrthoSizePadding {};
+		uint32_t CulledNum = 0;
+		uint32_t TotalNum = 0;
 	} ImguiData;
 
 	void Init(uint32_t width = 2048, uint32_t height = 2048);
