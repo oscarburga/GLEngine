@@ -56,8 +56,8 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 
 	glm::vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
 	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
-	// const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
-	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, World::Up);
+	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
+	// const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, World::Up);
 	ShadowsCamera.Rotation = glm::quat_cast(lightView);
 	for (auto& corner : frustumCorners)
 	{
@@ -93,7 +93,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	ImguiData.CulledNum = 0;
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{
-		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
+		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform) || surface.Material->bIgnoreLighting)
 		{
 			++ImguiData.CulledNum;
 			continue;

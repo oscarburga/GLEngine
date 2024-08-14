@@ -197,7 +197,6 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 	{
 		for (fastgltf::Sampler& sampler : gltf->samplers)
 		{
-			// break; // TEMP while materials are pending, not using the samplers.
 			SGlSamplerId id;
 			glCreateSamplers(1, &*id);
 			glTextureParameteri(*id, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
@@ -211,7 +210,6 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 	}
 
 	// Textures
-	std::vector<SGlTextureId> textures;
 	{
 		for (fastgltf::Image& image : gltf->images)
 		{
@@ -219,7 +217,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			auto FailLoad = [&](auto&... args)
 			{
 				std::cerr << std::format("\tError processing image \"{}\"\n\t{}", image.name, errMsg);
-				textures.emplace_back(ErrorTexture);
+				scene.Textures.emplace_back(ErrorTexture);
 			};
 			auto LoadFromURI = [&](fastgltf::sources::URI& imagePath)
 			{
@@ -233,7 +231,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				if (auto texture = LoadTexture2DFromFile(fullImagePath, false))
 				{
 					// std::cout << std::format("\t\tsuccessfully loaded {}\n", imagePath.uri.c_str());
-					textures.emplace_back(*texture);
+					scene.Textures.emplace_back(*texture);
 				}
 				else
 				{
@@ -247,7 +245,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				void* buffer = reinterpret_cast<uint8_t*>(bytes) + byteOffset;
 				if (auto texture = LoadTexture2DFromBuffer(buffer, size, false))
 				{
-					textures.emplace_back(*texture);
+					scene.Textures.emplace_back(*texture);
 				}
 				else
 				{
@@ -321,7 +319,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				size_t texIndex = gltf->textures[gltfTexture->textureIndex].imageIndex.value();
 				size_t samplerIndex = gltf->textures[gltfTexture->textureIndex].samplerIndex.value();
 
-				outTex.Texture = textures[texIndex];
+				outTex.Texture = scene.Textures[texIndex];
 				outTex.Sampler = scene.Samplers[samplerIndex];
 				return true;
 			}

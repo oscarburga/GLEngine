@@ -55,10 +55,10 @@ void SLoadedGLTF::ClearAll()
     Samplers.clear();
 
     // Delete textures
-    for (auto& [name, texPtr] : Textures)
+    for (auto texId : Textures)
     {
-        if (texPtr->Id)
-            glDeleteTextures(1, &*texPtr->Id);
+        if (texId)
+            glDeleteTextures(1, &*texId);
     }
     Textures.clear();
 

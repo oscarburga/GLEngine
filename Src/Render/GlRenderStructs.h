@@ -126,6 +126,18 @@ struct SVertex
 	glm::vec4 Tangent = {}; // xyz normalized, W is the sign (+-1) indicating tangent handedness
 };
 
+struct SSkBone
+{
+	uint32_t Id;
+	glm::mat4 BoneSpaceMatrix;
+};
+
+struct SVertexBoneData 
+{
+	glm::uvec4 Bones;
+	glm::vec4 Weights;
+};
+
 struct STextureAsset
 {
 	std::string Name;
@@ -137,6 +149,11 @@ struct SMeshAsset
 	std::string Name;
 	std::vector<SGeoSurface> Surfaces;
 	SGPUMeshBuffers MeshBuffers;
+};
+
+struct SSkinAsset
+{
+	std::string Name;
 };
 
 struct SRenderObject // TODO: some bCastShadows bool
@@ -183,8 +200,9 @@ struct SLoadedGLTF : public IRenderable
 {
 	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
 	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
-	std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures;
-	std::unordered_map<std::string, std::shared_ptr<SPbrMaterial>> Materials;
+	// std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures; // Don't think I need them mapped by name for now
+	std::unordered_map<std::string, std::shared_ptr<SPbrMaterial>> Materials; // Possibly don't need these mapped by name either
+	std::vector<SGlTextureId> Textures;
 	std::vector<SGlSamplerId> Samplers;
 	std::vector<std::shared_ptr<SNode>> RootNodes;
 	glm::mat4 UserTransform;
