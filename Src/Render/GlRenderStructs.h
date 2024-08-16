@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include "glm/glm.hpp"
 #include "GlIdTypes.h"
+#include "Utils/GenericConcepts.h"
 
 class CGlShader;
 
@@ -151,11 +152,6 @@ struct SMeshAsset
 	SGPUMeshBuffers MeshBuffers;
 };
 
-struct SSkinAsset
-{
-	std::string Name;
-};
-
 struct SRenderObject // TODO: some bCastShadows bool
 {
 	uint32_t IndexCount;
@@ -210,4 +206,88 @@ struct SLoadedGLTF : public IRenderable
 	~SLoadedGLTF() { ClearAll(); }
 	void ClearAll();
 	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
+};
+
+// TODO these do not consider morph targets
+template<typename Kf>
+concept KeyframeConcept = requires(Kf keyframe, SNode* node, float curTime, Kf lastKf, Kf nextKf)
+{
+	{ keyframe.Timestamp } -> MatchesAnyType<float>;
+	// { keyframe.Value } -> MatchesAnyType<glm::vec3, glm::quat>;
+	keyframe.Interpolate(curTime, node, lastKf, nextKf);
+};
+
+template<typename ValueType>
+struct SKeyFrame
+{
+	float Timestamp = 0.0f;
+	ValueType Value {};
+	template<typename OtherValueType>
+	inline bool operator<(const SKeyFrame<OtherValueType>& other) { return Timestamp < other.Timestamp; }
+};
+
+template<MatchesAnyType<glm::vec3, glm::quat> ValueType>
+struct SAnimKeyFrames : public std::vector<SKeyFrame<ValueType>>
+{
+	uint32_t LastIndex = 0;
+
+private: // For assertion purposes only:
+	float LastTime = 0.0f;
+public:
+
+	// EInterpolationType...
+	ValueType GetValueAtTime(float animTime)
+	{
+		assert(LastTime <= animTime);
+		LastTime = animTime;
+
+		if (this->size() == 0)
+			return ValueType {};
+
+		while (LastIndex < this->size() && this->at(LastIndex).Timestamp <= animTime)
+			++LastIndex;
+
+		// If requested time is less than first keyframe timestamp, grab the value from the earliest keyframe (GLTF spec)
+		if (LastIndex == 0 && animTime < this->at(LastIndex).Timestamp)
+			return this->at(0).Value;
+
+		// If we reached the end (requested time is past the last keyframe timestamp), grab the value from the last keyframe (GLTF spec)
+		if (LastIndex == this->size())
+			return this->back().Value;
+
+		// Somewhere in the middle: interpolate
+		--LastIndex;
+		ValueType& last = this->at(LastIndex);
+		ValueType& nxt = this->at(LastIndex + 1);
+		const float rangeSize = nxt.Timestamp - last.Timestamp;
+		const float timePastLast = animTime - last.Timestamp;
+		const float alpha = glm::clamp(timePastLast / rangeSize, 0.f, 1.f);
+
+		// Don't like this too much but w/e, saves us the work of specializing templates
+		if constexpr (std::is_same_v<ValueType, glm::vec3>)
+			return glm::lerp(last.Value, nxt.Value, alpha);
+
+		if constexpr (std::is_same_v<ValueType, glm::quat>)
+			return glm::slerp(last.Value, nxt.Value, alpha);
+	}
+	void Reset() { LastIndex = 0; LastTime = 0.0f; }
+};
+
+struct SBoneAnimData
+{
+	SAnimKeyFrames<glm::vec3> Positions;
+	SAnimKeyFrames<glm::quat> Rotations;
+	SAnimKeyFrames<glm::vec3> Scales;
+};
+
+
+struct SAnimation
+{
+	std::string Name;
+	std::vector<SBoneAnimData> BoneKeyFrames;
+};
+
+struct SSkinAsset
+{
+	std::string Name;
 };

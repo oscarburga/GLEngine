@@ -2,12 +2,7 @@
 
 #include <vector>
 #include <algorithm>
-
-template<typename T, typename... U>
-concept MatchesAnyType = (... || std::same_as<T, U>);
-
-template<typename Func, typename... ArgTypes>
-concept IsCallableWith = (... && std::invocable<Func, ArgTypes>);
+#include "Utils/ConceptsDef.h"
 
 template<typename... Types>
 class MultiTypeContainer

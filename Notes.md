@@ -44,3 +44,16 @@ VAO binds attributes to locations for input variables in shader code.
 ## Texture coordinates
 opengl tex coords are measured with (0,0) being bottom left corner.
 regular images have (0,0) coordinate being top left corner. Make sure to vertically flip images when reading them
+
+
+## GLTF animations
+
+* Channels and samplers.
+* Each channel specificies a node to animate, the property to animate, and the sampler to use for the interpolation.
+* Each sampler specifies timestamps (inputs) and a value for the animated property for each timestamp (outputs)
+    * The interpolation method to use between timestamp values is also specified in each sampler i.e. LINEAR.
+
+This means for an abstracted skeletal animation concept: 
+* Each single keyframe only animates 1 property of 1 bone.
+    * Unless you manually merge keyframes with equal time, but that seems annoying.
+

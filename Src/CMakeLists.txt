@@ -23,6 +23,7 @@ set(SOURCE_LIST
 	Render/GlShadowDepth.h
 
 	# UTILS
+	Utils/GenericConcepts.h
 	Utils/Defer.h
 	Utils/FuncVector.h
 	Utils/MultiTypeContainer.h
