@@ -100,9 +100,9 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		}
 		// TODO: SRenderObject shadows check
 		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, surface.Buffers.IndexBuffer);
-		if (surface.Buffers.IndexBuffer)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, surface.IndexBuffer);
+		if (surface.IndexBuffer)
 			glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
 		else
 			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);

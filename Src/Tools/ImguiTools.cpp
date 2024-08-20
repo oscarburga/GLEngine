@@ -27,6 +27,7 @@ void CImguiManager::Init(GLFWwindow* window)
 	ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
 	ImGui_ImplOpenGL3_Init();
 	bIsInitialized = true;
+	SetCapturingInput(false);
 }
 
 void CImguiManager::Cleanup()

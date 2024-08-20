@@ -30,7 +30,9 @@ void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
             draw.FirstIndex = surface.StartIndex;
             draw.Bounds = surface.Bounds;
             draw.Material = surface.Material;
-            draw.Buffers = Mesh->MeshBuffers;
+            draw.VertexBuffer = Mesh->VertexBuffer;
+            draw.IndexBuffer = Mesh->IndexBuffer;
+            draw.BonesDataBuffer = Mesh->BoneDataBuffer;
             draw.Transform = nodeMatrix;
         }
     }
@@ -42,10 +44,12 @@ void SLoadedGLTF::ClearAll()
     // This might be a bad idea... its fine if noone else is using buffers/etc from this graph though.
     for (auto& [name, meshPtr] : Meshes)
     {
-        if (meshPtr->MeshBuffers.IndexBuffer)
-            glDeleteBuffers(1, &*meshPtr->MeshBuffers.IndexBuffer);
-        if (meshPtr->MeshBuffers.VertexBuffer)
-            glDeleteBuffers(1, &*meshPtr->MeshBuffers.VertexBuffer);
+        if (meshPtr->IndexBuffer)
+            glDeleteBuffers(1, &*meshPtr->IndexBuffer);
+        if (meshPtr->VertexBuffer)
+            glDeleteBuffers(1, &*meshPtr->VertexBuffer);
+        if (meshPtr->BoneDataBuffer)
+            glDeleteBuffers(1, &*meshPtr->BoneDataBuffer);
     }
     Meshes.clear();
 

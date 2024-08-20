@@ -21,12 +21,6 @@ struct SSceneData
 	glm::mat4 LightSpaceTransform {};
 };
 
-struct SGPUMeshBuffers
-{
-	SGlBufferId IndexBuffer {};
-	SGlBufferId VertexBuffer {};
-};
-
 struct SGlTexture
 {
 	SGlTextureId Texture {};
@@ -127,18 +121,6 @@ struct SVertex
 	glm::vec4 Tangent = {}; // xyz normalized, W is the sign (+-1) indicating tangent handedness
 };
 
-struct SSkBone
-{
-	uint32_t Id;
-	glm::mat4 BoneSpaceMatrix;
-};
-
-struct SVertexBoneData 
-{
-	glm::uvec4 Bones;
-	glm::vec4 Weights;
-};
-
 struct STextureAsset
 {
 	std::string Name;
@@ -149,14 +131,18 @@ struct SMeshAsset
 {
 	std::string Name;
 	std::vector<SGeoSurface> Surfaces;
-	SGPUMeshBuffers MeshBuffers;
+	SGlBufferId VertexBuffer;
+	SGlBufferId IndexBuffer;
+	SGlBufferId BoneDataBuffer;
 };
 
 struct SRenderObject // TODO: some bCastShadows bool
 {
 	uint32_t IndexCount;
 	uint32_t FirstIndex;
-	SGPUMeshBuffers Buffers;
+	SGlBufferId VertexBuffer;
+	SGlBufferId IndexBuffer;
+	SGlBufferId BonesDataBuffer;
 	SBounds Bounds;
 	glm::mat4 Transform;
 	std::shared_ptr<SPbrMaterial> Material;
@@ -175,6 +161,7 @@ class IRenderable
 
 struct SNode : public IRenderable
 {
+	uint32_t NodeId = 0;
 	std::weak_ptr<SNode> Parent;
 	std::vector<std::shared_ptr<SNode>> Children;
 	// TODO: Replace these matrices with a transform struct to use quaternions
@@ -189,32 +176,8 @@ struct SNode : public IRenderable
 struct SMeshNode : public SNode
 {
 	std::shared_ptr<SMeshAsset> Mesh;
+	std::shared_ptr<struct SSkinAsset> Skin;
 	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
-};
-
-struct SLoadedGLTF : public IRenderable
-{
-	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
-	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
-	// std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures; // Don't think I need them mapped by name for now
-	std::unordered_map<std::string, std::shared_ptr<SPbrMaterial>> Materials; // Possibly don't need these mapped by name either
-	std::vector<SGlTextureId> Textures;
-	std::vector<SGlSamplerId> Samplers;
-	std::vector<std::shared_ptr<SNode>> RootNodes;
-	glm::mat4 UserTransform;
-
-	~SLoadedGLTF() { ClearAll(); }
-	void ClearAll();
-	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
-};
-
-// TODO these do not consider morph targets
-template<typename Kf>
-concept KeyframeConcept = requires(Kf keyframe, SNode* node, float curTime, Kf lastKf, Kf nextKf)
-{
-	{ keyframe.Timestamp } -> MatchesAnyType<float>;
-	// { keyframe.Value } -> MatchesAnyType<glm::vec3, glm::quat>;
-	keyframe.Interpolate(curTime, node, lastKf, nextKf);
 };
 
 template<typename ValueType>
@@ -273,21 +236,48 @@ public:
 	void Reset() { LastIndex = 0; LastTime = 0.0f; }
 };
 
-struct SBoneAnimData
+struct SVertexSkinData 
 {
-	SAnimKeyFrames<glm::vec3> Positions;
-	SAnimKeyFrames<glm::quat> Rotations;
-	SAnimKeyFrames<glm::vec3> Scales;
+	glm::uvec4 Joints {};
+	glm::vec4 Weights {};
 };
 
-
-struct SAnimation
+struct SJointAnimData
 {
-	std::string Name;
-	std::vector<SBoneAnimData> BoneKeyFrames;
+	SNode* JointNode = nullptr;
+	SAnimKeyFrames<glm::vec3> Positions {};
+	SAnimKeyFrames<glm::quat> Rotations {};
+	SAnimKeyFrames<glm::vec3> Scales {};
+};
+
+struct SAnimationAsset
+{
+	std::vector<SJointAnimData> JointKeyFrames {};
+	std::weak_ptr<struct SSkinAsset> OwnerSkin {};
 };
 
 struct SSkinAsset
 {
 	std::string Name;
+	std::vector<std::shared_ptr<SNode>> AllJoints;
+	std::vector<glm::mat4> InverseBindMatrices;
+	std::unordered_map<std::string, SAnimationAsset> Animations;
+};
+
+struct SLoadedGLTF : public IRenderable
+{
+	std::unordered_map<std::string, std::shared_ptr<SMeshAsset>> Meshes;
+	std::unordered_map<std::string, std::shared_ptr<SNode>> Nodes;
+	// std::unordered_map<std::string, std::shared_ptr<STextureAsset>> Textures; // Don't think I need them mapped by name for now
+	std::unordered_map<std::string, std::shared_ptr<SPbrMaterial>> Materials; // Possibly don't need these mapped by name either
+	std::unordered_map<std::string, std::shared_ptr<SSkinAsset>> Skins;
+	std::vector<std::string> AnimationNames;
+	std::vector<SGlTextureId> Textures;
+	std::vector<SGlSamplerId> Samplers;
+	std::vector<std::shared_ptr<SNode>> RootNodes;
+	glm::mat4 UserTransform;
+
+	~SLoadedGLTF() { ClearAll(); }
+	void ClearAll();
+	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
 };

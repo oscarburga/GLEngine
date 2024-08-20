@@ -25,6 +25,7 @@ set(SOURCE_LIST
 	# UTILS
 	Utils/GenericConcepts.h
 	Utils/Defer.h
+	Utils/ForEachIndexed.h
 	Utils/FuncVector.h
 	Utils/MultiTypeContainer.h
 	Utils/RefIgnore.h

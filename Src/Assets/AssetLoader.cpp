@@ -5,6 +5,7 @@
 #include "Utils/Defer.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <Utils/ForEachIndexed.h>
 #undef STB_IMAGE_IMPLEMENTATION
 
 std::filesystem::path CAssetLoader::ContentRoot = "C:\\Users\\51956\\Documents\\OpenGLProjects\\GLEngine\\Content";
@@ -54,7 +55,7 @@ CAssetLoader::~CAssetLoader()
 		glDeleteBuffers(1, &*WhiteMaterial->DataBuffer);
 	if (AxisMesh)
 	{
-		glDeleteBuffers(1, &*AxisMesh->Mesh->MeshBuffers.VertexBuffer);
+		glDeleteBuffers(1, &*AxisMesh->Mesh->VertexBuffer);
 		glDeleteBuffers(1, &*AxisMesh->Mesh->Surfaces[0].Material->DataBuffer);
 	}
 }
@@ -132,8 +133,8 @@ void CAssetLoader::LoadDefaultAssets()
 			vertices[i + 1].Position[axis % 3] = (i < 6) ? 1.f : -1.f;
 			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
 		}
-		glCreateBuffers(1, &*axisMesh.MeshBuffers.VertexBuffer);
-		glNamedBufferStorage(axisMesh.MeshBuffers.VertexBuffer, sizeof(vertices), vertices, 0);
+		glCreateBuffers(1, &*axisMesh.VertexBuffer);
+		glNamedBufferStorage(axisMesh.VertexBuffer, sizeof(vertices), vertices, 0);
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
 		axisMaterial->bIgnoreLighting = true;
 		axisMaterial->PrimitiveType = GL_LINES;
@@ -192,6 +193,19 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 	std::shared_ptr<SLoadedGLTF> scene_ptr = std::make_shared<SLoadedGLTF>();
 	auto& scene = *scene_ptr.get();
+
+	// Create nodes but don't initialize their data yet
+	std::vector<std::shared_ptr<SNode>> nodes;
+	{
+		uint32_t nodeId = 0;
+		nodes.reserve(gltf->nodes.size());
+		for (fastgltf::Node& node : gltf->nodes)
+		{
+			nodes.emplace_back(node.meshIndex ? 
+				std::make_shared<SMeshNode>() : 
+				std::make_shared<SNode>());
+		}
+	}
 
 	// Samplers
 	{
@@ -349,17 +363,20 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 	{
 		std::vector<uint32_t> indices;
 		std::vector<SVertex> vertices;
+		std::vector<SVertexSkinData> boneData;
 		bool bMultipleTexCoords = false;
 		for (fastgltf::Mesh& mesh : gltf->meshes)
 		{
 			indices.clear();
 			vertices.clear();
+			boneData.clear();
 
 			std::shared_ptr<SMeshAsset> newMesh_ptr = std::make_shared<SMeshAsset>();
 			SMeshAsset& newMesh = *newMesh_ptr.get();
 			newMesh.Name = mesh.name;
 			scene.Meshes[newMesh.Name] = newMesh_ptr;
 
+			bool bHasSkin = false;
 			for (auto& primitive : mesh.primitives)
 			{
 				if (!bMultipleTexCoords && primitive.findAttribute("TEXCOORD_1") != primitive.attributes.end())
@@ -454,7 +471,30 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					});
 				}
 
+				// SKINNING
+				// Try load vertex joints & weights
+				fastgltf::Attribute* joints = primitive.findAttribute("JOINTS_0");
+				fastgltf::Attribute* weights = primitive.findAttribute("WEIGHTS_0");
+				if (joints != primitive.attributes.end() && weights != primitive.attributes.end())
+				{
+					bHasSkin = true;
+					boneData.resize(vertices.size(), {});
+					fastgltf::iterateAccessorWithIndex<glm::uvec4>(gltf.get(), gltf->accessors[joints->accessorIndex], [&](glm::uvec4 value, size_t index)
+					{
+						boneData[startVertex + index].Joints = value;
+					});
+					fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf.get(), gltf->accessors[weights->accessorIndex], [&](glm::vec4 value, size_t index)
+					{
+						boneData[startVertex + index].Weights = value;
+					});
+				}
+
 			}
+
+			// Ensure boneData size ends up matching vertex size in case the last primitive(s) didn't have skin data
+			if (bHasSkin)
+				boneData.resize(vertices.size(), {});
+
 			constexpr bool bNormalsAsColors = false;
 			if constexpr (bNormalsAsColors)
 			{
@@ -462,26 +502,153 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					vtx.Color = glm::vec4(vtx.Normal, 1.f);
 			}
 
-			// Create and submit glbuffers
+			// Create and submit vertex buffers
 			{
-				GLuint buffers[2] = { 0, 0 }; // vbo, ibo
-				glCreateBuffers(1 + !indices.empty(), buffers);
+				GLuint buffers[3] = { 0, 0, 0 }; // vbo, ibo, boneinfo
+				int numBuffers = 1 + int(!indices.empty()) + int(!boneData.empty());
+				glCreateBuffers(numBuffers, buffers);
+
+				// Vertex buffer is always the first one
 				glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), 0);
-
+				int nextBufferIdx = 1;
 				if (!indices.empty())
-					glNamedBufferStorage(buffers[1], indices.size() * sizeof(uint32_t), indices.data(), 0);
+				{
+					glNamedBufferStorage(buffers[nextBufferIdx], indices.size() * sizeof(uint32_t), indices.data(), 0);
+					nextBufferIdx += 1;
+				}
 
-				newMesh.MeshBuffers.VertexBuffer = buffers[0];
-				newMesh.MeshBuffers.IndexBuffer = buffers[1];
+				if (!boneData.empty())
+				{
+					glNamedBufferStorage(buffers[nextBufferIdx], boneData.size() * sizeof(SVertexSkinData), boneData.data(), 0);
+				}
+
+				newMesh.VertexBuffer = buffers[0];
+				newMesh.IndexBuffer = buffers[1];
+				newMesh.BoneDataBuffer = buffers[2];
 			}
 
 			meshes.emplace_back(newMesh_ptr);
 		}
 	}
 
-	// Load Nodes
+	// Load skins
+	std::vector<std::shared_ptr<SSkinAsset>> skins;
+	std::vector<std::vector<uint32_t>> skinsNodeIsJointOf(nodes.size(), std::vector<uint32_t>{}); // Really annoying 1 node can be joint of multiple skins... unrealistic case but allowed
+	{
+		for (fastgltf::Skin& gltfSkin : gltf->skins)
+		{
+			SSkinAsset& skin = *skins.emplace_back(std::make_shared<SSkinAsset>());
+			skin.Name = gltfSkin.name;
+			scene.Skins[skin.Name] = skins.back();
+
+			for (size_t joint : gltfSkin.joints)
+			{
+				skin.AllJoints.emplace_back(nodes[joint]);
+				skinsNodeIsJointOf[joint].push_back(uint32_t(skins.size()) - 1);
+			}
+
+			if (gltfSkin.inverseBindMatrices)
+			{
+				auto& ibmAccessor = gltf->accessors[*gltfSkin.inverseBindMatrices];
+				assert(ibmAccessor.type == fastgltf::AccessorType::Mat4);
+				skin.InverseBindMatrices.reserve(ibmAccessor.count);
+				fastgltf::iterateAccessor<glm::mat4>(gltf.get(), ibmAccessor, [&](glm::mat4 const& mat)
+				{
+					skin.InverseBindMatrices.emplace_back(mat);
+				});
+			}
+			else
+			{
+				skin.InverseBindMatrices.resize(gltfSkin.joints.size(), glm::mat4(1.f));
+			}
+		}
+	}
+
+	// Load animations
+	// Want to load the asset as single skeletal meshes with animations per skeletal mesh (like a game engine typically would),
+	// so will parse the animation per skin (a single gltf animation can animate any/all nodes in a scene, we want to separate it into 
+	// animations per skin, and discard non-joint animations).
+	{
+		std::vector<SAnimationAsset> animsPerSkin(skins.size());
+		for (fastgltf::Animation& gltfAnim : gltf->animations)
+		{
+			animsPerSkin.clear();
+			animsPerSkin.resize(skins.size(), {});
+			
+			// Remove anims without node
+			std::erase_if(gltfAnim.channels, [&](auto& channel) { return !channel.nodeIndex; });
+
+			// Sort channels by node id
+			std::sort(gltfAnim.channels.begin(), gltfAnim.channels.end(), [&](auto& c1, auto& c2)
+			{
+				return *c1.nodeIndex < *c2.nodeIndex;
+			});
+
+			// channels are now guaranteed to always have a valid node and be sorted by increasing node id
+			for (fastgltf::AnimationChannel& channel : gltfAnim.channels)
+			{
+				SNode* targetNode = nodes[*channel.nodeIndex].get();
+				// TODO: MORPH TARGETS
+				if (channel.path == fastgltf::AnimationPath::Weights)
+				{
+					std::cout << std::format("\tAnimation {}: skipping channel that animates weights (morph targets) for node {} ({}). Currently not supported\n",
+						gltfAnim.name, *channel.nodeIndex, gltf->nodes[*channel.nodeIndex].name);
+					continue;
+				}
+				// TODO: CUBIC SPLINE INTERPOLATION
+				auto& sampler = gltfAnim.samplers[channel.samplerIndex];
+				if (sampler.interpolation == fastgltf::AnimationInterpolation::CubicSpline)
+				{
+					std::cout << std::format("\tAnimation {}: skipping channel that animates interpolates using cubic spline for node {} ({})\n",
+						gltfAnim.name, *channel.nodeIndex, gltf->nodes[*channel.nodeIndex].name);
+					continue;
+				}
+				auto& samplerInput = gltf->accessors[sampler.inputAccessor];
+				assert(samplerInput.type == fastgltf::AccessorType::Scalar);
+				assert(samplerInput.componentType == fastgltf::ComponentType::Float || samplerInput.componentType == fastgltf::ComponentType::Double);
+				auto& samplerOutput = gltf->accessors[sampler.outputAccessor];
+				assert(samplerInput.count == samplerOutput.count);
+				for (uint32_t skinIdx : skinsNodeIsJointOf[*channel.nodeIndex])
+				{
+					std::vector<SJointAnimData>& skinKeyFrames = animsPerSkin[skinIdx].JointKeyFrames;
+					if (skinKeyFrames.empty() || skinKeyFrames.back().JointNode != targetNode) // .back() comparison works because channels are sorted by node id
+						skinKeyFrames.emplace_back(SJointAnimData { .JointNode = targetNode });
+					SJointAnimData& jointAnimData = skinKeyFrames.back();
+					for (size_t kfIndex = 0; kfIndex < samplerInput.count; ++kfIndex)
+					{
+						float timeStamp = fastgltf::getAccessorElement<float>(gltf.get(), samplerInput, kfIndex);
+						switch (channel.path)
+						{
+							case fastgltf::AnimationPath::Translation:
+							{
+								glm::vec3 pos = fastgltf::getAccessorElement<glm::vec3>(gltf.get(), samplerOutput, kfIndex);
+								jointAnimData.Positions.emplace_back(SKeyFrame<glm::vec3> { timeStamp, pos });
+								break;
+							}
+							case fastgltf::AnimationPath::Rotation:
+							{
+								glm::vec4 rotVec = fastgltf::getAccessorElement<glm::vec4>(gltf.get(), samplerOutput, kfIndex);
+								glm::quat rotQuat { rotVec.w, rotVec.x, rotVec.y, rotVec.z };
+								jointAnimData.Rotations.emplace_back(SKeyFrame<glm::quat> { timeStamp, rotQuat });
+								break;
+							}
+							case fastgltf::AnimationPath::Scale:
+							{
+								glm::vec3 scale = fastgltf::getAccessorElement<glm::vec3>(gltf.get(), samplerOutput, kfIndex);
+								jointAnimData.Scales.emplace_back(SKeyFrame<glm::vec3> { timeStamp, scale });
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Load nodes
 	{
 		std::vector<std::shared_ptr<SNode>> nodes;
+		uint32_t nodeId = 0;
 		for (fastgltf::Node& node : gltf->nodes)
 		{
 			auto& newNode = nodes.emplace_back(nullptr);
@@ -490,11 +657,16 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				auto meshNode = std::make_shared<SMeshNode>();
 				newNode = meshNode;
 				meshNode->Mesh = meshes[*node.meshIndex];
+				if (node.skinIndex)
+				{
+					meshNode->Skin = skins[*node.skinIndex];
+				}
 			}
 			else
 			{
 				newNode = std::make_shared<SNode>();
 			}
+			newNode->NodeId = nodeId++;
 			scene.Nodes[node.name.c_str()] = newNode;
 
 			std::visit(
@@ -538,6 +710,10 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			}
 		}
 	}
+
+
+
+
 	scene.UserTransform = glm::mat4(1.0f);
 	SceneCache[filePathStr] = scene_ptr;
 	std::cout << std::format("Loaded GLTF successfully: {}\n", gltfPath.string());

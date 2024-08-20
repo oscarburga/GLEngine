@@ -228,10 +228,10 @@ void CGlRenderer::RenderScene(float deltaTime)
 			glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
 
 			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
-			if (surface.Buffers.IndexBuffer)
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
+			if (surface.IndexBuffer)
 			{
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
 				glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
 			}
 			else
@@ -288,10 +288,10 @@ void CGlRenderer::RenderScene(float deltaTime)
 			glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
 
 			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.Buffers.VertexBuffer);
-			if (surface.Buffers.IndexBuffer)
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
+			if (surface.IndexBuffer)
 			{
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.Buffers.IndexBuffer);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
 				glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
 			}
 			else
