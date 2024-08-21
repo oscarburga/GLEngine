@@ -6,23 +6,24 @@
 #include <iostream>
 #include "GlRenderStructs.h"
 
-void SNode::RefreshTransform(const glm::mat4& parentMatrix)
+void SNode::RefreshTransform(const STransform& parentTransform)
 {
-    WorldTransform = parentMatrix * LocalTransform;
+    WorldTransform = parentTransform * LocalTransform;
     for (auto& child : Children)
         child->RefreshTransform(WorldTransform);
 }
 
-void SNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
+void SNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
     for (auto& child : Children)
-        child->Draw(topMatrix, drawCtx);
+        child->Draw(topTransform, drawCtx);
 }
 
-void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
+void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
     {
-        glm::mat4 nodeMatrix = topMatrix * WorldTransform;
+        STransform nodeTransform = topTransform * WorldTransform;
+        glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
         for (auto& surface : Mesh->Surfaces)
         {
             auto& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
@@ -36,7 +37,7 @@ void SMeshNode::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
             draw.Transform = nodeMatrix;
         }
     }
-	SNode::Draw(topMatrix, drawCtx);
+	SNode::Draw(topTransform, drawCtx);
 }
 
 void SLoadedGLTF::ClearAll()
@@ -75,12 +76,37 @@ void SLoadedGLTF::ClearAll()
 
 }
 
-void SLoadedGLTF::Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx)
+void SLoadedGLTF::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
-    const glm::mat4 rootTransform = UserTransform * topMatrix;
+    const STransform rootTransform = topTransform * UserTransform;
     for (auto& root : RootNodes)
     {
         root->Draw(rootTransform, drawCtx);
     }
 }
 
+void CAnimator::PlayAnimation(const std::string& anim)
+{
+    assert(OwnerSkin);
+    StopAnimation();
+    if (auto it = OwnerSkin->Animations.find(anim); it != OwnerSkin->Animations.end())
+    {
+        CurrentAnim = &(it->second);
+        UpdateAnimation(0.0f);
+    }
+}
+
+void CAnimator::UpdateAnimation(float deltaTime)
+{
+    CurrentAnim->JointKeyFrames;
+}
+
+void CAnimator::StopAnimation()
+{
+    if (!CurrentAnim)
+        return;
+    for (SJointAnimData& jointKeyFrames : CurrentAnim->JointKeyFrames)
+        jointKeyFrames.ResetAnimState();
+    CurrentAnim = nullptr;
+
+}

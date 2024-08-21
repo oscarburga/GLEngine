@@ -7,6 +7,7 @@
 #include "glm/glm.hpp"
 #include "GlIdTypes.h"
 #include "Utils/GenericConcepts.h"
+#include "Math/EngineMath.h"
 
 class CGlShader;
 
@@ -133,7 +134,7 @@ struct SMeshAsset
 	std::vector<SGeoSurface> Surfaces;
 	SGlBufferId VertexBuffer;
 	SGlBufferId IndexBuffer;
-	SGlBufferId BoneDataBuffer;
+	SGlBufferId BoneDataBuffer; // TODO: Bones are in their own buffer. Figure out how to include them into the vertex buffer without making the code horrible
 };
 
 struct SRenderObject // TODO: some bCastShadows bool
@@ -156,7 +157,7 @@ struct SDrawContext
 
 class IRenderable
 {
-	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) = 0;
+	virtual void Draw(const STransform& topTransform, SDrawContext& drawCtx) = 0;
 };
 
 struct SNode : public IRenderable
@@ -164,20 +165,24 @@ struct SNode : public IRenderable
 	uint32_t NodeId = 0;
 	std::weak_ptr<SNode> Parent;
 	std::vector<std::shared_ptr<SNode>> Children;
-	// TODO: Replace these matrices with a transform struct to use quaternions
-	glm::mat4 LocalTransform;
-	glm::mat4 WorldTransform;
-	
-	void RefreshTransform(const glm::mat4& parentMatrix);
+	STransform LocalTransform;
+	STransform WorldTransform;
+	STransform OriginalLocalTransform;
 
-	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx);
+	void RefreshTransform(const STransform& topTransform = STransform {});
+	virtual void Draw(const STransform& topTransform, SDrawContext& drawCtx) override;
+	// glm::mat4 LocalTransform;
+	// glm::mat4 WorldTransform;
+	
+	// void RefreshTransform(const glm::mat4& parentMatrix);
+	// virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx);
 };
 
 struct SMeshNode : public SNode
 {
 	std::shared_ptr<SMeshAsset> Mesh;
 	std::shared_ptr<struct SSkinAsset> Skin;
-	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
+	virtual void Draw(const STransform& topTransform, SDrawContext& drawCtx) override;
 };
 
 template<typename ValueType>
@@ -193,13 +198,13 @@ template<MatchesAnyType<glm::vec3, glm::quat> ValueType>
 struct SAnimKeyFrames : public std::vector<SKeyFrame<ValueType>>
 {
 	uint32_t LastIndex = 0;
-
 private: // For assertion purposes only:
 	float LastTime = 0.0f;
 public:
 
 	// EInterpolationType...
-	ValueType GetValueAtTime(float animTime)
+	// StepToTime assumes that animTime >= lastAnimTime >= 0.0f. Otherwise asserts.
+	ValueType StepToTime(float animTime)
 	{
 		assert(LastTime <= animTime);
 		LastTime = animTime;
@@ -233,7 +238,7 @@ public:
 		if constexpr (std::is_same_v<ValueType, glm::quat>)
 			return glm::slerp(last.Value, nxt.Value, alpha);
 	}
-	void Reset() { LastIndex = 0; LastTime = 0.0f; }
+	void ResetAnimState() { LastIndex = 0; LastTime = 0.0f; }
 };
 
 struct SVertexSkinData 
@@ -248,6 +253,15 @@ struct SJointAnimData
 	SAnimKeyFrames<glm::vec3> Positions {};
 	SAnimKeyFrames<glm::quat> Rotations {};
 	SAnimKeyFrames<glm::vec3> Scales {};
+
+	void ResetAnimState()
+	{
+		Positions.ResetAnimState();
+		Rotations.ResetAnimState();
+		Scales.ResetAnimState();
+		if (JointNode)
+			JointNode->LocalTransform = JointNode->OriginalLocalTransform;
+	}
 };
 
 struct SAnimationAsset
@@ -256,12 +270,33 @@ struct SAnimationAsset
 	std::weak_ptr<struct SSkinAsset> OwnerSkin {};
 };
 
+/*
+* BIG TODO: Figure out a better design for separating objects from instances. 
+* Currently just trying to get the features I want done asap, but current design doesn't 
+* really allow for nicely having multiple instances of the same objects (specially animations, 
+* currently using & modifying the actual SAnimationAsset data in-plcae for animations).
+*/
+
+class CAnimator
+{
+	friend struct SSkinAsset;
+	float CurrentTime = 0.0f;
+private:
+	struct SSkinAsset* OwnerSkin = nullptr; // Animator is uniquely owned by a skin, so no need for smart ptr
+	SAnimationAsset* CurrentAnim = nullptr; // Animations are uniquely owned by the owner skin, so no need for smart ptr
+
+	void PlayAnimation(const std::string& anim);
+	void UpdateAnimation(float deltaTime);
+	void StopAnimation();
+};
+
 struct SSkinAsset
 {
 	std::string Name;
 	std::vector<std::shared_ptr<SNode>> AllJoints;
 	std::vector<glm::mat4> InverseBindMatrices;
 	std::unordered_map<std::string, SAnimationAsset> Animations;
+	CAnimator Animator;
 };
 
 struct SLoadedGLTF : public IRenderable
@@ -275,9 +310,10 @@ struct SLoadedGLTF : public IRenderable
 	std::vector<SGlTextureId> Textures;
 	std::vector<SGlSamplerId> Samplers;
 	std::vector<std::shared_ptr<SNode>> RootNodes;
-	glm::mat4 UserTransform;
+	STransform UserTransform;
 
 	~SLoadedGLTF() { ClearAll(); }
 	void ClearAll();
-	virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx) override;
+	virtual void Draw(const STransform& topTransform, SDrawContext& drawCtx) override;
 };
+

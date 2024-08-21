@@ -2,10 +2,8 @@
 #include <iostream>
 #include <format>
 
-#ifdef GLM_GTX_matrix_decompose
 #include "Utils/RefIgnore.h"
 #include <glm/gtx/matrix_decompose.hpp>
-#endif
 
 using glm::IMat;
 using glm::IQuat;
@@ -32,23 +30,18 @@ quat glm::fromPitchYawRoll(const vec3& yawPitchRoll)
 	return rollQuat * pitchYawQuat;
 }
 
-STransform::STransform() : Rotation(IQuat), Angles(vec3(0.0f)), Position(0.0f), Scale(1.0f) {}
+STransform::STransform() : Rotation(IQuat), Position(0.0f), Scale(1.0f) {}
 
-STransform::STransform(const vec3& pos, const vec3& angles, const vec3& scale) : Angles(angles), Position(pos), Scale(scale) 
+STransform::STransform(const vec3& pos, const vec3& angles, const vec3& scale) : Position(pos), Scale(scale) 
 {
 	Rotation = glm::fromYawPitchRoll(angles);
 }
 
-STransform::STransform(const vec3& pos, const quat& rot, const vec3& scale) : Rotation(rot), Angles(std::nullopt), Position(pos), Scale(scale) {}
+STransform::STransform(const vec3& pos, const quat& rot, const vec3& scale) : Rotation(rot), Position(pos), Scale(scale) {}
 
-#ifdef GLM_GTX_matrix_decompose
 STransform::STransform(const mat4& transformMatrix)
 {
-	if (glm::decompose(transformMatrix, Scale, Rotation, Position, RefIgnore<vec3>::I, RefIgnore<vec4>::I))
-	{
-		Angles = glm::toYawPitchRoll(Rotation);
-	} 
-	else 
+	if (!glm::decompose(transformMatrix, Scale, Rotation, Position, util::RefIgnore<vec3>::I, util::RefIgnore<vec4>::I))
 	{
 		std::cerr << "Error: Failed to decompose transform matrix:\n";
 		// GLM matrices are in column-major format. Print them in row-major.
@@ -64,11 +57,8 @@ STransform::STransform(const mat4& transformMatrix)
 		Rotation = IQuat;
 		Position = vec3(0.0f);
 		Scale = vec3(1.0f);
-		Angles = vec3(0.0f);
 	}
 }
-#endif
-// #pragma warning(pop)
 
 mat4 STransform::GetMatrix() const
 {
@@ -85,9 +75,7 @@ mat4 STransform::GetMatrix() const
 
 void STransform::SetRotation(const vec3& yawPitchRoll) 
 { 
-	Angles = yawPitchRoll; 
 	Rotation = glm::fromYawPitchRoll(yawPitchRoll);
-	// Consider using glm::angleAxis and multiplying quaternions instead, potentially better precision.
 }
 
 vec3 STransform::TransformLocation(const vec3& v) const
@@ -140,16 +128,16 @@ STransform STransform::Inverse() const
 STransform operator*(const STransform& A, const STransform& B)
 {
 	/*
-	* To transform a vector V by first applying A, then B:
-	* V' = Tb x Rb x Sb x Ta x Ra x Sa x V
+	* To transform a vector V by first applying B, then A:
+	* V' = Ta x Ra x Sa x Tb x Rb x Sb x V
 	*
-	* Final Translation: Tb x Rb x Sb x Ta -> B.Position + (B.RotateVector(B.Scale * A.Position))
-	* Final Rotation: Rb x Ra = B.Rotation x A.Rotation.
-	* Final Scale = Sb x Sa
+	* Final Translation: Ta x Ra x Sa x Tb -> A.Position + (A.RotateVector(A.Scale * B.Position))
+	* Final Rotation: Ra x Rb = A.Rotation x B.Rotation.
+	* Final Scale = Sa x Sb
 	*/
-	const quat rotation = B.Rotation * A.Rotation;
-	const vec3 scale = B.Scale * A.Scale;
-	const vec3 translate = B.Position + (B.Rotation * (B.Scale * A.Position));
+	const quat rotation = A.Rotation * B.Rotation;
+	const vec3 scale = A.Scale * B.Scale;
+	const vec3 translate = A.Position + glm::rotateByQuat((A.Scale * B.Position), A.Rotation);
 	return STransform(translate, rotation, scale);
 }
 

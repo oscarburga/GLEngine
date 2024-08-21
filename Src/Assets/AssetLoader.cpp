@@ -154,8 +154,8 @@ void CAssetLoader::LoadDefaultAssets()
 		};
 		axisMesh.Surfaces.push_back(surface);
 		AxisMesh = std::make_shared<SMeshNode>();
-		AxisMesh->LocalTransform = glm::scale(glm::mat4(1.f), glm::vec3(100.f));
-		AxisMesh->RefreshTransform(glm::mat4(1.f));
+		AxisMesh->LocalTransform.SetScale(glm::vec3{ 100.f });
+		AxisMesh->RefreshTransform(STransform {});
 		AxisMesh->Mesh = std::make_shared_for_overwrite<SMeshAsset>();
 		*(AxisMesh->Mesh) = std::move(axisMesh);
 	}
@@ -183,7 +183,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 	if (HasGltfError(data, filePath))
 		return nullptr;
 
-	// TODO: just use TRS instead of matrices later
+	// Don't use fastgltf's DecomposeNodeMatrices. Use GLM's gtx_matrix_decompose instead. fastgltf's decomposition doesn't handle negative scales.
 	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::DecomposeNodeMatrices;
 	fastgltf::Parser parser {};
 	Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
@@ -204,6 +204,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			nodes.emplace_back(node.meshIndex ? 
 				std::make_shared<SMeshNode>() : 
 				std::make_shared<SNode>());
+			nodes.back()->NodeId = nodeId++;
 		}
 	}
 
@@ -572,8 +573,8 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		std::vector<SAnimationAsset> animsPerSkin(skins.size());
 		for (fastgltf::Animation& gltfAnim : gltf->animations)
 		{
-			animsPerSkin.clear();
-			animsPerSkin.resize(skins.size(), {});
+			for (SAnimationAsset& anim : animsPerSkin)
+				anim.JointKeyFrames.clear();
 			
 			// Remove anims without node
 			std::erase_if(gltfAnim.channels, [&](auto& channel) { return !channel.nodeIndex; });
@@ -611,8 +612,10 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				for (uint32_t skinIdx : skinsNodeIsJointOf[*channel.nodeIndex])
 				{
 					std::vector<SJointAnimData>& skinKeyFrames = animsPerSkin[skinIdx].JointKeyFrames;
+
 					if (skinKeyFrames.empty() || skinKeyFrames.back().JointNode != targetNode) // .back() comparison works because channels are sorted by node id
 						skinKeyFrames.emplace_back(SJointAnimData { .JointNode = targetNode });
+
 					SJointAnimData& jointAnimData = skinKeyFrames.back();
 					for (size_t kfIndex = 0; kfIndex < samplerInput.count; ++kfIndex)
 					{
@@ -642,53 +645,49 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					}
 				}
 			}
+
+			util::for_each_indexed(animsPerSkin.begin(), animsPerSkin.end(), 0, [&](int i, SAnimationAsset& anim)
+			{
+				anim.OwnerSkin = skins[i];
+				skins[i]->Animations[gltfAnim.name.c_str()] = std::move(anim);
+			});
 		}
 	}
 
-	// Load nodes
+	// Actually load nodes
 	{
-		std::vector<std::shared_ptr<SNode>> nodes;
-		uint32_t nodeId = 0;
-		for (fastgltf::Node& node : gltf->nodes)
+		util::for_each_indexed(gltf->nodes.begin(), gltf->nodes.end(), 0, [&](uint32_t i, fastgltf::Node& node)
 		{
-			auto& newNode = nodes.emplace_back(nullptr);
+			auto& newNode = nodes[i];
+			scene.Nodes[node.name.c_str()] = newNode;
+
 			if (node.meshIndex)
 			{
-				auto meshNode = std::make_shared<SMeshNode>();
-				newNode = meshNode;
+				SMeshNode* meshNode = static_cast<SMeshNode*>(newNode.get());
 				meshNode->Mesh = meshes[*node.meshIndex];
 				if (node.skinIndex)
-				{
 					meshNode->Skin = skins[*node.skinIndex];
-				}
 			}
-			else
-			{
-				newNode = std::make_shared<SNode>();
-			}
-			newNode->NodeId = nodeId++;
-			scene.Nodes[node.name.c_str()] = newNode;
 
 			std::visit(
 				fastgltf::visitor
 				{
 					[&](fastgltf::math::fmat4x4 matrix)
 					{
-						memcpy(&newNode->LocalTransform, matrix.data(), sizeof(matrix));
+						glm::mat4* mat = reinterpret_cast<glm::mat4*>(&matrix);
+						newNode->LocalTransform = STransform { *mat };
 					},
 					[&](fastgltf::TRS transform)
 					{
-						glm::vec3 tl(transform.translation[0], transform.translation[1], transform.translation[2]);
-						glm::quat rot(transform.rotation[3], transform.rotation[0], transform.rotation[1], transform.rotation[2]);
-						glm::vec3 sc(transform.scale[0], transform.scale[1], transform.scale[2]);
-						glm::mat4 tm = glm::translate(glm::mat4(1.f), tl);
-						glm::mat4 rm = glm::mat4_cast(rot);
-						glm::mat4 sm = glm::scale(glm::mat4(1.f), sc);
-						newNode->LocalTransform = tm * rm * sm;
+						glm::vec3 pos = glm::make_vec3(&transform.translation[0]);
+						glm::quat rot { transform.rotation[3], transform.rotation[0], transform.rotation[1], transform.rotation[2] };
+						glm::vec3 scale = glm::make_vec3(&transform.scale[0]);
+						newNode->LocalTransform = STransform { pos, rot, scale };
 					}
 				},
 				node.transform);
-		}
+			newNode->OriginalLocalTransform = newNode->LocalTransform;
+		});
 		// Set children and parents
 		for (int i = 0; i < gltf->nodes.size(); i++)
 		{
@@ -706,15 +705,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			if (node->Parent.lock() == nullptr)
 			{
 				scene.RootNodes.emplace_back(node);
-				node->RefreshTransform(glm::mat4(1.f));
+				node->RefreshTransform();
 			}
 		}
 	}
 
-
-
-
-	scene.UserTransform = glm::mat4(1.0f);
+	scene.UserTransform = STransform {};
 	SceneCache[filePathStr] = scene_ptr;
 	std::cout << std::format("Loaded GLTF successfully: {}\n", gltfPath.string());
 	return scene_ptr;

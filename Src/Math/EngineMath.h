@@ -56,27 +56,20 @@ struct STransform
 	STransform(const vec3& pos, const quat& rot, const vec3& scale);
 	STransform(const vec3& pos, const vec3& angles, const vec3& scale);
 	STransform(const STransform&) = default;
-
-#ifdef GLM_GTX_matrix_decompose
-	STransform(const mat4& transformMatrix);
-#endif
+	explicit STransform(const mat4& transformMatrix);
 
 	mat4 GetMatrix() const; // Gets the transformation matrix Tf = Translation x Rotation x Scale
 
 	inline const vec3& GetPosition() const { return Position; }
 	inline const vec3& GetScale() const { return Scale; }
 	inline const quat& GetRotation() const { return Rotation; }
-	inline const std::optional<vec3>& GetAngles() const { return Angles; }
 	inline void SetPosition(const vec3& position) { Position = position; }
 	inline void SetScale(const vec3& scale) { Scale = scale; }
 
 	/* Rotation stuff */
 
 	// Assumes a valid rotation, normalized quaternion. Does not store angles.
-	inline void SetRotation(const quat& rotation) { Rotation = rotation; Angles.reset(); } 
-
-	// Use if you want to set rotation with angles in an order that isnt yaw->pitch->roll
-	inline void SetRotationWithAngles(const quat& rotation, const vec3& angles) { Rotation = rotation; Angles = angles; } 
+	inline void SetRotation(const quat& rotation) { Rotation = rotation; } 
 
 	// Applies Yaw->Pitch->Roll rotation.
 	void SetRotation(const vec3& yawPitchRoll); 
@@ -101,13 +94,17 @@ struct STransform
 	// Gets the inverse of this transform
 	STransform Inverse() const;
 
-	// Composes transformations
+	// Composes transformations (result of applying first B, then A). Analogous to multiplying transform matrices.
 	friend STransform operator*(const STransform& A, const STransform& B);
+	// Composes transformations (result of applying first B, then A). Analogous to multiplying transform matrices.
 	inline static STransform ComposeTransforms(const STransform& A, const STransform& B) { return A * B; };
 
+	inline static STransform FromScale(const glm::vec3& scale) { STransform t {}; t.SetScale(scale); return t; }
+	inline static STransform FromTranslate(const glm::vec3& translation) { STransform t {}; t.SetPosition(translation); return t; }
+	inline static STransform FromRotate(const glm::quat& rot) { STransform t {}; t.SetRotation(rot); return t; }
+
 protected:
-	quat Rotation;
-	std::optional<vec3> Angles;
-	vec3 Position;
-	vec3 Scale;
+	quat Rotation { glm::IQuat };
+	vec3 Position { 0.f };
+	vec3 Scale { 1.f };
 };
