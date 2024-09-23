@@ -27,7 +27,6 @@ void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
         const bool bIsPlayingAnim = Skin && Skin->Animator && Skin->Animator->IsPlaying();
         STransform nodeTransform = bIsPlayingAnim ? topTransform : topTransform * WorldTransform;
         glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
-        // This isn't ideal to update the joints buffer in this call
         for (auto& surface : Mesh->Surfaces)
         {
             auto& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
@@ -185,9 +184,14 @@ void SJointAnimData::StepToTime(float animTime)
     if (!JointNode)
         return;
 
-    glm::vec3 pos = Positions.StepToTime(animTime);
-    glm::quat rot = Rotations.StepToTime(animTime);
-    glm::vec3 scale = Scales.StepToTime(animTime);
+    // If a property is not modified at all (i.e. positions/scales/rotations are empty), 
+    // must keep the original node's transform
+
+    const STransform& jointOriginalTransform = JointNode->OriginalLocalTransform;
+
+    glm::vec3 pos = Positions.StepToTime(animTime, jointOriginalTransform.GetPosition());
+    glm::vec3 scale = Scales.StepToTime(animTime, jointOriginalTransform.GetScale());
+    glm::quat rot = Rotations.StepToTime(animTime, jointOriginalTransform.GetRotation());
     JointNode->LocalTransform = STransform { pos, rot, scale };
 }
 

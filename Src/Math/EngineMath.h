@@ -22,6 +22,7 @@ using glm::mat4;
 using glm::quat;
 
 constexpr float pi = glm::pi<float>();
+constexpr float pi_half = glm::half_pi<float>();
 constexpr float SMALLER_NUMBER = 1.e-8f;
 constexpr float SMALL_NUMBER = 1.e-4f;
 

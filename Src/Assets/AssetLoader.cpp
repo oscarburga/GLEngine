@@ -618,6 +618,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				assert(samplerInput.componentType == fastgltf::ComponentType::Float || samplerInput.componentType == fastgltf::ComponentType::Double);
 				auto& samplerOutput = gltf->accessors[sampler.outputAccessor];
 				assert(samplerInput.count == samplerOutput.count);
+				if (skinsNodeIsJointOf[*channel.nodeIndex].empty())
+				{
+					std::cout << std::format("\t\tAnimation {}: channel animates node {} ({}), but this node is not part of any skins.\n",
+						gltfAnim.name, *channel.nodeIndex, gltf->nodes[*channel.nodeIndex].name);
+				}
+
 				for (uint32_t skinIdx : skinsNodeIsJointOf[*channel.nodeIndex])
 				{
 					std::vector<SJointAnimData>& skinKeyFrames = animsPerSkin[skinIdx].JointKeyFrames;

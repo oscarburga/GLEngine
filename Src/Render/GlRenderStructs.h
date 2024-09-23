@@ -195,17 +195,17 @@ struct SKeyFrame
 	inline bool operator<(const SKeyFrame<OtherValueType>& other) { return Timestamp < other.Timestamp; }
 };
 
-template<MatchesAnyType<glm::vec3, glm::quat> ValueType, ValueType DefaultValue>
+template<MatchesAnyType<glm::vec3, glm::quat> ValueType>
 struct SAnimKeyFrames : public std::vector<SKeyFrame<ValueType>>
 {
-	uint32_t LastIndex = 0;
 private: // For assertion purposes only:
+	uint32_t LastIndex = 0;
 	float LastTime = 0.0f;
 public:
 
 	// EInterpolationType...
 	// StepToTime assumes that animTime >= lastAnimTime >= 0.0f. Otherwise asserts.
-	ValueType StepToTime(float animTime)
+	ValueType StepToTime(float animTime, const ValueType& DefaultValue)
 	{
 		assert(LastTime <= animTime);
 		LastTime = animTime;
@@ -251,9 +251,9 @@ struct SVertexSkinData
 struct SJointAnimData
 {
 	SNode* JointNode = nullptr;
-	SAnimKeyFrames<glm::vec3, vec3{0.0f}> Positions {};
-	SAnimKeyFrames<glm::quat, glm::IQuat> Rotations {};
-	SAnimKeyFrames < glm::vec3, vec3{1.0f}> Scales {};
+	SAnimKeyFrames<glm::vec3> Positions {};
+	SAnimKeyFrames<glm::quat> Rotations {};
+	SAnimKeyFrames<glm::vec3> Scales {};
 
 	void ResetAnimState();
 	void StepToTime(float animTime);
