@@ -1,5 +1,7 @@
 #version 460 core
 
+#define MAX_JOINTS 200
+
 struct SVertex {
 	vec3 Position;
 	float uv_x;
@@ -7,6 +9,11 @@ struct SVertex {
 	float uv_y;
 	vec4 Color;
 	vec4 Tangent;
+};
+
+struct SVertexJointData {
+	uvec4 Joints;
+	vec4 Weights;
 };
 
 // UBO
@@ -20,15 +27,34 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 LightSpaceTransform;
 } sceneData;
 
+layout (binding = 2, std140) uniform JointMatsUBO {
+	mat4 jointMatrices[MAX_JOINTS];
+};
+
 // SSBO
 layout (binding = 0, std430) readonly buffer VertexBuffer {
 	SVertex vertices[];
 };
 
+layout (binding = 1, std430) readonly buffer VertexJointDataBuffer {
+	SVertexJointData vertexJointData[];
+};
+
 layout (location = 0) uniform mat4 Model;
+layout (location = 6) uniform bool bHasJoints;
 
 void main()
 {
 	const SVertex vertex = vertices[gl_VertexID];
-	gl_Position = sceneData.LightSpaceTransform * Model * vec4(vertex.Position, 1.0);
+	mat4 toWorldTransMat = Model;
+	if (bHasJoints) {
+		const SVertexJointData jointsData = vertexJointData[gl_VertexID];
+
+		toWorldTransMat *= 
+			jointsData.Weights.x * jointMatrices[jointsData.Joints.x] +
+			jointsData.Weights.y * jointMatrices[jointsData.Joints.y] +
+			jointsData.Weights.z * jointMatrices[jointsData.Joints.z] +
+			jointsData.Weights.w * jointMatrices[jointsData.Joints.w];
+	}
+	gl_Position = sceneData.LightSpaceTransform * toWorldTransMat * vec4(vertex.Position, 1.0);
 }

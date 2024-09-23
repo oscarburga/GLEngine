@@ -525,7 +525,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 				newMesh.VertexBuffer = buffers[0];
 				newMesh.IndexBuffer = buffers[1];
-				newMesh.BoneDataBuffer = buffers[2];
+				newMesh.VertexJointsDataBuffer = buffers[2];
 			}
 
 			meshes.emplace_back(newMesh_ptr);
@@ -542,26 +542,30 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			skin.Name = gltfSkin.name;
 			scene.Skins[skin.Name] = skins.back();
 
-			for (size_t joint : gltfSkin.joints)
-			{
-				skin.AllJoints.emplace_back(nodes[joint]);
-				skinsNodeIsJointOf[joint].push_back(uint32_t(skins.size()) - 1);
-			}
+			if (gltfSkin.skeleton)
+				skin.SkeletonRoot = nodes[*gltfSkin.skeleton];
 
+			skin.AllJoints.resize(gltfSkin.joints.size(), SJoint {});
+			uint32_t maxId = 0;
+			util::for_each_indexed(gltfSkin.joints.begin(), gltfSkin.joints.end(), 0, [&](uint32_t i, size_t joint)
+			{
+				assert(joint >= 0);
+				skin.AllJoints[i].JointId = i;
+				skin.AllJoints[i].Node = nodes[joint];
+				skinsNodeIsJointOf[joint].push_back(uint32_t(skins.size()) - 1);
+				maxId = std::max(maxId, (uint32_t)joint);
+			});
 			if (gltfSkin.inverseBindMatrices)
 			{
 				auto& ibmAccessor = gltf->accessors[*gltfSkin.inverseBindMatrices];
 				assert(ibmAccessor.type == fastgltf::AccessorType::Mat4);
-				skin.InverseBindMatrices.reserve(ibmAccessor.count);
-				fastgltf::iterateAccessor<glm::mat4>(gltf.get(), ibmAccessor, [&](glm::mat4 const& mat)
+				fastgltf::iterateAccessorWithIndex<glm::mat4>(gltf.get(), ibmAccessor, [&](glm::mat4 const& mat, size_t index)
 				{
-					skin.InverseBindMatrices.emplace_back(mat);
+					skin.AllJoints[index].InverseBindMatrix = mat;
 				});
 			}
-			else
-			{
-				skin.InverseBindMatrices.resize(gltfSkin.joints.size(), glm::mat4(1.f));
-			}
+			skin.InitAnimator(maxId);
+			std::cout << std::format("\tLoaded skin {}, has IB matrices = {}\n", skin.Name, gltfSkin.inverseBindMatrices.has_value());
 		}
 	}
 
@@ -573,8 +577,13 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		std::vector<SAnimationAsset> animsPerSkin(skins.size());
 		for (fastgltf::Animation& gltfAnim : gltf->animations)
 		{
+			std::cout << std::format("\tLoading animation {}\n", gltfAnim.name);
 			for (SAnimationAsset& anim : animsPerSkin)
+			{
+				anim.AnimationLength = 0.0f;
 				anim.JointKeyFrames.clear();
+				anim.OwnerSkin.reset();
+			}
 			
 			// Remove anims without node
 			std::erase_if(gltfAnim.channels, [&](auto& channel) { return !channel.nodeIndex; });
@@ -592,7 +601,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				// TODO: MORPH TARGETS
 				if (channel.path == fastgltf::AnimationPath::Weights)
 				{
-					std::cout << std::format("\tAnimation {}: skipping channel that animates weights (morph targets) for node {} ({}). Currently not supported\n",
+					std::cout << std::format("\t\tAnimation {}: skipping channel that animates weights (morph targets) for node {} ({}). Currently not supported\n",
 						gltfAnim.name, *channel.nodeIndex, gltf->nodes[*channel.nodeIndex].name);
 					continue;
 				}
@@ -600,7 +609,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				auto& sampler = gltfAnim.samplers[channel.samplerIndex];
 				if (sampler.interpolation == fastgltf::AnimationInterpolation::CubicSpline)
 				{
-					std::cout << std::format("\tAnimation {}: skipping channel that animates interpolates using cubic spline for node {} ({})\n",
+					std::cout << std::format("\t\tAnimation {}: skipping channel that animates interpolates using cubic spline for node {} ({})\n",
 						gltfAnim.name, *channel.nodeIndex, gltf->nodes[*channel.nodeIndex].name);
 					continue;
 				}
@@ -620,6 +629,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					for (size_t kfIndex = 0; kfIndex < samplerInput.count; ++kfIndex)
 					{
 						float timeStamp = fastgltf::getAccessorElement<float>(gltf.get(), samplerInput, kfIndex);
+						animsPerSkin[skinIdx].AnimationLength = std::max(animsPerSkin[skinIdx].AnimationLength, timeStamp);
 						switch (channel.path)
 						{
 							case fastgltf::AnimationPath::Translation:
@@ -648,8 +658,11 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 			util::for_each_indexed(animsPerSkin.begin(), animsPerSkin.end(), 0, [&](int i, SAnimationAsset& anim)
 			{
+				if (anim.JointKeyFrames.empty())
+					return;
 				anim.OwnerSkin = skins[i];
 				skins[i]->Animations[gltfAnim.name.c_str()] = std::move(anim);
+				std::cout << std::format("\t\tAdded animation {} to skin {}\n", gltfAnim.name, skins[i]->Name);
 			});
 		}
 	}
@@ -666,7 +679,9 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				SMeshNode* meshNode = static_cast<SMeshNode*>(newNode.get());
 				meshNode->Mesh = meshes[*node.meshIndex];
 				if (node.skinIndex)
+				{
 					meshNode->Skin = skins[*node.skinIndex];
+				}
 			}
 
 			std::visit(

@@ -22,8 +22,12 @@ void SNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
     {
-        STransform nodeTransform = topTransform * WorldTransform;
+        // If we're using animations/skinning, send the model matrix as just the top transform. 
+        // World transforms are already built into the joints.
+        const bool bIsPlayingAnim = Skin && Skin->Animator && Skin->Animator->IsPlaying();
+        STransform nodeTransform = bIsPlayingAnim ? topTransform : topTransform * WorldTransform;
         glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
+        // This isn't ideal to update the joints buffer in this call
         for (auto& surface : Mesh->Surfaces)
         {
             auto& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
@@ -33,7 +37,8 @@ void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
             draw.Material = surface.Material;
             draw.VertexBuffer = Mesh->VertexBuffer;
             draw.IndexBuffer = Mesh->IndexBuffer;
-            draw.BonesDataBuffer = Mesh->BoneDataBuffer;
+            draw.VertexJointsDataBuffer = Mesh->VertexJointsDataBuffer;
+            draw.JointMatricesBuffer = bIsPlayingAnim ? Skin->Animator->JointMatricesBuffer : SGlBufferId {};
             draw.Transform = nodeMatrix;
         }
     }
@@ -49,8 +54,8 @@ void SLoadedGLTF::ClearAll()
             glDeleteBuffers(1, &*meshPtr->IndexBuffer);
         if (meshPtr->VertexBuffer)
             glDeleteBuffers(1, &*meshPtr->VertexBuffer);
-        if (meshPtr->BoneDataBuffer)
-            glDeleteBuffers(1, &*meshPtr->BoneDataBuffer);
+        if (meshPtr->VertexJointsDataBuffer)
+            glDeleteBuffers(1, &*meshPtr->VertexJointsDataBuffer);
     }
     Meshes.clear();
 
@@ -85,10 +90,29 @@ void SLoadedGLTF::Draw(const STransform& topTransform, SDrawContext& drawCtx)
     }
 }
 
-void CAnimator::PlayAnimation(const std::string& anim)
+void SLoadedGLTF::RefreshNodeTransforms()
 {
+    for (auto& root : RootNodes)
+        root->RefreshTransform();
+}
+
+CAnimator::CAnimator(SSkinAsset* ownerSkin, uint32_t maxJointId) : OwnerSkin(ownerSkin), JointMatrices(maxJointId)
+{
+    glCreateBuffers(1, &*JointMatricesBuffer);
+    glNamedBufferStorage(*JointMatricesBuffer, JointMatrices.size() * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
+}
+
+CAnimator::~CAnimator()
+{
+    glDeleteBuffers(1, &*JointMatricesBuffer);
+}
+
+void CAnimator::PlayAnimation(const std::string& anim, bool bLoop)
+{
+    assert(JointMatricesBuffer);
     assert(OwnerSkin);
     StopAnimation();
+    bLoopCurrentAnim = bLoop;
     if (auto it = OwnerSkin->Animations.find(anim); it != OwnerSkin->Animations.end())
     {
         CurrentAnim = &(it->second);
@@ -98,7 +122,43 @@ void CAnimator::PlayAnimation(const std::string& anim)
 
 void CAnimator::UpdateAnimation(float deltaTime)
 {
-    CurrentAnim->JointKeyFrames;
+    if (!CurrentAnim || !JointMatricesBuffer)
+        return;
+
+    CurrentTime += deltaTime;
+    bool bNeedsReset = false;
+    if (CurrentTime > CurrentAnim->AnimationLength)
+    {
+        CurrentTime = std::fmod(CurrentTime, CurrentAnim->AnimationLength);
+        bNeedsReset = true;
+    }
+
+    for (SJointAnimData& jointKeyFrames : CurrentAnim->JointKeyFrames)
+    {
+        if (bNeedsReset)
+            jointKeyFrames.ResetAnimState();
+
+        jointKeyFrames.StepToTime(CurrentTime);
+    }
+
+    if (OwnerSkin->SkeletonRoot)
+    {
+        auto parent = OwnerSkin->SkeletonRoot->Parent.lock();
+        OwnerSkin->SkeletonRoot->RefreshTransform(parent ? parent->WorldTransform : STransform {});
+    }
+	// UGLY FALLBACK IF THERE'S NO SKELETON ROOT PROVIDED (and I CBA manually finding it) very slow
+    else for (auto& joint : OwnerSkin->AllJoints)
+    {
+        auto parent = OwnerSkin->SkeletonRoot->Parent.lock();
+        joint.Node->RefreshTransform(parent ? parent->WorldTransform : STransform {});
+    }
+            
+	for (auto& joint : OwnerSkin->AllJoints)
+	{
+		JointMatrices[joint.JointId] = joint.Node->WorldTransform.GetMatrix() * joint.InverseBindMatrix;
+	}
+
+	glNamedBufferSubData(*JointMatricesBuffer, 0, JointMatrices.size() * sizeof(glm::mat4), JointMatrices.data());
 }
 
 void CAnimator::StopAnimation()
@@ -109,4 +169,31 @@ void CAnimator::StopAnimation()
         jointKeyFrames.ResetAnimState();
     CurrentAnim = nullptr;
 
+}
+
+void SJointAnimData::ResetAnimState()
+{
+    Positions.ResetAnimState();
+    Rotations.ResetAnimState();
+    Scales.ResetAnimState();
+    if (JointNode)
+        JointNode->LocalTransform = JointNode->OriginalLocalTransform;
+}
+
+void SJointAnimData::StepToTime(float animTime)
+{
+    if (!JointNode)
+        return;
+
+    glm::vec3 pos = Positions.StepToTime(animTime);
+    glm::quat rot = Rotations.StepToTime(animTime);
+    glm::vec3 scale = Scales.StepToTime(animTime);
+    JointNode->LocalTransform = STransform { pos, rot, scale };
+}
+
+void SSkinAsset::InitAnimator(uint32_t maxJoints)
+{
+    assert(AllJoints.size() && maxJoints > 0);
+    // Animator = std::make_unique<CAnimator>(this, maxJoints);
+    Animator = std::unique_ptr<CAnimator>(new CAnimator(this, maxJoints));
 }

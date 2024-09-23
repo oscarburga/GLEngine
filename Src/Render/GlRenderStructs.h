@@ -134,7 +134,7 @@ struct SMeshAsset
 	std::vector<SGeoSurface> Surfaces;
 	SGlBufferId VertexBuffer;
 	SGlBufferId IndexBuffer;
-	SGlBufferId BoneDataBuffer; // TODO: Bones are in their own buffer. Figure out how to include them into the vertex buffer without making the code horrible
+	SGlBufferId VertexJointsDataBuffer; // TODO: Bones are in their own buffer. Figure out how to include them into the vertex buffer without making the code horrible
 };
 
 struct SRenderObject // TODO: some bCastShadows bool
@@ -143,7 +143,8 @@ struct SRenderObject // TODO: some bCastShadows bool
 	uint32_t FirstIndex;
 	SGlBufferId VertexBuffer;
 	SGlBufferId IndexBuffer;
-	SGlBufferId BonesDataBuffer;
+	SGlBufferId VertexJointsDataBuffer;
+	SGlBufferId JointMatricesBuffer;
 	SBounds Bounds;
 	glm::mat4 Transform;
 	std::shared_ptr<SPbrMaterial> Material;
@@ -194,7 +195,7 @@ struct SKeyFrame
 	inline bool operator<(const SKeyFrame<OtherValueType>& other) { return Timestamp < other.Timestamp; }
 };
 
-template<MatchesAnyType<glm::vec3, glm::quat> ValueType>
+template<MatchesAnyType<glm::vec3, glm::quat> ValueType, ValueType DefaultValue>
 struct SAnimKeyFrames : public std::vector<SKeyFrame<ValueType>>
 {
 	uint32_t LastIndex = 0;
@@ -210,7 +211,7 @@ public:
 		LastTime = animTime;
 
 		if (this->size() == 0)
-			return ValueType {};
+			return DefaultValue;
 
 		while (LastIndex < this->size() && this->at(LastIndex).Timestamp <= animTime)
 			++LastIndex;
@@ -225,15 +226,15 @@ public:
 
 		// Somewhere in the middle: interpolate
 		--LastIndex;
-		ValueType& last = this->at(LastIndex);
-		ValueType& nxt = this->at(LastIndex + 1);
+		SKeyFrame<ValueType>& last = this->at(LastIndex);
+		SKeyFrame<ValueType>& nxt = this->at(LastIndex + 1);
 		const float rangeSize = nxt.Timestamp - last.Timestamp;
 		const float timePastLast = animTime - last.Timestamp;
 		const float alpha = glm::clamp(timePastLast / rangeSize, 0.f, 1.f);
 
 		// Don't like this too much but w/e, saves us the work of specializing templates
 		if constexpr (std::is_same_v<ValueType, glm::vec3>)
-			return glm::lerp(last.Value, nxt.Value, alpha);
+			return glm::mix(last.Value, nxt.Value, alpha);
 
 		if constexpr (std::is_same_v<ValueType, glm::quat>)
 			return glm::slerp(last.Value, nxt.Value, alpha);
@@ -250,22 +251,17 @@ struct SVertexSkinData
 struct SJointAnimData
 {
 	SNode* JointNode = nullptr;
-	SAnimKeyFrames<glm::vec3> Positions {};
-	SAnimKeyFrames<glm::quat> Rotations {};
-	SAnimKeyFrames<glm::vec3> Scales {};
+	SAnimKeyFrames<glm::vec3, vec3{0.0f}> Positions {};
+	SAnimKeyFrames<glm::quat, glm::IQuat> Rotations {};
+	SAnimKeyFrames < glm::vec3, vec3{1.0f}> Scales {};
 
-	void ResetAnimState()
-	{
-		Positions.ResetAnimState();
-		Rotations.ResetAnimState();
-		Scales.ResetAnimState();
-		if (JointNode)
-			JointNode->LocalTransform = JointNode->OriginalLocalTransform;
-	}
+	void ResetAnimState();
+	void StepToTime(float animTime);
 };
 
 struct SAnimationAsset
 {
+	float AnimationLength = 0.0f;
 	std::vector<SJointAnimData> JointKeyFrames {};
 	std::weak_ptr<struct SSkinAsset> OwnerSkin {};
 };
@@ -280,23 +276,42 @@ struct SAnimationAsset
 class CAnimator
 {
 	friend struct SSkinAsset;
+	friend struct SMeshNode;
 	float CurrentTime = 0.0f;
+
 private:
+	CAnimator(SSkinAsset* ownerSkin, uint32_t maxJointId);
 	struct SSkinAsset* OwnerSkin = nullptr; // Animator is uniquely owned by a skin, so no need for smart ptr
 	SAnimationAsset* CurrentAnim = nullptr; // Animations are uniquely owned by the owner skin, so no need for smart ptr
+	std::vector<glm::mat4> JointMatrices {};
+	bool bLoopCurrentAnim = false;
+	SGlBufferId JointMatricesBuffer {};
 
-	void PlayAnimation(const std::string& anim);
+public:
+	~CAnimator();
+	bool IsPlaying() { return CurrentAnim != nullptr; }
+	void PlayAnimation(const std::string& anim, bool bLoop);
 	void UpdateAnimation(float deltaTime);
 	void StopAnimation();
+
+};
+
+struct SJoint
+{
+	uint32_t JointId = 0;
+	std::shared_ptr<SNode> Node {};
+	glm::mat4 InverseBindMatrix { 1.f };
 };
 
 struct SSkinAsset
 {
 	std::string Name;
-	std::vector<std::shared_ptr<SNode>> AllJoints;
-	std::vector<glm::mat4> InverseBindMatrices;
+	std::vector<SJoint> AllJoints;
+	std::shared_ptr<SNode> SkeletonRoot;
 	std::unordered_map<std::string, SAnimationAsset> Animations;
-	CAnimator Animator;
+	std::unique_ptr<CAnimator> Animator = nullptr;
+	
+	void InitAnimator(uint32_t maxJoints);
 };
 
 struct SLoadedGLTF : public IRenderable
@@ -315,5 +330,6 @@ struct SLoadedGLTF : public IRenderable
 	~SLoadedGLTF() { ClearAll(); }
 	void ClearAll();
 	virtual void Draw(const STransform& topTransform, SDrawContext& drawCtx) override;
+	void RefreshNodeTransforms();
 };
 

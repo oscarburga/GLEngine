@@ -169,7 +169,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 	ActiveCamera.UpdateSceneData(SceneData);
 	ShadowPass.UpdateSceneData(SceneData, ActiveCamera);
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
-	// TODO frustum cull shadow depth
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
 
 	if (ImguiData.bShowShadowDepthMap)
@@ -202,49 +201,56 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexture);
 	ImguiData.CulledNum = ImguiData.TotalNum = 0;
+
+	static const auto RenderObject = [&](SRenderObject& surface)
+	{
+		if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
+		{
+			++ImguiData.CulledNum;
+			return;
+		}
+		PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+		PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+		PvpShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
+
+		glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
+		glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
+
+		glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
+		glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
+
+		glBindTextureUnit(GlTexUnits::Normal, *surface.Material->NormalTex.Texture);
+		glBindSampler(GlTexUnits::Normal, *surface.Material->NormalTex.Sampler);
+
+		glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
+		glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
+
+		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
+		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);
+
+		if (surface.IndexBuffer)
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
+			glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+		}
+		else
+		{
+			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
+		}
+	};
+
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
 		ImguiData.TotalNum += (uint32_t)MainDrawContext.Surfaces[pass].size();
 		for (auto& surface : MainDrawContext.Surfaces[pass])
-		{
-			if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
-			{
-				++ImguiData.CulledNum;
-				continue;
-			}
-			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			RenderObject(surface);
 
-			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
-			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
-
-			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
-			glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
-
-			glBindTextureUnit(GlTexUnits::Normal, *surface.Material->NormalTex.Texture);
-			glBindSampler(GlTexUnits::Normal, *surface.Material->NormalTex.Sampler);
-
-			glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
-			glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
-
-			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
-			if (surface.IndexBuffer)
-			{
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
-				glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
-			}
-			else
-			{
-				glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
-			}
-		}
 		MainDrawContext.Surfaces[pass].clear();
 	}
 
-	// Draw Blend, unoptimized sort. Could keep a sorted map and only update objects that move
 	// Basic blend, no OIT
-	// horrible, need to deduplicate a lot of this code with the color pass
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -265,39 +271,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		for (size_t& idx : indices)
 		{
 			auto& surface = blendObjects[idx];
-			if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
-			{
-				++ImguiData.CulledNum;
-				continue;
-			}
-			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
-			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
-
-			// TODO: these texture swaps are painnnnnnnnnnnnnnnnnnnnnnnnnn
-			// Ideally use bindless textures extension
-			glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
-			glBindSampler(GlTexUnits::PbrColor, *surface.Material->ColorTex.Sampler);
-
-			glBindTextureUnit(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Texture);
-			glBindSampler(GlTexUnits::PbrMetalRough, *surface.Material->MetalRoughTex.Sampler);
-
-			glBindTextureUnit(GlTexUnits::Normal, *surface.Material->NormalTex.Texture);
-			glBindSampler(GlTexUnits::Normal, *surface.Material->NormalTex.Sampler);
-
-			glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
-			glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
-
-			glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
-			if (surface.IndexBuffer)
-			{
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
-				glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
-			}
-			else
-			{
-				glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
-			}
+			RenderObject(surface);
 		}
 		blendObjects.clear();
 		glDisable(GL_BLEND);

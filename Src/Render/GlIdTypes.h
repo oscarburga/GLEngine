@@ -32,6 +32,7 @@ namespace GlBindPoints
 		{
 			SceneData = 0,
 			PbrMaterial = 1,
+			JointMatrices = 2,
 			Count
 		};
 	}
@@ -41,6 +42,7 @@ namespace GlBindPoints
 		enum 
 		{
 			VertexBuffer = 0,
+			VertexJointBuffer = 1,
 			Count
 		};
 	}
@@ -69,6 +71,8 @@ namespace GlUniformLocs
 		OcclusionTex = 4,
 
 		ShadowDepthTexture = 5,
+
+		HasJoints = 6,
 
 		Count,
 

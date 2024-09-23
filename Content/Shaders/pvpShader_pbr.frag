@@ -40,6 +40,7 @@ layout (location = 2) uniform sampler2D MetalRoughTex;
 layout (location = 3) uniform sampler2D NormalTex;
 layout (location = 4) uniform sampler2D OcclusionTex;
 layout (location = 5) uniform sampler2D ShadowDepthTex;
+layout (location = 6) uniform bool bHasJoints;
 layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
 

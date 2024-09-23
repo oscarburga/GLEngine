@@ -16,17 +16,29 @@ int main(int argc, char** argv)
 	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/ufo_scene/scene.gltf");
 	gltf->UserTransform = STransform::FromScale(glm::vec3 { 0.01f });
 	auto anxiety = CAssetLoader::Get()->LoadGLTFScene("GLTF/anxiety/source/vefq.glb");
-	anxiety->UserTransform = STransform { 
-		glm::translate(glm::scale(glm::IMat, vec3(3.f)),
-		World::Up * 0.025f + World::Front - World::Right)
+	anxiety->UserTransform = STransform {
+		World::Up * 0.025f + World::Front * 3.f - World::Right * 3.f,
+		glm::IQuat,
+		glm::vec3(3.f)
 	};
-	assert(gltf && anxiety);
+
+	auto catgirl = CAssetLoader::Get()->LoadGLTFScene("GLTF/catgirl_animated.glb");
+	catgirl->UserTransform = STransform {
+		World::Up * 0.025f + World::Front * 7.f - World::Right * 3.f,
+		glm::IQuat,
+		glm::vec3(3.f)
+	};
+	auto catgirlSkin = catgirl->Skins[""];
+	assert(gltf && anxiety && catgirl && catgirlSkin);
+	catgirlSkin->Animator->PlayAnimation("Idleshow2", true);
 	CGlRenderer* renderer = CGlRenderer::Get();
 	engine->PreRenderFuncs.emplace_back([&](float deltaTime)
 	{
 		gltf->Draw(STransform {}, renderer->MainDrawContext);
 
-		anxiety->Draw(STransform {}, renderer->MainDrawContext);
+		// anxiety->Draw(STransform {}, renderer->MainDrawContext);
+		catgirlSkin->Animator->UpdateAnimation(deltaTime);
+		catgirl->Draw(STransform {}, renderer->MainDrawContext);
 		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, renderer->MainDrawContext);
 	});
 	engine->MainLoop();
