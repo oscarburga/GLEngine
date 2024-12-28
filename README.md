@@ -9,9 +9,9 @@ self-made (its mostly random handpicked stuff from sketchfab).
 TODO: List all features/scope here.
 
 Coming up next:
-* Fit shadow mapping to camera frustum
+* ~~Fit shadow mapping to camera frustum~~
     * Possibly implement CSM along with that if I feel like it
-* Skinning
+* ~~Skinning~~
 
 Stuff I eventually want to get to but I keep procrastinating:
 * ImGui and maybe cvars to make my development & testing life 10x easier
