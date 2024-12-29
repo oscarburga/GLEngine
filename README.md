@@ -9,12 +9,12 @@ self-made (its mostly random handpicked stuff from sketchfab).
 TODO: List all features/scope here.
 
 Coming up next:
-* ~~Fit shadow mapping to camera frustum~~
-    * Possibly implement CSM along with that if I feel like it
-* ~~Skinning~~
+* ~~Fit shadow mapping to camera frustum~~ (done)
+    * CSM still pending
+* ~~Skinning~~(done)
 
 Stuff I eventually want to get to but I keep procrastinating:
-* ImGui and maybe cvars to make my development & testing life 10x easier
+* ~~ImGui~~ (done) and maybe cvars to make my development & testing life 10x easier
 * Point/Spot light support with the new pbr shaders
     * Also actually learn PBR, currently just blackboxing it for the most part.
     * I miss the simplicity of the diffuse-specular model :(

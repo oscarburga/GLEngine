@@ -51,14 +51,22 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f}) / 8.f;
 
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
-	const vec3 shadowsRight = glm::normalize(glm::cross(shadowsCamDir, World::Up));
-	const vec3 shadowsUp = glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
-
-	glm::vec3 min(std::numeric_limits<float>::max()), max(std::numeric_limits<float>::min());
+	const vec3 shadowsUp = [&]
+	{
+		const vec3 shadowsRight = glm::normalize(glm::cross(shadowsCamDir, World::Up));
+		// If sunlight points straight up/down, just set the shadowsUp to be World::Front
+		if (glm::any(glm::isnan(shadowsRight)) || (glm::length2(shadowsRight) <= 1e-8))
+		{
+			return World::Front;
+		}
+		return glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
+	}(); 
 	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
 	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
 	// const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, World::Up);
 	ShadowsCamera.Rotation = glm::quat_cast(lightView);
+	glm::vec3 min { std::numeric_limits<float>::max() };
+	glm::vec3 max { std::numeric_limits<float>::min() };
 	for (auto& corner : frustumCorners)
 	{
 		const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));

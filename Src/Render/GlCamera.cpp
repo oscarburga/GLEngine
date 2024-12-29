@@ -150,9 +150,10 @@ void SGlCamera::UpdateCameraFromInput(GLFWwindow* window, float deltax, float de
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		moveDir += right; 
 
-	vec3 positionDelta(abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
+	vec3 positionDelta = vec3{ glm::length2(moveDir) > 1e-8f ?
 		(Speed * deltaTime * glm::normalize(moveDir)) :
-		vec3(0.0f));
+		vec3(0.0f)
+	};
 
 	moveDir = vec3(0.0f);
 	if (glfwGetKey(window, GLFW_KEY_E))
@@ -160,7 +161,7 @@ void SGlCamera::UpdateCameraFromInput(GLFWwindow* window, float deltax, float de
 	if (glfwGetKey(window, GLFW_KEY_Q))
 		moveDir -= up;
 
-	positionDelta += abs(glm::dot(moveDir, moveDir)) > 1e-8f ?
+	positionDelta += glm::length2(moveDir) > 1e-8f ?
 		(Speed * deltaTime * glm::normalize(moveDir)) :
 		vec3(0.0f);
 
