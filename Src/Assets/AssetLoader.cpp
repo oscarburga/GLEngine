@@ -818,7 +818,7 @@ std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem
 	}
 	size_t codeLen = shaderFile.tellg();
 	std::string shaderCode(codeLen + 1, 0);
-	shaderCode.resize(codeLen + 1); // +1 for null terminator
+	// shaderCode.resize(codeLen + 1); // +1 for null terminator
 	shaderFile.seekg(0);
 	shaderFile.read(shaderCode.data(), codeLen);
 	shaderCode.back() = 0; // null-terminated string

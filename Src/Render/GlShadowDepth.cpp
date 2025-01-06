@@ -73,14 +73,12 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		min = glm::min(min, cornerLVspace);
 		max = glm::max(max, cornerLVspace);
 	}
-	min.x -= ImguiData.OrthoSizePadding.x;
-	min.y -= ImguiData.OrthoSizePadding.y;
-	max.x += ImguiData.OrthoSizePadding.x;
-	max.y += ImguiData.OrthoSizePadding.y;
-	min *= vec3(ImguiData.OrthoSizeScale, 1.f);
-	max *= vec3(ImguiData.OrthoSizeScale, 1.f);
-	ShadowsCamera.OrthoMinBounds = vec2(min);
-	ShadowsCamera.OrthoMaxBounds = vec2(max);
+	min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
+	max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
+	min *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+	max *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+	ShadowsCamera.OrthoMinBounds = vec2 { min };
+	ShadowsCamera.OrthoMaxBounds = vec2 { max };
 	ShadowsCamera.NearPlane = min.z;
 	ShadowsCamera.FarPlane = max.z;
 	mat4 lightProj;
