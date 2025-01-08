@@ -6,6 +6,8 @@
 #include "Render/GlShader.h"
 #include "Render/GlRenderStructs.h"
 
+struct SShaderLoadData;
+
 /*
 * Class responsible for all basic asset loading done. Meshes, shaders, textures, etc.
 * No object management should be done from within this class, it is only for loading.
@@ -38,6 +40,8 @@ public:
 
 	static std::optional<CGlShader> LoadShaderProgram(const std::filesystem::path& vsPath, const std::filesystem::path& fsPath);
 
+	static std::optional<std::string> ReadContentFileToString(const std::filesystem::path& filePath);
+	static std::optional<std::string> ReadFileToString(const std::filesystem::path& rawFilePath);
 private:
 
 	static std::optional<unsigned int> LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType);
@@ -46,3 +50,10 @@ private:
     static bool CheckShaderCompilation(unsigned int shader, const std::filesystem::path& shaderPath);
 };
 
+struct SShaderLoadArgs
+{
+	std::filesystem::path ShaderPath;
+	std::unordered_map<std::string, std::string> ShaderArgs;
+	
+	static std::string ReplaceShaderArgs(const SShaderLoadArgs& Args, const std::string& shaderCode);
+};

@@ -804,12 +804,15 @@ std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const std::filesystem::
 	return CGlShader(program);
 }
 
-std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType)
+std::optional<std::string> CAssetLoader::ReadContentFileToString(const std::filesystem::path& filePath)
 {
-	// shaderCode.clear();
-	std::stringstream shaderStream;
+	return ReadFileToString(ContentRoot / filePath);
+}
+
+std::optional<std::string> CAssetLoader::ReadFileToString(const std::filesystem::path& rawFilePath)
+{
 	// open at end, read as binary since we just want the flat raw content, don't care about any text format.
-	std::filesystem::path path = ContentRoot / shaderPath;
+	std::filesystem::path path = rawFilePath;
 	std::ifstream shaderFile(path, std::ios_base::ate | std::ios_base::binary);
 	if (!shaderFile)
 	{
@@ -817,23 +820,32 @@ std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem
 		return std::nullopt;
 	}
 	size_t codeLen = shaderFile.tellg();
-	std::string shaderCode(codeLen + 1, 0);
-	// shaderCode.resize(codeLen + 1); // +1 for null terminator
+	std::string shaderCode(codeLen + 1, 0); // +1 to include a null terminator
 	shaderFile.seekg(0);
 	shaderFile.read(shaderCode.data(), codeLen);
 	shaderCode.back() = 0; // null-terminated string
 	shaderFile.close();
+	return std::optional { std::move(shaderCode) };
+}
 
-	GLuint shader = glCreateShader(shaderType);
-	const char* shaderStr = shaderCode.c_str();
-	glShaderSource(shader, 1, &shaderStr, nullptr);
-	glCompileShader(shader);
-	if (!CheckShaderCompilation(shader, path))
+std::optional<unsigned int> CAssetLoader::LoadSingleShader(const std::filesystem::path& shaderPath, unsigned int shaderType)
+{
+	if (auto shaderCode = ReadContentFileToString(shaderPath); shaderCode.has_value())
 	{
-		glDeleteShader(shader);
-		return std::nullopt;
+
+		GLuint shader = glCreateShader(shaderType);
+		std::string replacedCode = SShaderLoadArgs::ReplaceShaderArgs(SShaderLoadArgs {}, *shaderCode);
+		const char* shaderStr = shaderCode->c_str();
+		glShaderSource(shader, 1, &shaderStr, nullptr);
+		glCompileShader(shader);
+		if (!CheckShaderCompilation(shader, shaderPath))
+		{
+			glDeleteShader(shader);
+			return std::nullopt;
+		}
+		return shader;
 	}
-	return shader;
+	return std::nullopt;
 }
 
 SGlTextureId CAssetLoader::RegisterTexture2D(void* stbiTexData, int width, int height, int channels)
@@ -872,4 +884,72 @@ bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesy
 		return false;
 	}
 	return true;
+}
+
+std::string SShaderLoadArgs::ReplaceShaderArgs(const SShaderLoadArgs& Args, const std::string& shaderCode)
+{
+	constexpr std::string_view argsBeginStr = "#define COMPILEARG_BEGIN";
+	constexpr std::string_view argsEndStr = "#define COMPILEARG_END";
+
+	size_t beginPos = shaderCode.find(argsBeginStr);
+	if (beginPos == std::string::npos)
+		return std::string { shaderCode };
+
+	size_t firstPosAfterBegin = beginPos + argsBeginStr.size();
+	size_t endPos = shaderCode.find(argsEndStr, firstPosAfterBegin);
+	if (endPos == std::string::npos)
+		return std::string { shaderCode };
+
+	std::string result;
+	result.reserve(shaderCode.size() * 2);
+	std::copy(shaderCode.begin(), shaderCode.begin() + beginPos, std::back_inserter(result));
+	std::stringstream ss(shaderCode.substr(beginPos, endPos - beginPos));
+	{
+		std::string dummy;
+		std::getline(ss, dummy);
+	}
+	for (int lineNum = 1; ss; lineNum++)
+	{
+		constexpr std::string_view defineStr = "#define ";
+		constexpr size_t defineStrLen = defineStr.size();
+		constexpr std::string_view whitespaceStr = " \t\r\n";
+		std::string line, define, argName, defaultValue = "";
+		std::getline(ss, line);
+		std::stringstream linestream(line);
+		linestream >> define;
+		linestream >> argName;
+		// linestream >> defaultValue; // This doesn't work for all cases, need to get the entire remainder of the line (without trailing whitespaces);
+		std::getline(linestream, defaultValue);
+		while (defaultValue.size() && std::isspace(defaultValue.back())) // remove trailing whitespace
+			defaultValue.pop_back();
+
+		if (!define.starts_with(defineStr) || argName.empty())
+		{
+			std::cerr << std::format("\tSkipping Args line {}: '{}'\n", lineNum, line);
+			continue;
+		}
+		result += std::format("{} {}", defineStr, argName);
+		if (auto it = Args.ShaderArgs.find(argName); it != Args.ShaderArgs.end())
+		{
+			const std::string& newArgVal = it->second;
+			std::cout << std::format("\tSetting arg '{}' to value '{}' - default was '{}'\n", argName, newArgVal, defaultValue);
+			if (newArgVal.size())
+			{
+				result += ' ';
+				result += newArgVal;
+			}
+		}
+		else
+		{
+			std::cout << std::format("\tArg {} remains unchanged. Default value is {}\n", argName, defaultValue);
+			if (defaultValue.size())
+			{
+				result += ' ';
+				result += defaultValue;
+			}
+		}
+		result += '\n';
+	}
+	std::copy(shaderCode.begin() + endPos, shaderCode.end(), std::back_inserter(result));
+	return result;
 }
