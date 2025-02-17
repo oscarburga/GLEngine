@@ -6,6 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <Utils/ForEachIndexed.h>
+#include <Utils/RefIgnore.h>
 #undef STB_IMAGE_IMPLEMENTATION
 
 std::filesystem::path CAssetLoader::ContentRoot = "C:\\Users\\51956\\Documents\\OpenGLProjects\\GLEngine\\Content";
@@ -907,10 +908,8 @@ std::string SShaderLoadArgs::ApplyToCode(std::string&& shaderCode) const
 	result.reserve(shaderCode.size() * 2);
 	std::copy(shaderCode.begin(), shaderCode.begin() + beginPos, std::back_inserter(result));
 	std::stringstream ss(shaderCode.substr(beginPos, endPos - beginPos));
-	{
-		std::string dummy;
-		std::getline(ss, dummy); // discard compilearg_begin line
-	}
+	std::getline(ss, util::RefIgnore<std::string>::I); // discard compilearg_begin line
+
 	for (int lineNum = 1; ss; lineNum++)
 	{
 		constexpr std::string_view defineStr = "#define";
