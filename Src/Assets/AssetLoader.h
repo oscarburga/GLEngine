@@ -38,8 +38,8 @@ public:
 	static std::optional<SGlTextureId> LoadTexture2DFromFile(std::filesystem::path const& texturePath, bool bFlipVertical);
 	static std::optional<SGlTextureId> LoadTexture2DFromBuffer(void* buffer, size_t size, bool bFlipVertical);
 
-	static std::optional<CGlShader> LoadShaderProgram(const SShaderLoadArgs& vsArgs, const SShaderLoadArgs& fsPath);
-	static std::optional<CGlShader> LoadShaderProgram(const SShaderLoadArgs& vsArgs, const SShaderLoadArgs& gsPath, const SShaderLoadArgs& fsPath);
+	static std::optional<CGlShader> LoadShaderProgram(const SShaderLoadArgs& vsArgs, const SShaderLoadArgs& fsArgs);
+	static std::optional<CGlShader> LoadShaderProgram(const SShaderLoadArgs& vsArgs, const SShaderLoadArgs& gsArgs, const SShaderLoadArgs& fsArgs);
 
 	static std::optional<std::string> ReadContentFileToString(const std::filesystem::path& filePath);
 	static std::optional<std::string> ReadFileToString(const std::filesystem::path& rawFilePath);
@@ -54,6 +54,8 @@ private:
 // Warning: Args are CASE-SENSITIVE!!
 struct SShaderLoadArgs
 {
+	SShaderLoadArgs() = default;
+
 	template<typename StrLike>
 	constexpr SShaderLoadArgs(StrLike&& path) : Path(path) {}
 

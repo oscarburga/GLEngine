@@ -776,12 +776,27 @@ std::optional<SGlTextureId> CAssetLoader::LoadTexture2DFromBuffer(void* buffer, 
 
 std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const SShaderLoadArgs& vsArgs, const SShaderLoadArgs& fsArgs)
 {
+	return LoadShaderProgram(vsArgs, SShaderLoadArgs {}, fsArgs);
+}
+
+std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const SShaderLoadArgs& vsArgs, const SShaderLoadArgs& gsArgs, const SShaderLoadArgs& fsArgs)
+{
 	auto vs = LoadSingleShader(vsArgs, GL_VERTEX_SHADER);
+	auto gs = LoadSingleShader(gsArgs, GL_GEOMETRY_SHADER);
 	auto fs = LoadSingleShader(fsArgs, GL_FRAGMENT_SHADER);
+
+	// Vertex and fragment shader are mandatory. 
+	// Geometry shader is optional, but if a non-empty path was provided, have to check it compiled successfully
+	if (!vs || !fs || (!gsArgs.Path.empty() && !gs))
+		return std::nullopt;
+
 	auto destroyShaders = Defer([&]()
 	{
 		if (vs)
 			glDeleteShader(*vs);
+
+		if (gs)
+			glDeleteShader(*gs);
 
 		if (fs)
 			glDeleteShader(*fs);
@@ -789,6 +804,8 @@ std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const SShaderLoadArgs& 
 
 	unsigned int program = glCreateProgram();
 	glAttachShader(program, *vs);
+	if (gs)
+		glAttachShader(program, *gs);
 	glAttachShader(program, *fs);
 	glLinkProgram(program);
 
@@ -797,8 +814,8 @@ std::optional<CGlShader> CAssetLoader::LoadShaderProgram(const SShaderLoadArgs& 
 	if (!success)
 	{
 		glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
-		std::cerr << std::format("Program failed to link:\nVertex Shader:{}\nFragment Shader: {}\nLog:\n{}\n",
-			vsArgs.Path.string(), fsArgs.Path.string(), infoLog);
+		std::cerr << std::format("Program failed to link:\nVertex Shader:{}\nGeometry Shader: {}\nFragment Shader: {}\nLog:\n{}\n",
+			vsArgs.Path.string(), gsArgs.Path.string(), fsArgs.Path.string(), infoLog);
 		glDeleteProgram(program);
 		return std::nullopt;
 	}
@@ -831,6 +848,9 @@ std::optional<std::string> CAssetLoader::ReadFileToString(const std::filesystem:
 
 std::optional<unsigned int> CAssetLoader::LoadSingleShader(const SShaderLoadArgs& shaderArgs, unsigned int shaderType)
 {
+	if (shaderArgs.Path.empty())
+		return std::nullopt;
+
 	if (auto shaderCodeOpt = ReadContentFileToString(shaderArgs.Path); shaderCodeOpt.has_value())
 	{
 
