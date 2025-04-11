@@ -167,7 +167,7 @@ void SGlCamera::UpdateCameraFromInput(GLFWwindow* window, float deltax, float de
 
 	Position += positionDelta;
 	Yaw -= deltax * deltaTime * YawSens;
-	Pitch -= deltay * deltaTime * PitchSens;
+	Pitch += deltay * deltaTime * PitchSens;
 	constexpr float minPitch = glm::radians(-89.f);
 	constexpr float maxPitch = glm::radians(89.f);
 	Pitch = glm::clamp(Pitch, minPitch, maxPitch);

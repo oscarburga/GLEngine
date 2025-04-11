@@ -45,9 +45,8 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
 	vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
-	SFrustum camFrustum;
 	std::array<vec3, 8> frustumCorners;
-	Camera.CalcFrustum(&camFrustum, &frustumCorners);
+	Camera.CalcFrustum(nullptr, &frustumCorners);
 	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f}) / 8.f;
 
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
@@ -63,7 +62,6 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	}(); 
 	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
 	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
-	// const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, World::Up);
 	ShadowsCamera.Rotation = glm::quat_cast(lightView);
 	glm::vec3 min { std::numeric_limits<float>::max() };
 	glm::vec3 max { std::numeric_limits<float>::min() };
@@ -73,10 +71,10 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		min = glm::min(min, cornerLVspace);
 		max = glm::max(max, cornerLVspace);
 	}
-	min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
-	max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
 	min *= vec3 { ImguiData.OrthoSizeScale, 1.f };
 	max *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+	min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
+	max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
 	ShadowsCamera.OrthoMinBounds = vec2 { min };
 	ShadowsCamera.OrthoMaxBounds = vec2 { max };
 	ShadowsCamera.NearPlane = min.z;

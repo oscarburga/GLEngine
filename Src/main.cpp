@@ -36,13 +36,16 @@ int main(int argc, char** argv)
 	assert(gltf && anxiety && catgirl && catgirlSkin);
 	catgirlSkin->Animator->PlayAnimation("Idleshow", true);
 	CGlRenderer* renderer = CGlRenderer::Get();
-	engine->PreRenderFuncs.emplace_back([&](float deltaTime)
+	engine->PreRenderFuncs.emplace_back([&, totalTime = 0.f](float deltaTime) mutable
 	{
 		gltf->Draw(STransform {}, renderer->MainDrawContext);
 
 		// anxiety->Draw(STransform {}, renderer->MainDrawContext);
 		catgirlSkin->Animator->UpdateAnimation(deltaTime);
-		catgirl->Draw(STransform {}, renderer->MainDrawContext);
+		totalTime += deltaTime;
+		glm::quat q = glm::fromYawPitchRoll(vec3{ totalTime , 0.0f, 0.0f });
+		catgirl->UserTransform.SetRotation(q);
+		catgirl->Draw(STransform{}, renderer->MainDrawContext);
 		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, renderer->MainDrawContext);
 	});
 	engine->MainLoop();

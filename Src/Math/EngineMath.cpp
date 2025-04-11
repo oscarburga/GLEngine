@@ -11,8 +11,8 @@ using glm::IQuat;
 quat glm::fromYawPitchRoll(const vec3& yawPitchRoll)
 {
 	const quat yawQuat = glm::angleAxis(yawPitchRoll.x, World::Up);
-	const vec3 right = yawQuat * World::Right;
-	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, right);
+	const vec3 left = yawQuat * World::Left;
+	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, left);
 	const quat yawPitchQuat = pitchQuat * yawQuat;
 	const vec3 front = yawPitchQuat * World::Front;
 	const quat rollQuat = glm::angleAxis(yawPitchRoll.z, front);
@@ -21,7 +21,7 @@ quat glm::fromYawPitchRoll(const vec3& yawPitchRoll)
 
 quat glm::fromPitchYawRoll(const vec3& yawPitchRoll)
 {
-	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, World::Right);
+	const quat pitchQuat = glm::angleAxis(yawPitchRoll.y, World::Left);
 	const vec3 up = pitchQuat * World::Up;
 	const quat yawQuat = glm::angleAxis(yawPitchRoll.x, up);
 	const quat pitchYawQuat = yawQuat * pitchQuat;
