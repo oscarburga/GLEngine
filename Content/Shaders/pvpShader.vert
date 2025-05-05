@@ -1,6 +1,9 @@
 #version 460 core
 
+#define COMPILEARG_BEGIN
+#define MAX_CASCADES 16
 #define MAX_JOINTS 200
+#define COMPILEARG_END
 
 struct SVertex {
 	vec3 Position;
@@ -25,6 +28,7 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 Proj;
 	mat4 ViewProj;
 	mat4 LightSpaceTransform;
+	mat4 LightSpaceTransforms[MAX_CASCADES];
 } sceneData;
 
 layout (binding = 2, std140) uniform JointMatsUBO {

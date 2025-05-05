@@ -36,6 +36,21 @@ struct SFrustum
 	bool IsSphereInFrustum(const SBounds& bounds, const glm::mat4& transform);
 };
 
+namespace EFrustumCorners
+{
+	enum
+	{
+		NearBotLeft = 0,
+		NearBotRight = 1,
+		NearTopRight = 2,
+		NearTopLeft = 3,
+		FarBotLeft = 4,
+		FarBotRight = 5,
+		FarTopRight = 6,
+		FarTopLeft = 7,
+	};
+}
+
 // May want to eventually differentiate orthographic from ortho2d (for like UI/quad stuff)...
 // enum class ECameraType : uint8_t
 // {

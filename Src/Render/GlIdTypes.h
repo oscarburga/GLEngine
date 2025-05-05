@@ -14,9 +14,10 @@
 using SGlVaoId = TId<uint32_t, struct VaoIdTag, 0>;
 using SGlBufferId = TId<uint32_t, struct BufferIdTag, 0>;
 using SGlTextureId = TId<uint32_t, struct TexIdTag, 0>;
+using SGlTexArrayId = TId<uint32_t, struct TexArrayIdTag, 0>;
 using SGlSamplerId = TId<uint32_t, struct TexIdTag, 0>;
 using SGlShaderId = TId<uint32_t, struct ShaderIdTag, 0>;
-using SGlFramebufferId = TId<uint32_t, struct FbIdTag, 0>;
+using SGlFramebufferId = TId<uint32_t, struct FramebufferIdTag, 0>;
 
 struct SGlBufferRangeId : public SGlBufferId
 {

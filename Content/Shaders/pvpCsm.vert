@@ -60,5 +60,5 @@ void main()
 			jointsData.Weights.z * jointMatrices[jointsData.Joints.z] +
 			jointsData.Weights.w * jointMatrices[jointsData.Joints.w];
 	}
-	gl_Position = sceneData.LightSpaceTransform * toWorldTransMat * vec4(vertex.Position, 1.0);
+	gl_Position = toWorldTransMat * vec4(vertex.Position, 1.0);
 }

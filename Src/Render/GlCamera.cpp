@@ -48,6 +48,9 @@ void SGlCamera::CalcProjMatrix(glm::mat4& outMat) const
 
 void SGlCamera::CalcFrustum(SFrustum* outFrustum, std::array<vec3, 8>* outCorners) const
 {    
+	if (!outFrustum && !outCorners)
+		return;
+
 	const vec3 front = glm::rotateByQuat(World::Front, Rotation);
 	const vec3 frontNear = NearPlane * front;
 	const vec3 frontFar = FarPlane * front;
@@ -74,6 +77,7 @@ void SGlCamera::CalcFrustum(SFrustum* outFrustum, std::array<vec3, 8>* outCorner
 	}
 
 	// Corners
+	// near { botleft, botright, topright, topleft }, far { botleft, botright, topright, topleft }
 	if (outCorners)
 	{
 		constexpr float dx[] = { -1, 1, 1, -1 };

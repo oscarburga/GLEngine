@@ -12,6 +12,8 @@ CGlShadowDepthPass::~CGlShadowDepthPass()
 		glDeleteFramebuffers(1, &*ShadowsFbo);
 	if (ShadowsTexture)
 		glDeleteTextures(1, &*ShadowsTexture);
+	if (ShadowsTexArray)
+		glDeleteTextures(1, &*ShadowsTexArray);
 	if (ShadowsShader.Id)
 		glDeleteProgram(ShadowsShader.Id);
 }
@@ -21,24 +23,48 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	ShadowsCamera.bIsPerspective = false;
 	Width = width;
 	Height = height;
-	glCreateFramebuffers(1, &*ShadowsFbo);
-	glCreateTextures(GL_TEXTURE_2D, 1, &*ShadowsTexture);
-	glTextureStorage2D(*ShadowsTexture, 1, GL_DEPTH_COMPONENT32F, width, height);
-	// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTextureParameteri(*ShadowsTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
-	glTextureParameterfv(*ShadowsTexture, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexture, 0);
+	// Single shadow map
+	{
+		glCreateTextures(GL_TEXTURE_2D, 1, &*ShadowsTexture);
+		glTextureStorage2D(*ShadowsTexture, 1, GL_DEPTH_COMPONENT32F, width, height);
+	}
+
+	const int numCascades = int(CascadeSplitPoints.size());
+	// Shadow map array
+	{
+		assert(numCascades > 1);
+		glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &*ShadowsTexArray);
+		glTextureStorage3D(*ShadowsTexArray, 1, GL_DEPTH_COMPONENT32F, width, height, numCascades);
+	}
+
+
+	uint32_t texIds[] = { *ShadowsTexture, *ShadowsTexArray };
+	for (uint32_t& texId : texIds)
+	{
+		// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTextureParameteri(texId, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTextureParameteri(texId, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTextureParameteri(texId, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTextureParameteri(texId, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		constexpr float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
+		glTextureParameterfv(texId, GL_TEXTURE_BORDER_COLOR, borderColor);
+	}
+
+	// Setup framebuffer
+	glCreateFramebuffers(1, &*ShadowsFbo);
+	// glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexture, 0);
+	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexArray, 0);
 	glNamedFramebufferDrawBuffer(*ShadowsFbo, GL_NONE);
 	glNamedFramebufferReadBuffer(*ShadowsFbo, GL_NONE);
 
-	auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", "Shaders/empty.frag");
+	assert(glCheckNamedFramebufferStatus(*ShadowsFbo, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+	SShaderLoadArgs gsArgs("Shaders/csm.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", gsArgs, "Shaders/empty.frag");
 	assert(shader);
+
 	ShadowsShader = *shader;
 }
 
@@ -47,9 +73,22 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(nullptr, &frustumCorners);
-	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), vec3{0.0f}) / 8.f;
-
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
+	const vec3 frustumTopCenter = [&]
+	{
+		vec3 highestCenter { 0.f, std::numeric_limits<float>::min(), 0.f };
+		// take x and z (horizontal & frontal) averages, but take maximum y (vertical)
+		for (const vec3& corner : frustumCorners)
+		{
+			highestCenter.x += corner.x;
+			highestCenter.z += corner.z;
+			highestCenter.y = glm::max(highestCenter.y, corner.y);
+		}
+		highestCenter.x /= frustumCorners.size();
+		highestCenter.z /= frustumCorners.size();
+		return highestCenter;
+	}();
+
 	const vec3 shadowsUp = [&]
 	{
 		const vec3 shadowsRight = glm::normalize(glm::cross(shadowsCamDir, World::Up));
@@ -60,8 +99,8 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		}
 		return glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
 	}(); 
-	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
-	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
+	ShadowsCamera.Position = frustumTopCenter - shadowsCamDir;
+	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumTopCenter, shadowsUp);
 	ShadowsCamera.Rotation = glm::quat_cast(lightView);
 	glm::vec3 min { std::numeric_limits<float>::max() };
 	glm::vec3 max { std::numeric_limits<float>::min() };
