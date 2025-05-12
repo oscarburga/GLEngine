@@ -139,6 +139,7 @@ struct SMeshAsset
 
 struct SRenderObject // TODO: some bCastShadows bool
 {
+	bool bIsCCW = false;
 	uint32_t IndexCount;
 	uint32_t FirstIndex;
 	SGlBufferId VertexBuffer;
@@ -177,6 +178,20 @@ struct SNode : public IRenderable
 	
 	// void RefreshTransform(const glm::mat4& parentMatrix);
 	// virtual void Draw(const glm::mat4& topMatrix, SDrawContext& drawCtx);
+	template<IsCallableWith<SNode*> Func>
+	static void TraverseTree(SNode* Node, Func&& f)
+	{
+		auto travLambda = [&f](SNode* Node) -> void
+		{
+			f(Node);
+			for (auto& child : Node->Children)
+			{
+				travLambda(child.get());
+			}
+		};
+		travLambda(Node);
+	}
+
 };
 
 struct SMeshNode : public SNode

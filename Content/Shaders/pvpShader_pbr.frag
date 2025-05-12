@@ -139,8 +139,9 @@ float DirLightShadowFactor()
 	vec3 projCoords = fs.FragPosSunSpace.xyz / fs.FragPosSunSpace.w;
 	projCoords = projCoords * 0.5f + 0.5f;
 
+	// Shadow acne
 	vec3 sunlightDir = normalize(-sceneData.SunlightDirection.xyz);
-	float bias = 0.005f;// max(0.01f * (1.0f - abs(dot(N, sunlightDir))), 0.005f);
+	float bias = max(0.05f * (1.0f - abs(dot(N, sunlightDir))), 0.005f);
 	float curDepth = projCoords.z; // depth of this fragment
 
 	// simple PCF

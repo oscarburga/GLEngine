@@ -163,6 +163,9 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	// TODO: figure out negative determinants for flipping the front face
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 	
 	// Refresh SceneData
 	SceneData.SunlightDirection = vec4(glm::normalize(vec3(ImguiData.SunlightDirection)), ImguiData.SunlightDirection.w);
@@ -229,6 +232,11 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);
+		
+		constexpr int windingOrder[] = { GL_CW, GL_CCW };
+		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
+		// Figure it out at some point
+		glFrontFace(windingOrder[!surface.bIsCCW]);
 
 		if (surface.IndexBuffer)
 		{

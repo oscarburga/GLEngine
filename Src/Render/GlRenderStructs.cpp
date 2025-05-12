@@ -27,9 +27,11 @@ void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
         const bool bIsPlayingAnim = Skin && Skin->Animator && Skin->Animator->IsPlaying();
         STransform nodeTransform = bIsPlayingAnim ? topTransform : topTransform * WorldTransform;
         glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
+        const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f;
         for (auto& surface : Mesh->Surfaces)
         {
-            auto& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
+            SRenderObject& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
+            draw.bIsCCW = bIsCCW;
             draw.IndexCount = surface.Count;
             draw.FirstIndex = surface.StartIndex;
             draw.Bounds = surface.Bounds;

@@ -54,15 +54,16 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 	// Setup framebuffer
 	glCreateFramebuffers(1, &*ShadowsFbo);
-	// glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexture, 0);
-	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexArray, 0);
+	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexture, 0);
+	// glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexArray, 0);
 	glNamedFramebufferDrawBuffer(*ShadowsFbo, GL_NONE);
 	glNamedFramebufferReadBuffer(*ShadowsFbo, GL_NONE);
 
 	assert(glCheckNamedFramebufferStatus(*ShadowsFbo, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
-	SShaderLoadArgs gsArgs("Shaders/csm.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
-	auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", gsArgs, "Shaders/empty.frag");
+	//SShaderLoadArgs gsArgs("Shaders/csm.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	// auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", gsArgs, "Shaders/empty.frag");
+	auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", "Shaders/empty.frag");
 	assert(shader);
 
 	ShadowsShader = *shader;
@@ -74,20 +75,7 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(nullptr, &frustumCorners);
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
-	const vec3 frustumTopCenter = [&]
-	{
-		vec3 highestCenter { 0.f, std::numeric_limits<float>::min(), 0.f };
-		// take x and z (horizontal & frontal) averages, but take maximum y (vertical)
-		for (const vec3& corner : frustumCorners)
-		{
-			highestCenter.x += corner.x;
-			highestCenter.z += corner.z;
-			highestCenter.y = glm::max(highestCenter.y, corner.y);
-		}
-		highestCenter.x /= frustumCorners.size();
-		highestCenter.z /= frustumCorners.size();
-		return highestCenter;
-	}();
+	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
 
 	const vec3 shadowsUp = [&]
 	{
@@ -99,8 +87,8 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		}
 		return glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
 	}(); 
-	ShadowsCamera.Position = frustumTopCenter - shadowsCamDir;
-	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumTopCenter, shadowsUp);
+	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
+	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
 	ShadowsCamera.Rotation = glm::quat_cast(lightView);
 	glm::vec3 min { std::numeric_limits<float>::max() };
 	glm::vec3 max { std::numeric_limits<float>::min() };
@@ -128,6 +116,8 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	glViewport(0, 0, Width, Height);
 	glBindFramebuffer(GL_FRAMEBUFFER, *ShadowsFbo);
 	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
 
 	SFrustum shadowsFrustum;
 	ShadowsCamera.CalcFrustum(&shadowsFrustum, nullptr);
@@ -147,6 +137,12 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, surface.IndexBuffer);
+
+		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
+		// Figure it out at some point
+		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
+		glFrontFace(windingOrder[!surface.bIsCCW]); ;
+
 		if (surface.IndexBuffer)
 			glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
 		else
@@ -158,5 +154,4 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	glViewport(0, 0, viewport.SizeX, viewport.SizeY);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(0);
-
 }
