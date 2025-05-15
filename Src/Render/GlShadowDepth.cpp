@@ -30,10 +30,19 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 		glTextureStorage2D(*ShadowsTexture, 1, GL_DEPTH_COMPONENT32F, width, height);
 	}
 
-	const int numCascades = int(CascadeSplitPoints.size());
+	const int numCascades = GetNumCascades();
 	// Shadow map array
 	{
-		assert(numCascades > 1);
+		ShadowCameras.resize(numCascades);
+		std::for_each(ShadowCameras.begin(), ShadowCameras.end(), [&](SGlCamera& shadowCamera)
+		{
+			shadowCamera.bIsPerspective = false;
+		});
+		assert(numCascades >= 1);
+		assert(CascadeSplitPoints.front() == 0.0f);
+		assert(CascadeSplitPoints.back() == 1.f);
+		assert(std::is_sorted(CascadeSplitPoints.begin(), CascadeSplitPoints.end()));
+
 		glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &*ShadowsTexArray);
 		glTextureStorage3D(*ShadowsTexArray, 1, GL_DEPTH_COMPONENT32F, width, height, numCascades);
 	}
@@ -75,7 +84,7 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(nullptr, &frustumCorners);
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
-	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
+	
 
 	const vec3 shadowsUp = [&]
 	{
@@ -87,6 +96,56 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		}
 		return glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
 	}(); 
+
+
+	auto CalcCascade = [&](int index)
+	{
+		const float fromPercent = CascadeSplitPoints[index];
+		const float toPercent = CascadeSplitPoints[index + 1];
+		SceneData.CascadeDistances[index] = Camera.FarPlane * toPercent;
+
+		SGlCamera& ShadowsCamera = ShadowCameras[index];
+
+		std::array<vec3, 8> subFrustumCorners;
+		for (int i = 0; i < 4; i++)
+		{
+			const vec3 dir = frustumCorners[i + 4] - frustumCorners[i];
+			subFrustumCorners[i] = frustumCorners[i] + (fromPercent * dir);
+			subFrustumCorners[i + 4] = frustumCorners[i] + (toPercent * dir);
+		}
+
+		const vec3 frustumCenter = std::accumulate(subFrustumCorners.begin(), subFrustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
+		ShadowsCamera.Position = frustumCenter - shadowsCamDir;
+		const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
+		ShadowsCamera.Rotation = glm::quat_cast(lightView);
+		glm::vec3 min { std::numeric_limits<float>::max() };
+		glm::vec3 max { std::numeric_limits<float>::min() };
+		for (auto& corner : subFrustumCorners)
+		{
+			const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
+			min = glm::min(min, cornerLVspace);
+			max = glm::max(max, cornerLVspace);
+		}
+		min *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+		max *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+		min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
+		max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
+		ShadowsCamera.OrthoMinBounds = vec2 { min };
+		ShadowsCamera.OrthoMaxBounds = vec2 { max };
+		ShadowsCamera.NearPlane = min.z;
+		ShadowsCamera.FarPlane = max.z;
+		mat4 lightProj;
+		ShadowsCamera.CalcProjMatrix(lightProj);
+		SceneData.LightSpaceTransforms[index] = lightProj * lightView;
+	};
+
+	for (int i = 0, lim = GetNumCascades(); i < lim; i++)
+	{
+		CalcCascade(i);
+	}
+
+	// old: single shadow map code, remove later
+	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
 	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
 	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
 	ShadowsCamera.Rotation = glm::quat_cast(lightView);

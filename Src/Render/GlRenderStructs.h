@@ -13,6 +13,7 @@ class CGlShader;
 
 struct SSceneData
 {
+	constexpr static int MAX_CASCADES = 16;
 	glm::vec4 CameraPos {};
 	glm::vec4 SunlightDirection {}; // 4th component for sun power
 	glm::vec4 SunlightColor {};
@@ -20,6 +21,8 @@ struct SSceneData
 	glm::mat4 Proj {};
 	glm::mat4 ViewProj {};
 	glm::mat4 LightSpaceTransform {};
+	float CascadeDistances[MAX_CASCADES];
+	glm::mat4 LightSpaceTransforms[MAX_CASCADES] {};
 };
 
 struct SGlTexture

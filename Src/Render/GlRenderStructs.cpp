@@ -21,28 +21,27 @@ void SNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 
 void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
-    {
-        // If we're using animations/skinning, send the model matrix as just the top transform. 
-        // World transforms are already built into the joints.
-        const bool bIsPlayingAnim = Skin && Skin->Animator && Skin->Animator->IsPlaying();
-        STransform nodeTransform = bIsPlayingAnim ? topTransform : topTransform * WorldTransform;
-        glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
-        const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f;
-        for (auto& surface : Mesh->Surfaces)
-        {
-            SRenderObject& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
-            draw.bIsCCW = bIsCCW;
-            draw.IndexCount = surface.Count;
-            draw.FirstIndex = surface.StartIndex;
-            draw.Bounds = surface.Bounds;
-            draw.Material = surface.Material;
-            draw.VertexBuffer = Mesh->VertexBuffer;
-            draw.IndexBuffer = Mesh->IndexBuffer;
-            draw.VertexJointsDataBuffer = Mesh->VertexJointsDataBuffer;
-            draw.JointMatricesBuffer = bIsPlayingAnim ? Skin->Animator->JointMatricesBuffer : SGlBufferId {};
-            draw.Transform = nodeMatrix;
-        }
-    }
+	// If we're using animations/skinning, send the model matrix as just the top transform. 
+	// World transforms are already built into the joints.
+	const bool bIsPlayingAnim = Skin && Skin->Animator && Skin->Animator->IsPlaying();
+	STransform nodeTransform = bIsPlayingAnim ? topTransform : topTransform * WorldTransform;
+	glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
+	// TODO: Fix this calculation for skinned nodes. Need to take the joint's transform. 	
+    const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f; 
+	for (auto& surface : Mesh->Surfaces)
+	{
+		SRenderObject& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
+		draw.bIsCCW = bIsCCW;
+		draw.IndexCount = surface.Count;
+		draw.FirstIndex = surface.StartIndex;
+		draw.Bounds = surface.Bounds;
+		draw.Material = surface.Material;
+		draw.VertexBuffer = Mesh->VertexBuffer;
+		draw.IndexBuffer = Mesh->IndexBuffer;
+		draw.VertexJointsDataBuffer = Mesh->VertexJointsDataBuffer;
+		draw.JointMatricesBuffer = bIsPlayingAnim ? Skin->Animator->JointMatricesBuffer : SGlBufferId {};
+		draw.Transform = nodeMatrix;
+	}
 	SNode::Draw(topTransform, drawCtx);
 }
 

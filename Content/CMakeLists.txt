@@ -2,6 +2,7 @@
 # Shaders setup
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "Shaders/*.frag"
+    "Shaders/*.geom"
     "Shaders/*.vert"
     "Shaders/*.comp"
 )
