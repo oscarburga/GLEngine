@@ -174,11 +174,12 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
 
+	// TEMP: will need to fix the debug view of the shadows texture with csm
 	if (ImguiData.bShowShadowDepthMap)
 	{
 		// render shadow depth onto quad to screen
 		QuadShader.Use();
-		glBindTextureUnit(GlTexUnits::ShadowMap, ShadowPass.ShadowsTexture);
+		glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
 		QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -202,7 +203,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::NormalTex, GlTexUnits::Normal);
 	PvpShader.SetUniform(GlUniformLocs::OcclusionTex, GlTexUnits::PbrOcclusion);
 	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
-	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexture);
+	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
 	ImguiData.CulledNum = ImguiData.TotalNum = 0;
 
 	static const auto RenderObject = [&](SRenderObject& surface)

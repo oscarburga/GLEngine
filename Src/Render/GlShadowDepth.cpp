@@ -10,8 +10,6 @@ CGlShadowDepthPass::~CGlShadowDepthPass()
 {
 	if (ShadowsFbo)
 		glDeleteFramebuffers(1, &*ShadowsFbo);
-	if (ShadowsTexture)
-		glDeleteTextures(1, &*ShadowsTexture);
 	if (ShadowsTexArray)
 		glDeleteTextures(1, &*ShadowsTexArray);
 	if (ShadowsShader.Id)
@@ -20,21 +18,15 @@ CGlShadowDepthPass::~CGlShadowDepthPass()
 
 void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 {
-	ShadowsCamera.bIsPerspective = false;
+	FullShadowCamera.bIsPerspective = false;
 	Width = width;
 	Height = height;
-
-	// Single shadow map
-	{
-		glCreateTextures(GL_TEXTURE_2D, 1, &*ShadowsTexture);
-		glTextureStorage2D(*ShadowsTexture, 1, GL_DEPTH_COMPONENT32F, width, height);
-	}
 
 	const int numCascades = GetNumCascades();
 	// Shadow map array
 	{
-		ShadowCameras.resize(numCascades);
-		std::for_each(ShadowCameras.begin(), ShadowCameras.end(), [&](SGlCamera& shadowCamera)
+		CascadeCameras.resize(numCascades, SGlCamera {});
+		std::for_each(CascadeCameras.begin(), CascadeCameras.end(), [&](SGlCamera& shadowCamera)
 		{
 			shadowCamera.bIsPerspective = false;
 		});
@@ -48,31 +40,28 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	}
 
 
-	uint32_t texIds[] = { *ShadowsTexture, *ShadowsTexArray };
-	for (uint32_t& texId : texIds)
 	{
 		// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureParameteri(texId, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTextureParameteri(texId, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTextureParameteri(texId, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTextureParameteri(texId, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		constexpr float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
-		glTextureParameterfv(texId, GL_TEXTURE_BORDER_COLOR, borderColor);
+		glTextureParameterfv(*ShadowsTexArray, GL_TEXTURE_BORDER_COLOR, borderColor);
 	}
 
 	// Setup framebuffer
 	glCreateFramebuffers(1, &*ShadowsFbo);
-	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexture, 0);
-	// glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexArray, 0);
+	glNamedFramebufferTexture(*ShadowsFbo, GL_DEPTH_ATTACHMENT, *ShadowsTexArray, 0);
 	glNamedFramebufferDrawBuffer(*ShadowsFbo, GL_NONE);
 	glNamedFramebufferReadBuffer(*ShadowsFbo, GL_NONE);
 
 	assert(glCheckNamedFramebufferStatus(*ShadowsFbo, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
-	//SShaderLoadArgs gsArgs("Shaders/csm.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
-	// auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", gsArgs, "Shaders/empty.frag");
-	auto shader = CAssetLoader::LoadShaderProgram("Shaders/pvpShadows.vert", "Shaders/empty.frag");
+	SShaderLoadArgs vsArgs("Shaders/pvpCsm.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs gsArgs("Shaders/csm.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	auto shader = CAssetLoader::LoadShaderProgram(vsArgs, gsArgs, "Shaders/empty.frag");
 	assert(shader);
 
 	ShadowsShader = *shader;
@@ -80,7 +69,6 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
-	vec3 mainCameraFront = glm::rotateByQuat(World::Front, Camera.Rotation);
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(nullptr, &frustumCorners);
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
@@ -98,13 +86,23 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	}(); 
 
 
-	auto CalcCascade = [&](int index)
+	auto CalcCascade = [&](int index) // Pass a negative index to calculate the full camera
 	{
-		const float fromPercent = CascadeSplitPoints[index];
-		const float toPercent = CascadeSplitPoints[index + 1];
-		SceneData.CascadeDistances[index] = Camera.FarPlane * toPercent;
-
-		SGlCamera& ShadowsCamera = ShadowCameras[index];
+		auto [fromPercent, toPercent, ShadowsCamera] = [this, index]() -> std::tuple<const float, const float, SGlCamera&>
+		{
+			assert(index + 1 < int(CascadeSplitPoints.size()));
+			if (index >= 0)
+			{
+				const float fromPercent = CascadeSplitPoints[index];
+				const float toPercent = CascadeSplitPoints[index + 1];
+				return { fromPercent, toPercent, CascadeCameras[index] };
+			}
+			else
+			{
+				return { 0.0f, 1.f, FullShadowCamera };
+			}
+		}();
+		
 
 		std::array<vec3, 8> subFrustumCorners;
 		for (int i = 0; i < 4; i++)
@@ -134,39 +132,46 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		ShadowsCamera.OrthoMaxBounds = vec2 { max };
 		ShadowsCamera.NearPlane = min.z;
 		ShadowsCamera.FarPlane = max.z;
-		mat4 lightProj;
-		ShadowsCamera.CalcProjMatrix(lightProj);
-		SceneData.LightSpaceTransforms[index] = lightProj * lightView;
+		
+		if (index >= 0)
+		{
+			SceneData.CascadeDistances[index] = vec4(Camera.FarPlane * toPercent, 0.0f, 0.0f, 0.0f);
+			mat4 lightProj;
+			ShadowsCamera.CalcProjMatrix(lightProj);
+			SceneData.LightSpaceTransforms[index] = lightProj * lightView;
+		}
 	};
 
-	for (int i = 0, lim = GetNumCascades(); i < lim; i++)
+	//  Yes, start from -1 to calculate the full shadows camera, then all the cascades
+	for (int i = -1, lim = GetNumCascades(); i < lim; i++)
 	{
 		CalcCascade(i);
 	}
 
 	// old: single shadow map code, remove later
+
 	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
-	ShadowsCamera.Position = frustumCenter - shadowsCamDir;
-	const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
-	ShadowsCamera.Rotation = glm::quat_cast(lightView);
-	glm::vec3 min { std::numeric_limits<float>::max() };
-	glm::vec3 max { std::numeric_limits<float>::min() };
-	for (auto& corner : frustumCorners)
-	{
-		const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
-		min = glm::min(min, cornerLVspace);
-		max = glm::max(max, cornerLVspace);
-	}
-	min *= vec3 { ImguiData.OrthoSizeScale, 1.f };
-	max *= vec3 { ImguiData.OrthoSizeScale, 1.f };
-	min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
-	max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
-	ShadowsCamera.OrthoMinBounds = vec2 { min };
-	ShadowsCamera.OrthoMaxBounds = vec2 { max };
-	ShadowsCamera.NearPlane = min.z;
-	ShadowsCamera.FarPlane = max.z;
+	// FullShadowCamera.Position = frustumCenter - shadowsCamDir;
+	const mat4 lightView = glm::lookAt(FullShadowCamera.Position, frustumCenter, shadowsUp);
+	// FullShadowCamera.Rotation = glm::quat_cast(lightView);
+	// glm::vec3 min { std::numeric_limits<float>::max() };
+	// glm::vec3 max { std::numeric_limits<float>::min() };
+	// for (auto& corner : frustumCorners)
+	// {
+	// 	const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
+	// 	min = glm::min(min, cornerLVspace);
+	// 	max = glm::max(max, cornerLVspace);
+	// }
+	// min *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+	// max *= vec3 { ImguiData.OrthoSizeScale, 1.f };
+	// min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
+	// max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
+	// FullShadowCamera.OrthoMinBounds = vec2 { min };
+	// FullShadowCamera.OrthoMaxBounds = vec2 { max };
+	// FullShadowCamera.NearPlane = min.z;
+	// FullShadowCamera.FarPlane = max.z;
 	mat4 lightProj;
-	ShadowsCamera.CalcProjMatrix(lightProj);
+	FullShadowCamera.CalcProjMatrix(lightProj);
 	SceneData.LightSpaceTransform = lightProj * lightView;
 }
 
@@ -179,7 +184,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	glCullFace(GL_FRONT);
 
 	SFrustum shadowsFrustum;
-	ShadowsCamera.CalcFrustum(&shadowsFrustum, nullptr);
+	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	ShadowsShader.Use();
 	ImguiData.TotalNum = (uint32_t)DrawContext.Surfaces[EMaterialPass::MainColor].size();
 	ImguiData.CulledNum = 0;

@@ -1,6 +1,7 @@
 #version 460 core
 
 #define COMPILEARG_BEGIN
+#define NumCascades 3
 #define MAX_CASCADES 16
 #define COMPILEARG_END
 
@@ -24,6 +25,7 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 Proj;
 	mat4 ViewProj;
 	mat4 LightSpaceTransform;
+	vec4 CascadeDistances[MAX_CASCADES];
 	mat4 LightSpaceTransforms[MAX_CASCADES];
 } sceneData;
 
@@ -44,7 +46,7 @@ layout (location = 1) uniform sampler2D ColorTex;
 layout (location = 2) uniform sampler2D MetalRoughTex;
 layout (location = 3) uniform sampler2D NormalTex;
 layout (location = 4) uniform sampler2D OcclusionTex;
-layout (location = 5) uniform sampler2D ShadowDepthTex;
+layout (location = 5) uniform sampler2DArray ShadowDepthTexArray;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
@@ -60,6 +62,7 @@ vec3 PbrAlbedo;
 float PbrMetalness;
 float PbrRoughness;
 float PbrAmbientOcclusion;
+int CsmLayer;
 
 float DistributionGGX(vec3 N, vec3 H)
 {
@@ -136,25 +139,55 @@ vec3 CalcPointLight(vec3 lightPos, vec3 lightColor)
 
 float DirLightShadowFactor() 
 {
-	vec3 projCoords = fs.FragPosSunSpace.xyz / fs.FragPosSunSpace.w;
+	// Get camera space frag depth
+	vec4 fragPosViewSpace = sceneData.View * vec4(fs.FragPos, 1.f);
+	float depthValue = abs(fragPosViewSpace.z);
+
+	// Fragment is on the last cascade by default 
+	// (covers the case where fragment is outside the shadow map i.e. depthValue > farplane)
+	// check only if its on any cascade except the last
+	CsmLayer = NumCascades - 1;
+	for (int i = 0; i < CsmLayer; ++i) {
+		if (depthValue < sceneData.CascadeDistances[i].x) {
+			CsmLayer = i;
+			break;
+		}
+	}
+
+	vec4 fragPosCascadeSpace = sceneData.LightSpaceTransforms[CsmLayer] * vec4(fs.FragPos, 1.f);
+
+	// This step transforms the light space frag pos from [-w, w] to [-1, 1] normalized device coords.
+	// Technically not necessary since we use orthographic proj for directional light, but would need this 
+	// if we used perspective proj
+	vec3 projCoords = fragPosCascadeSpace.xyz / fragPosCascadeSpace.w;
 	projCoords = projCoords * 0.5f + 0.5f;
+
+	float curDepth = projCoords.z; // depth of this fragment
+	if (curDepth > 1.f) {
+		return 1.f; // not in shadow
+	}
 
 	// Shadow acne
 	vec3 sunlightDir = normalize(-sceneData.SunlightDirection.xyz);
 	float bias = max(0.05f * (1.0f - abs(dot(N, sunlightDir))), 0.005f);
-	float curDepth = projCoords.z; // depth of this fragment
+	// modify bias based on cascade. 
+	// On each shadow map, a pixel covers a different amount of space. A unit increase is not the same distance increase in all shadow maps.
+	// Simple approach: scale bias inversely proportionally with the cascade's far plane.
+	const float biasModifier = 0.5f;
+	bias *= 1.f / (sceneData.CascadeDistances[CsmLayer].x * biasModifier);
 
 	// simple PCF
 	float shadow = 0.0f;
-	vec2 texelSize = 1.0 / textureSize(ShadowDepthTex, 0);
+	vec2 texelSize = 1.0 / textureSize(ShadowDepthTexArray, 0).xy;
 	for (int x = -1; x <= 1; ++x) {
 		for (int y = -1; y <= 1; ++y) {
 			vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
-			float pcfDepth = texture(ShadowDepthTex, pcfCoords).r;
+			vec3 texSampleCoords = vec3(pcfCoords, CsmLayer);
+			float pcfDepth = texture(ShadowDepthTexArray, texSampleCoords).r;
 			shadow += float(((curDepth - bias) > pcfDepth)); 
 		}
 	}
-	shadow *= float(projCoords.z <= 1.0f) / 9.0f;
+	shadow /= 9.0f;
 	// float closestDepth = texture(ShadowDepthTex, projCoords.xy).r; // closest to sun
 	// float curDepth = projCoords.z; // depth of this fragment
 	// float shadow = float( ((curDepth - bias) > closestDepth) && (projCoords.z <= 1.0f) ); 
@@ -231,5 +264,7 @@ void main()
 	}
 
 	vec3 result = CalcPbr();
-	FragColor = vec4(result, srcColor.a) * fs.Color;
+	vec4 cascadeTint = vec4(1.f);
+	cascadeTint[CsmLayer] = 1.f;
+	FragColor = vec4(result, srcColor.a) * fs.Color * cascadeTint;
 }
