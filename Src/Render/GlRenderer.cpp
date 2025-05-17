@@ -176,23 +176,21 @@ void CGlRenderer::RenderScene(float deltaTime)
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
 
 	// TEMP: will need to fix the debug view of the shadows texture with csm
+	if (ImguiData.bShowShadowDepthMap)
 	{
-		if (ImguiData.bShowShadowDepthMap)
+		// render shadow depth onto quad to screen
+		QuadShader.Use();
+		glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
+		QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
+		QuadShader.SetUniform(GlUniformLocs::DebugShadowDepthMapIndex, ImguiData.ShadowDepthMapIndex);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// Clear all
+		std::for_each(MainDrawContext.Surfaces.begin(), MainDrawContext.Surfaces.end(), [&](auto& vec)
 		{
-			// render shadow depth onto quad to screen
-			QuadShader.Use();
-			glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
-			QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
-			QuadShader.SetUniform(GlUniformLocs::DebugShadowDepthMapIndex, ImguiData.ShadowDepthMapIndex);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			// Clear all
-			std::for_each(MainDrawContext.Surfaces.begin(), MainDrawContext.Surfaces.end(), [&](auto& vec)
-			{
-				vec.clear();
-			});
-			return;
-		}
+			vec.clear();
+		});
+		return;
 	}
 
 	// Culling... lots of room for optimization here
