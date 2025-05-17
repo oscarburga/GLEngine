@@ -79,7 +79,9 @@ namespace GlUniformLocs
 
 		// DEBUG LOCS GO HERE
 		DebugIgnoreLighting = 32,
-		ShowDebugNormals = 33
+		DebugShowNormals = 33,
+		DebugShadowDepthMapIndex = 34,
+		DebugCsmTint = 35,
 	};
 }
 

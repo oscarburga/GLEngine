@@ -43,6 +43,8 @@ private:
 	struct
 	{
 		bool bShowShadowDepthMap = false;
+		bool bDebugCsmTint = false;
+		int ShadowDepthMapIndex = 0;
 		glm::vec4 SunlightDirection {};
 		uint32_t CulledNum = 0;
 		uint32_t TotalNum = 0;

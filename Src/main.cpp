@@ -43,8 +43,15 @@ int main(int argc, char** argv)
 		// anxiety->Draw(STransform {}, renderer->MainDrawContext);
 		catgirlSkin->Animator->UpdateAnimation(deltaTime);
 		totalTime += deltaTime;
-		glm::quat q = glm::fromYawPitchRoll(vec3{ totalTime , 0.0f, 0.0f });
-		catgirl->UserTransform.SetRotation(q);
+		// glm::quat q = glm::fromYawPitchRoll(vec3{ totalTime , 0.0f, 0.0f });
+		{
+			SGlCamera& activeCam = renderer->ActiveCamera;
+			glm::vec3 catPos = catgirl->UserTransform.GetPosition();
+			glm::vec3 camPos = activeCam.Position;
+			camPos.y = catPos.y;
+			catgirl->UserTransform.SetRotation(glm::lookAtRotation(catPos, camPos, World::Up));
+		}
+		// catgirl->UserTransform.SetRotation(q);
 		catgirl->Draw(STransform{}, renderer->MainDrawContext);
 		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, renderer->MainDrawContext);
 	});

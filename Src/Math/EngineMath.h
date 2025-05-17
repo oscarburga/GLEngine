@@ -27,15 +27,32 @@ constexpr float SMALLER_NUMBER = 1.e-8f;
 constexpr float SMALL_NUMBER = 1.e-4f;
 
 // Right-handed coordinate system
+/*
+
+World coordinate system:
+
+	   +Y (straight index finger)
+	   |
+	   |
+	   |
+	   * ------- +X (thumb)
+	  / 
+	 /
+	/
+	+Z (bent middle finger)
+
+In the world, from our pov, +X is right and -X is left. 
+but for a local object (i.e. standing on the origin), right is -X, left is +X
+
+If an object is facing the camera at +z, the camera is facing -z
+
+*/
 namespace World
 {
 	constexpr glm::vec3 Front = glm::vec3(0.0f, 0.0f, 1.0f);
 	constexpr glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	constexpr glm::vec3 Left = glm::vec3(1.0f, 0.0f, 0.0f); // This is the real X axis
 	constexpr glm::vec3 Right = glm::vec3(-1.0f, 0.0f, 0.0f); // Using right when possible because it's more intuitive to me.
-	constexpr glm::vec3 X = Left;
-	constexpr glm::vec3 Y = Up;
-	constexpr glm::vec3 Z = Front;
 };
 
 namespace glm
@@ -47,6 +64,11 @@ namespace glm
 	inline vec3 rotateByQuatInverse(const vec3& v, const quat& q) { return v * q; };
 	quat fromYawPitchRoll(const vec3& yawPitchRoll); // Constructs quat applying yaw->pitch->roll
 	quat fromPitchYawRoll(const vec3& yawPitchRoll); // Constructs quat applying pitch->yaw->roll
+
+	// Makes a look-at quaternion WITH FORWARD VECTOR +Z POINTING @from to @to.
+	quat lookAtRotation(const vec3& from, const vec3& to, const vec3& up);
+	// Makes a look-at quaternion WITH FORWARD VECTOR +Z POINTING TOWARDS @dir (dir need not be normalized)
+	quat lookAtRotation(const vec3& dir, const vec3& up);
 }
 
 // #define GLM_ENABLE_EXPERIMENTAL

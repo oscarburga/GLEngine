@@ -50,6 +50,7 @@ layout (location = 5) uniform sampler2DArray ShadowDepthTexArray;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
+layout (location = 35) uniform bool bDebugCsmTint;
 
 const float PI = 3.14159265359;
 
@@ -156,7 +157,7 @@ float DirLightShadowFactor()
 
 	vec4 fragPosCascadeSpace = sceneData.LightSpaceTransforms[CsmLayer] * vec4(fs.FragPos, 1.f);
 
-	// This step transforms the light space frag pos from [-w, w] to [-1, 1] normalized device coords.
+	// This step transforms the light space frag pos from [-w, w] to [-1, 1] normalized device coords. Then to [0-1]
 	// Technically not necessary since we use orthographic proj for directional light, but would need this 
 	// if we used perspective proj
 	vec3 projCoords = fragPosCascadeSpace.xyz / fragPosCascadeSpace.w;
@@ -178,16 +179,19 @@ float DirLightShadowFactor()
 
 	// simple PCF
 	float shadow = 0.0f;
-	vec2 texelSize = 1.0 / textureSize(ShadowDepthTexArray, 0).xy;
-	for (int x = -1; x <= 1; ++x) {
-		for (int y = -1; y <= 1; ++y) {
-			vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
-			vec3 texSampleCoords = vec3(pcfCoords, CsmLayer);
-			float pcfDepth = texture(ShadowDepthTexArray, texSampleCoords).r;
-			shadow += float(((curDepth - bias) > pcfDepth)); 
-		}
-	}
-	shadow /= 9.0f;
+	float closestDepth = texture(ShadowDepthTexArray, vec3(projCoords.xy, CsmLayer)).r;
+	shadow = float((curDepth - bias) > closestDepth);
+	// vec2 texelSize = 1.0 / textureSize(ShadowDepthTexArray, 0).xy;
+	// for (int x = -1; x <= 1; ++x) {
+	// 	for (int y = -1; y <= 1; ++y) {
+	// 		vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
+	// 		vec3 texSampleCoords = vec3(pcfCoords, CsmLayer);
+	// 		float pcfDepth = texture(ShadowDepthTexArray, texSampleCoords).r;
+	// 		shadow += float(((curDepth - bias) > pcfDepth)); 
+	// 	}
+	// }
+	// shadow /= 9.0f;
+
 	// float closestDepth = texture(ShadowDepthTex, projCoords.xy).r; // closest to sun
 	// float curDepth = projCoords.z; // depth of this fragment
 	// float shadow = float( ((curDepth - bias) > closestDepth) && (projCoords.z <= 1.0f) ); 
@@ -264,7 +268,11 @@ void main()
 	}
 
 	vec3 result = CalcPbr();
-	vec4 cascadeTint = vec4(1.f);
-	cascadeTint[CsmLayer] = 1.f;
-	FragColor = vec4(result, srcColor.a) * fs.Color * cascadeTint;
+	FragColor = vec4(result, srcColor.a) * fs.Color;
+
+	if (bDebugCsmTint) {
+		vec4 cascadeTint = vec4(vec3(0.7f), 1.f);
+		cascadeTint[CsmLayer] = 1.f;
+		FragColor *= cascadeTint;
+	}
 }

@@ -30,6 +30,16 @@ quat glm::fromPitchYawRoll(const vec3& yawPitchRoll)
 	return rollQuat * pitchYawQuat;
 }
 
+quat glm::lookAtRotation(const vec3& from, const vec3& to, const vec3& up)
+{
+	return glm::conjugate(glm::quat_cast(glm::lookAtLH(from, to, up)));
+}
+
+quat glm::lookAtRotation(const vec3& dir, const vec3& up)
+{
+	return glm::conjugate(glm::quat_cast(glm::lookAtLH(glm::vec3 { 0.f }, dir, up)));;
+}
+
 STransform::STransform() : Rotation(IQuat), Position(0.0f), Scale(1.0f) {}
 
 STransform::STransform(const vec3& pos, const vec3& angles, const vec3& scale) : Position(pos), Scale(scale) 

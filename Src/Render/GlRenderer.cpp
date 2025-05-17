@@ -142,6 +142,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_pbr.frag"))
 		PvpShader = *pvpShader;
 
+	// TODO: separate simplequad.frag from the shadow depth debug shader.
 	if (auto quadShader = CAssetLoader::LoadShaderProgram("Shaders/simplequad.vert", "Shaders/simplequad.frag"))
 		QuadShader = *quadShader;
 
@@ -166,7 +167,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	// TODO: figure out negative determinants for flipping the front face
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	
+
 	// Refresh SceneData
 	SceneData.SunlightDirection = vec4(glm::normalize(vec3(ImguiData.SunlightDirection)), ImguiData.SunlightDirection.w);
 	ActiveCamera.UpdateSceneData(SceneData);
@@ -175,20 +176,23 @@ void CGlRenderer::RenderScene(float deltaTime)
 	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
 
 	// TEMP: will need to fix the debug view of the shadows texture with csm
-	if (ImguiData.bShowShadowDepthMap)
 	{
-		// render shadow depth onto quad to screen
-		QuadShader.Use();
-		glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
-		QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		// Clear all
-		std::for_each(MainDrawContext.Surfaces.begin(), MainDrawContext.Surfaces.end(), [&](auto& vec)
+		if (ImguiData.bShowShadowDepthMap)
 		{
-			vec.clear();
-		});
-		return;
+			// render shadow depth onto quad to screen
+			QuadShader.Use();
+			glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
+			QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
+			QuadShader.SetUniform(GlUniformLocs::DebugShadowDepthMapIndex, ImguiData.ShadowDepthMapIndex);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			// Clear all
+			std::for_each(MainDrawContext.Surfaces.begin(), MainDrawContext.Surfaces.end(), [&](auto& vec)
+			{
+				vec.clear();
+			});
+			return;
+		}
 	}
 
 	// Culling... lots of room for optimization here
@@ -203,6 +207,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::NormalTex, GlTexUnits::Normal);
 	PvpShader.SetUniform(GlUniformLocs::OcclusionTex, GlTexUnits::PbrOcclusion);
 	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
+	PvpShader.SetUniform(GlUniformLocs::DebugCsmTint, ImguiData.bDebugCsmTint);
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
 	ImguiData.CulledNum = ImguiData.TotalNum = 0;
 
@@ -304,6 +309,8 @@ void CGlRenderer::ShowImguiPanel()
 		if (ImGui::CollapsingHeader("Debug"))
 		{
 			ImGui::Checkbox("Show shadow map", &ImguiData.bShowShadowDepthMap);
+			ImGui::Checkbox("Show csm tint", &ImguiData.bDebugCsmTint);
+			ImGui::InputInt("Shadow map index", &ImguiData.ShadowDepthMapIndex);
 		}
 
 		if (ImGui::CollapsingHeader("Scene settings", ImGuiTreeNodeFlags_DefaultOpen))

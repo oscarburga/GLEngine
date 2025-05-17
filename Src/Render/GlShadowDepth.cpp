@@ -25,7 +25,7 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	const int numCascades = GetNumCascades();
 	// Shadow map array
 	{
-		CascadeCameras.resize(numCascades, SGlCamera {});
+		CascadeCameras.resize(numCascades);
 		std::for_each(CascadeCameras.begin(), CascadeCameras.end(), [&](SGlCamera& shadowCamera)
 		{
 			shadowCamera.bIsPerspective = false;
@@ -115,7 +115,7 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		const vec3 frustumCenter = std::accumulate(subFrustumCorners.begin(), subFrustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
 		ShadowsCamera.Position = frustumCenter - shadowsCamDir;
 		const mat4 lightView = glm::lookAt(ShadowsCamera.Position, frustumCenter, shadowsUp);
-		ShadowsCamera.Rotation = glm::quat_cast(lightView);
+		ShadowsCamera.Rotation = glm::lookAtRotation(shadowsCamDir, shadowsUp);
 		glm::vec3 min { std::numeric_limits<float>::max() };
 		glm::vec3 max { std::numeric_limits<float>::min() };
 		for (auto& corner : subFrustumCorners)
@@ -130,8 +130,8 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
 		ShadowsCamera.OrthoMinBounds = vec2 { min };
 		ShadowsCamera.OrthoMaxBounds = vec2 { max };
-		ShadowsCamera.NearPlane = min.z;
-		ShadowsCamera.FarPlane = max.z;
+		ShadowsCamera.NearPlane = -max.z; // min.z;
+		ShadowsCamera.FarPlane = -min.z; // max.z;
 		
 		if (index >= 0)
 		{

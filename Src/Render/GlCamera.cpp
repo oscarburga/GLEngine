@@ -176,5 +176,5 @@ void SGlCamera::UpdateCameraFromInput(GLFWwindow* window, float deltax, float de
 	constexpr float maxPitch = glm::radians(89.f);
 	Pitch = glm::clamp(Pitch, minPitch, maxPitch);
 	Rotation = glm::fromYawPitchRoll(glm::vec3(Yaw, Pitch, 0.0f));
-	// std::cout << glm::degrees(angles.x) << " " << glm::degrees(angles.y) << " " << glm::degrees(angles.z) << std::endl;
+	std::cout << glm::degrees(Yaw) << " " << glm::degrees(Pitch) << " " << std::endl;
 }
