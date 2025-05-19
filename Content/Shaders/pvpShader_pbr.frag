@@ -180,17 +180,17 @@ float DirLightShadowFactor()
 	// simple PCF
 	float shadow = 0.0f;
 	float closestDepth = texture(ShadowDepthTexArray, vec3(projCoords.xy, CsmLayer)).r;
-	shadow = float((curDepth - bias) > closestDepth);
-	// vec2 texelSize = 1.0 / textureSize(ShadowDepthTexArray, 0).xy;
-	// for (int x = -1; x <= 1; ++x) {
-	// 	for (int y = -1; y <= 1; ++y) {
-	// 		vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
-	// 		vec3 texSampleCoords = vec3(pcfCoords, CsmLayer);
-	// 		float pcfDepth = texture(ShadowDepthTexArray, texSampleCoords).r;
-	// 		shadow += float(((curDepth - bias) > pcfDepth)); 
-	// 	}
-	// }
-	// shadow /= 9.0f;
+	// shadow = float((curDepth - bias) > closestDepth);
+	vec2 texelSize = 1.0 / textureSize(ShadowDepthTexArray, 0).xy;
+	for (int x = -1; x <= 1; ++x) {
+		for (int y = -1; y <= 1; ++y) {
+			vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
+			vec3 texSampleCoords = vec3(pcfCoords, CsmLayer);
+			float pcfDepth = texture(ShadowDepthTexArray, texSampleCoords).r;
+			shadow += float(((curDepth - bias) > pcfDepth)); 
+		}
+	}
+	shadow /= 9.0f;
 
 	// float closestDepth = texture(ShadowDepthTex, projCoords.xy).r; // closest to sun
 	// float curDepth = projCoords.z; // depth of this fragment
