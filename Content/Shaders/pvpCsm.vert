@@ -28,7 +28,6 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 View;
 	mat4 Proj;
 	mat4 ViewProj;
-	mat4 LightSpaceTransform;
 	vec4 CascadeDistances[MAX_CASCADES];
 	mat4 LightSpaceTransforms[MAX_CASCADES];
 } sceneData;

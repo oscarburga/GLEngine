@@ -23,32 +23,29 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	Height = height;
 
 	const int numCascades = GetNumCascades();
-	// Shadow map array
-	{
-		CascadeCameras.resize(numCascades);
-		std::for_each(CascadeCameras.begin(), CascadeCameras.end(), [&](SGlCamera& shadowCamera)
-		{
-			shadowCamera.bIsPerspective = false;
-		});
-		assert(numCascades >= 1);
-		assert(CascadeSplitPoints.front() == 0.0f);
-		assert(CascadeSplitPoints.back() == 1.f);
-		assert(std::is_sorted(CascadeSplitPoints.begin(), CascadeSplitPoints.end()));
 
-		glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &*ShadowsTexArray);
-		glTextureStorage3D(*ShadowsTexArray, 1, GL_DEPTH_COMPONENT32F, width, height, numCascades);
-	}
-
+	// Shadow map array for CSM
+	CascadeCameras.resize(numCascades);
+	std::for_each(CascadeCameras.begin(), CascadeCameras.end(), [&](SGlCamera& shadowCamera)
 	{
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		constexpr float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
-		glTextureParameterfv(*ShadowsTexArray, GL_TEXTURE_BORDER_COLOR, borderColor);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	}
+		shadowCamera.bIsPerspective = false;
+	});
+	assert(numCascades >= 1);
+	assert(CascadeSplitPoints.front() == 0.0f);
+	assert(CascadeSplitPoints.back() == 1.f);
+	assert(std::is_sorted(CascadeSplitPoints.begin(), CascadeSplitPoints.end()));
+
+	glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &*ShadowsTexArray);
+	glTextureStorage3D(*ShadowsTexArray, 1, GL_DEPTH_COMPONENT32F, width, height, numCascades);
+
+	glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	constexpr float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
+	glTextureParameterfv(*ShadowsTexArray, GL_TEXTURE_BORDER_COLOR, borderColor);
+	glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
 	// Setup framebuffer
 	glCreateFramebuffers(1, &*ShadowsFbo);
@@ -72,7 +69,6 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	Camera.CalcFrustum(nullptr, &frustumCorners);
 	const vec3 shadowsCamDir = vec3(SceneData.SunlightDirection);
 	
-
 	const vec3 shadowsUp = [&]
 	{
 		const vec3 shadowsRight = glm::normalize(glm::cross(shadowsCamDir, World::Up));
@@ -83,7 +79,6 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 		}
 		return glm::normalize(glm::cross(shadowsRight, shadowsCamDir));
 	}(); 
-
 
 	auto CalcCascade = [&](int index) // Pass a negative index to calculate the full camera
 	{
@@ -102,7 +97,6 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 			}
 		}();
 		
-
 		std::array<vec3, 8> subFrustumCorners;
 		for (int i = 0; i < 4; i++)
 		{
@@ -146,32 +140,6 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	{
 		CalcCascade(i);
 	}
-
-	// old: single shadow map code, remove later
-
-	const vec3 frustumCenter = std::accumulate(frustumCorners.begin(), frustumCorners.end(), glm::vec3 { 0.f }) / 8.f;
-	// FullShadowCamera.Position = frustumCenter - shadowsCamDir;
-	const mat4 lightView = glm::lookAt(FullShadowCamera.Position, frustumCenter, shadowsUp);
-	// FullShadowCamera.Rotation = glm::quat_cast(lightView);
-	// glm::vec3 min { std::numeric_limits<float>::max() };
-	// glm::vec3 max { std::numeric_limits<float>::min() };
-	// for (auto& corner : frustumCorners)
-	// {
-	// 	const vec3 cornerLVspace = vec3(lightView * vec4(corner, 1.0f));
-	// 	min = glm::min(min, cornerLVspace);
-	// 	max = glm::max(max, cornerLVspace);
-	// }
-	// min *= vec3 { ImguiData.OrthoSizeScale, 1.f };
-	// max *= vec3 { ImguiData.OrthoSizeScale, 1.f };
-	// min -= vec3 { ImguiData.OrthoSizePadding, 0.0f };
-	// max += vec3 { ImguiData.OrthoSizePadding, 0.0f };
-	// FullShadowCamera.OrthoMinBounds = vec2 { min };
-	// FullShadowCamera.OrthoMaxBounds = vec2 { max };
-	// FullShadowCamera.NearPlane = min.z;
-	// FullShadowCamera.FarPlane = max.z;
-	mat4 lightProj;
-	FullShadowCamera.CalcProjMatrix(lightProj);
-	SceneData.LightSpaceTransform = lightProj * lightView;
 }
 
 void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)

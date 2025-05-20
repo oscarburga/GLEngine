@@ -27,7 +27,6 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 View;
 	mat4 Proj;
 	mat4 ViewProj;
-	mat4 LightSpaceTransform;
 	vec4 CascadeDistances[MAX_CASCADES];
 	mat4 LightSpaceTransforms[MAX_CASCADES];
 } sceneData;
@@ -53,7 +52,6 @@ out VS_OUT {
 	vec3 FragPos;
 	vec2 TexCoords;
 	vec4 Color;
-	vec4 FragPosSunSpace;
 	mat3 TBN;
 } fs;
 
@@ -82,8 +80,4 @@ void main()
 	T = normalize(T - dot(T, N) * N); // reorthogonalize
 	vec3 B = cross(N, T) * vertex.Tangent.w; // w is gltf handedness
 	fs.TBN = mat3(T, B, N);
-
-	// for CSM, we can't calculate this in the vertex shader each vertex might fall under a different cascade 
-	// and the FS interpolation will screw up the interp!!
-	fs.FragPosSunSpace = sceneData.LightSpaceTransform * vec4(fs.FragPos, 1.0f);
 }
