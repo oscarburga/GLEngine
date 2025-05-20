@@ -39,16 +39,15 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 		glTextureStorage3D(*ShadowsTexArray, 1, GL_DEPTH_COMPONENT32F, width, height, numCascades);
 	}
 
-
 	{
-		// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		// glTextureParameteri(*ShadowsTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		constexpr float borderColor[] = { 1.f, 1.f, 1.f, 1.f };
 		glTextureParameterfv(*ShadowsTexArray, GL_TEXTURE_BORDER_COLOR, borderColor);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTextureParameteri(*ShadowsTexArray, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	}
 
 	// Setup framebuffer

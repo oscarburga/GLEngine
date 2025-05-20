@@ -139,7 +139,11 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	}
 
 	CAssetLoader::Create();
-	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", "Shaders/pvpShader_pbr.frag"))
+
+	ShadowPass.Init();
+
+	SShaderLoadArgs fsArgs("Shaders/pvpShader_pbr.frag", { { ShadowPass.NumCascadesShaderArgName, std::to_string(ShadowPass.GetNumCascades()) } });
+	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", fsArgs))
 		PvpShader = *pvpShader;
 
 	// TODO: separate simplequad.frag from the shadow depth debug shader.
@@ -147,7 +151,6 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		QuadShader = *quadShader;
 
 	assert(PvpShader.Id && QuadShader.Id);
-	ShadowPass.Init();
 }
 
 void CGlRenderer::Destroy()

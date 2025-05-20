@@ -46,7 +46,7 @@ layout (location = 1) uniform sampler2D ColorTex;
 layout (location = 2) uniform sampler2D MetalRoughTex;
 layout (location = 3) uniform sampler2D NormalTex;
 layout (location = 4) uniform sampler2D OcclusionTex;
-layout (location = 5) uniform sampler2DArray ShadowDepthTexArray;
+layout (location = 5) uniform sampler2DArrayShadow ShadowDepthTexArray;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
@@ -179,23 +179,12 @@ float DirLightShadowFactor()
 
 	// simple PCF
 	float shadow = 0.0f;
-	float closestDepth = texture(ShadowDepthTexArray, vec3(projCoords.xy, CsmLayer)).r;
-	// shadow = float((curDepth - bias) > closestDepth);
-	vec2 texelSize = 1.0 / textureSize(ShadowDepthTexArray, 0).xy;
-	for (int x = -1; x <= 1; ++x) {
-		for (int y = -1; y <= 1; ++y) {
-			vec2 pcfCoords = projCoords.xy + vec2(x, y) * texelSize;
-			vec3 texSampleCoords = vec3(pcfCoords, CsmLayer);
-			float pcfDepth = texture(ShadowDepthTexArray, texSampleCoords).r;
-			shadow += float(((curDepth - bias) > pcfDepth)); 
-		}
-	}
-	shadow /= 9.0f;
 
-	// float closestDepth = texture(ShadowDepthTex, projCoords.xy).r; // closest to sun
-	// float curDepth = projCoords.z; // depth of this fragment
-	// float shadow = float( ((curDepth - bias) > closestDepth) && (projCoords.z <= 1.0f) ); 
-	return 1.0f - shadow;
+	// With GL_LEQUAL, checks curDepth-bias < textureDepth
+	// That means values closer to 1 are not in shadow, values closer to zero are in shadows.
+	shadow = texture(ShadowDepthTexArray, vec4(projCoords.xy, CsmLayer, curDepth - bias));
+	return shadow;
+
 }
 
 vec3 CalcDirLight() 
@@ -271,8 +260,11 @@ void main()
 	FragColor = vec4(result, srcColor.a) * fs.Color;
 
 	if (bDebugCsmTint) {
-		vec4 cascadeTint = vec4(vec3(0.7f), 1.f);
-		cascadeTint[CsmLayer] = 1.f;
+		vec4 cascadeTint = vec4(vec3(0.f), 1.f);
+		for (int i = 0; i <= 2; ++i) {
+			int val = (CsmLayer) >> i;
+			cascadeTint[i] = max(0.7f * (val & 1), 0.1f);
+		}
 		FragColor *= cascadeTint;
 	}
 }

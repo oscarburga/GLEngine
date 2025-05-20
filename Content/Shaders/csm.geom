@@ -5,7 +5,7 @@
 #define MAX_CASCADES 16
 #define COMPILEARG_END
 
-layout(triangles, invocations = 3) in;
+layout(triangles, invocations = NumCascades) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 layout (binding = 0, std140) uniform SceneData {
