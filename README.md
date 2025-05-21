@@ -10,7 +10,7 @@ TODO: List all features/scope here.
 
 Coming up next:
 * ~~Fit shadow mapping to camera frustum~~ (done)
-    * CSM still pending
+    * ~~CSM still pending~~ (done)
 * ~~Skinning~~(done)
 
 Stuff I eventually want to get to but I keep procrastinating:
