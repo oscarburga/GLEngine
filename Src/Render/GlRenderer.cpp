@@ -202,6 +202,11 @@ void CGlRenderer::RenderScene(float deltaTime)
 	// Draw main color & masked objects
 	// PvpShader.SetUniform(GlUniformLocs::ShowDebugNormals, true);
 
+	// Draw to main framebuffer now, and simply toss multisampling on.
+	// IF WE EVER CHANGE THE COLOR PASS TO RENDER TO ANOTHER FRAMEBUFFER, ADDITIONAL
+	// WORK WILLL NEED TO BE MADE
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glEnable(GL_MULTISAMPLE); 
 	PvpShader.Use();
 	PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
 	PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
@@ -292,6 +297,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glDisable(GL_BLEND);
 	}
 
+	glDisable(GL_MULTISAMPLE);
 	// std::cout << std::format("Culled objects {} / {}\n", culledObjects, totalObjects);
 }
 
