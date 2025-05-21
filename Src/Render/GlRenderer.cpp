@@ -142,8 +142,8 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 
 	ShadowPass.Init();
 
-	SShaderLoadArgs fsArgs("Shaders/pvpShader_pbr.frag", { { ShadowPass.NumCascadesShaderArgName, std::to_string(ShadowPass.GetNumCascades()) } });
-	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpShader.vert", fsArgs))
+	SShaderLoadArgs fsArgs("Shaders/pvpMesh.frag", { { ShadowPass.NumCascadesShaderArgName, std::to_string(ShadowPass.GetNumCascades()) } });
+	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpMesh.vert", fsArgs))
 		PvpShader = *pvpShader;
 
 	// TODO: separate simplequad.frag from the shadow depth debug shader.

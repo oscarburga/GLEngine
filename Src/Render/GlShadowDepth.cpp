@@ -55,8 +55,8 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 	assert(glCheckNamedFramebufferStatus(*ShadowsFbo, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
-	SShaderLoadArgs vsArgs("Shaders/pvpCsm.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
-	SShaderLoadArgs gsArgs("Shaders/csm.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
 	auto shader = CAssetLoader::LoadShaderProgram(vsArgs, gsArgs, "Shaders/empty.frag");
 	assert(shader);
 
