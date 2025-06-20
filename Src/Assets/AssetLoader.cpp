@@ -910,7 +910,7 @@ bool CAssetLoader::CheckShaderCompilation(unsigned int shader, const std::filesy
 std::string SShaderLoadArgs::ApplyToCode(std::string&& shaderCode) const
 {
 	if (Args.empty())
-		return std::string { shaderCode };
+		return std::string { std::move(shaderCode) };
 
 	constexpr std::string_view argsBeginStr = "#define COMPILEARG_BEGIN";
 	constexpr std::string_view argsEndStr = "#define COMPILEARG_END";
@@ -939,7 +939,7 @@ std::string SShaderLoadArgs::ApplyToCode(std::string&& shaderCode) const
 		linestream >> define;
 		linestream >> argName;
 		// linestream >> defaultValue; // This doesn't work for all cases, need to get the entire remainder of the line (without trailing whitespaces);
-		std::string_view defaultValueView = [&]
+		const std::string_view defaultValueView = [&]
 		{
 			std::getline(linestream, defaultValueRaw);
 			while (defaultValueRaw.size() && std::isspace(defaultValueRaw.back())) // remove trailing whitespace
