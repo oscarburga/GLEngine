@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 		glm::IQuat,
 		glm::vec3(1.f)
 	};
-	auto astronaut = CAssetLoader::Get()->LoadGLTFScene("GLTF/astronaut_rigged_and_animated.glb");
+	auto astronaut = CAssetLoader::Get()->LoadGLTFScene("GLTF/astronaut_rigged_and_animated/scene.glb");
 	astronaut->UserTransform = STransform {
 		World::Right * 2.f + World::Front * 5.f,
 		glm::IQuat,
