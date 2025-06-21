@@ -219,12 +219,12 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	static const auto RenderObject = [&](SRenderObject& surface)
 	{
-		if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform))
+		if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform))
 		{
 			++ImguiData.CulledNum;
 			return;
 		}
-		PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+		PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
 		PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
 		PvpShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
 
@@ -280,8 +280,8 @@ void CGlRenderer::RenderScene(float deltaTime)
 		std::iota(indices.begin(), indices.end(), 0); 
 		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](size_t& i, size_t& j)
 		{
-			const glm::vec3& loci = blendObjects[i].Transform[3];
-			const glm::vec3& locj = blendObjects[j].Transform[3];
+			const glm::vec3& loci = blendObjects[i].RenderTransform[3];
+			const glm::vec3& locj = blendObjects[j].RenderTransform[3];
 			const float di = glm::length2(camPos - loci);
 			const float dj = glm::length2(camPos - locj);
 			return di > dj;

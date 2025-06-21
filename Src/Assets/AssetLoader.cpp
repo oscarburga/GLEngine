@@ -547,14 +547,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				skin.SkeletonRoot = nodes[*gltfSkin.skeleton];
 
 			skin.AllJoints.resize(gltfSkin.joints.size(), SJoint {});
-			uint32_t maxId = 0;
 			util::for_each_indexed(gltfSkin.joints.begin(), gltfSkin.joints.end(), 0, [&](uint32_t i, size_t joint)
 			{
 				assert(joint >= 0);
 				skin.AllJoints[i].JointId = i;
 				skin.AllJoints[i].Node = nodes[joint];
 				skinsNodeIsJointOf[joint].push_back(uint32_t(skins.size()) - 1);
-				maxId = std::max(maxId, (uint32_t)joint);
 			});
 			if (gltfSkin.inverseBindMatrices)
 			{
@@ -565,7 +563,6 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					skin.AllJoints[index].InverseBindMatrix = mat;
 				});
 			}
-			skin.InitAnimator(maxId);
 			std::cout << std::format("\tLoaded skin {}, has IB matrices = {}\n", skin.Name, gltfSkin.inverseBindMatrices.has_value());
 		}
 	}
@@ -730,6 +727,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				node->RefreshTransform();
 			}
 		}
+	}
+
+	// Now that all nodes are loaded and have their transforms, initialize the skin animators
+	for (auto& skin : skins)
+	{
+		skin->InitAnimator();
 	}
 
 	scene.UserTransform = STransform {};

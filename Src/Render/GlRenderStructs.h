@@ -150,7 +150,8 @@ struct SRenderObject // TODO: some bCastShadows bool
 	SGlBufferId VertexJointsDataBuffer;
 	SGlBufferId JointMatricesBuffer;
 	SBounds Bounds;
-	glm::mat4 Transform;
+	glm::mat4 WorldTransform; // For frustum culling
+	glm::mat4 RenderTransform; // For actual rendering
 	std::shared_ptr<SPbrMaterial> Material;
 };
 
@@ -298,7 +299,7 @@ class CAnimator
 	float CurrentTime = 0.0f;
 
 private:
-	CAnimator(SSkinAsset* ownerSkin, uint32_t maxJointId);
+	CAnimator(SSkinAsset* ownerSkin);
 	struct SSkinAsset* OwnerSkin = nullptr; // Animator is uniquely owned by a skin, so no need for smart ptr
 	SAnimationAsset* CurrentAnim = nullptr; // Animations are uniquely owned by the owner skin, so no need for smart ptr
 	std::vector<glm::mat4> JointMatrices {};
@@ -310,6 +311,7 @@ public:
 	bool IsPlaying() { return CurrentAnim != nullptr; }
 	void PlayAnimation(const std::string& anim, bool bLoop);
 	void UpdateAnimation(float deltaTime);
+	void UpdateJointMatrices();
 	void StopAnimation();
 
 };
@@ -329,7 +331,8 @@ struct SSkinAsset
 	std::unordered_map<std::string, SAnimationAsset> Animations;
 	std::unique_ptr<CAnimator> Animator = nullptr;
 	
-	void InitAnimator(uint32_t maxJoints);
+	void InitAnimator();
+
 };
 
 struct SLoadedGLTF : public IRenderable

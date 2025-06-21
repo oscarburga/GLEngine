@@ -1,0 +1,11 @@
+Model Information:
+* title:	Goku (Rigged & Animated)
+* source:	https://sketchfab.com/3d-models/goku-rigged-animated-3ed060df9f4a4134963e61f3ca95ee7d
+* author:	Kari (https://sketchfab.com/keetos349)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Goku (Rigged & Animated)" (https://sketchfab.com/3d-models/goku-rigged-animated-3ed060df9f4a4134963e61f3ca95ee7d) by Kari (https://sketchfab.com/keetos349) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

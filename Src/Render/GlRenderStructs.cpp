@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include "GlRenderStructs.h"
+#include <Utils/ForEachIndexed.h>
 
 void SNode::RefreshTransform(const STransform& parentTransform)
 {
@@ -23,11 +24,11 @@ void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
 	// If we're using animations/skinning, send the model matrix as just the top transform. 
 	// World transforms are already built into the joints.
-	const bool bIsPlayingAnim = Skin && Skin->Animator && Skin->Animator->IsPlaying();
-	STransform nodeTransform = bIsPlayingAnim ? topTransform : topTransform * WorldTransform;
+	const bool bIsSkinned = Skin && Skin->Animator;
+	STransform nodeTransform = topTransform * WorldTransform;
 	glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
-	// TODO: Fix this calculation for skinned nodes. Need to take the joint's transform. 	
-    const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f; 
+
+	const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f; 
 	for (auto& surface : Mesh->Surfaces)
 	{
 		SRenderObject& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
@@ -39,8 +40,9 @@ void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 		draw.VertexBuffer = Mesh->VertexBuffer;
 		draw.IndexBuffer = Mesh->IndexBuffer;
 		draw.VertexJointsDataBuffer = Mesh->VertexJointsDataBuffer;
-		draw.JointMatricesBuffer = bIsPlayingAnim ? Skin->Animator->JointMatricesBuffer : SGlBufferId {};
-		draw.Transform = nodeMatrix;
+		draw.JointMatricesBuffer = bIsSkinned ? Skin->Animator->JointMatricesBuffer : SGlBufferId {};
+		draw.WorldTransform = nodeMatrix;
+		draw.RenderTransform = bIsSkinned ? topTransform.GetMatrix() : nodeMatrix;
 	}
 	SNode::Draw(topTransform, drawCtx);
 }
@@ -96,10 +98,11 @@ void SLoadedGLTF::RefreshNodeTransforms()
         root->RefreshTransform();
 }
 
-CAnimator::CAnimator(SSkinAsset* ownerSkin, uint32_t maxJointId) : OwnerSkin(ownerSkin), JointMatrices(maxJointId)
+CAnimator::CAnimator(SSkinAsset* ownerSkin) : OwnerSkin(ownerSkin), JointMatrices(ownerSkin->AllJoints.size())
 {
     glCreateBuffers(1, &*JointMatricesBuffer);
     glNamedBufferStorage(*JointMatricesBuffer, JointMatrices.size() * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    UpdateJointMatrices();
 }
 
 CAnimator::~CAnimator()
@@ -149,15 +152,18 @@ void CAnimator::UpdateAnimation(float deltaTime)
 	// UGLY FALLBACK IF THERE'S NO SKELETON ROOT PROVIDED (and I CBA manually finding it) very slow
     else for (auto& joint : OwnerSkin->AllJoints)
     {
-        auto parent = OwnerSkin->SkeletonRoot->Parent.lock();
+        auto parent = joint.Node->Parent.lock();
         joint.Node->RefreshTransform(parent ? parent->WorldTransform : STransform {});
     }
-            
+    UpdateJointMatrices();
+}
+
+void CAnimator::UpdateJointMatrices()
+{
 	for (auto& joint : OwnerSkin->AllJoints)
 	{
 		JointMatrices[joint.JointId] = joint.Node->WorldTransform.GetMatrix() * joint.InverseBindMatrix;
 	}
-
 	glNamedBufferSubData(*JointMatricesBuffer, 0, JointMatrices.size() * sizeof(glm::mat4), JointMatrices.data());
 }
 
@@ -196,9 +202,9 @@ void SJointAnimData::StepToTime(float animTime)
     JointNode->LocalTransform = STransform { pos, rot, scale };
 }
 
-void SSkinAsset::InitAnimator(uint32_t maxJoints)
+void SSkinAsset::InitAnimator()
 {
-    assert(AllJoints.size() && maxJoints > 0);
+    assert(AllJoints.size());
     // Animator = std::make_unique<CAnimator>(this, maxJoints);
-    Animator = std::unique_ptr<CAnimator>(new CAnimator(this, maxJoints));
+    Animator = std::unique_ptr<CAnimator>(new CAnimator(this));
 }

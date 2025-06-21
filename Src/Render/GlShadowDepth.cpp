@@ -157,12 +157,12 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	ImguiData.CulledNum = 0;
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{
-		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.Transform) || surface.Material->bIgnoreLighting)
+		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->bIgnoreLighting)
 		{
 			++ImguiData.CulledNum;
 			continue;
 		}
-		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.Transform);
+		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
 		ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);

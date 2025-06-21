@@ -13,46 +13,55 @@
 int main(int argc, char** argv)
 {
 	CEngine* engine = CEngine::Create();
+
 	auto gltf = CAssetLoader::Get()->LoadGLTFScene("GLTF/ufo_scene/scene.gltf");
 	gltf->UserTransform = STransform {
 		glm::vec3 {0.0f},
 		glm::IQuat, //glm::angleAxis(pi_half, World::Front),
 		glm::vec3 { 0.01f }
 	};
-	auto anxiety = CAssetLoader::Get()->LoadGLTFScene("GLTF/anxiety/source/vefq.glb");
-	anxiety->UserTransform = STransform {
-		World::Up * 0.025f + World::Front * 3.f - World::Right * 3.f,
-		glm::IQuat,
-		glm::vec3(1.f)
-	};
 
-	auto catgirl = CAssetLoader::Get()->LoadGLTFScene("GLTF/catgirl_animated.glb");
-	catgirl->UserTransform = STransform {
-		World::Up * 0.3f + World::Front * 7.f - World::Right * 3.f,
+	auto daji = CAssetLoader::Get()->LoadGLTFScene("GLTF/daji_hok/scene.gltf");
+	daji->UserTransform = STransform {
+		World::Right * 0.f + World::Front * 5.f,
 		glm::IQuat,
 		glm::vec3(1.f)
 	};
-	auto catgirlSkin = catgirl->Skins[""];
-	assert(gltf && anxiety && catgirl && catgirlSkin);
-	catgirlSkin->Animator->PlayAnimation("Idleshow", true);
+	// Goku's gltf file is kinda kapoot? seems that the skinning matrices add a big scale factor
+	// that's not present in their actual node transforms. Frustum culling works wanky on him because of it,
+	// the nodes actual transforms are wayyy smaller than the rendered skinned mesh
+	// To fix this, I'd need to calculate the bounds after applying the skinning matrix to each vertex... 
+	// but I won't do that just to get a weirdly-skinned goku model culling properly haha
+	auto goku = CAssetLoader::Get()->LoadGLTFScene("GLTF/goku_rigged__animated/scene.gltf");
+	goku->UserTransform = STransform {
+		World::Right * -2.f + World::Front * 5.f,
+		glm::IQuat,
+		glm::vec3(1.f)
+	};
+	auto astronaut = CAssetLoader::Get()->LoadGLTFScene("GLTF/astronaut_rigged_and_animated.glb");
+	astronaut->UserTransform = STransform {
+		World::Right * 2.f + World::Front * 5.f,
+		glm::IQuat,
+		glm::vec3(0.25f)
+	};
+	auto dajiSkin = daji->Skins.begin()->second;
+	auto gokuSkin = goku->Skins.begin()->second;
+	auto astroSkin = astronaut->Skins.begin()->second;
+	assert(gltf && daji && dajiSkin && astronaut && astroSkin);
+	dajiSkin->Animator->PlayAnimation("Idleshow", true);
+	gokuSkin->Animator->PlayAnimation("Idle", true);
+	astroSkin->Animator->PlayAnimation("astro_bones|idle_1", true);
 	CGlRenderer* renderer = CGlRenderer::Get();
 	engine->PreRenderFuncs.emplace_back([&, totalTime = 0.f](float deltaTime) mutable
 	{
 		gltf->Draw(STransform {}, renderer->MainDrawContext);
-
-		// anxiety->Draw(STransform {}, renderer->MainDrawContext);
-		catgirlSkin->Animator->UpdateAnimation(deltaTime);
+		dajiSkin->Animator->UpdateAnimation(deltaTime);
+		gokuSkin->Animator->UpdateAnimation(deltaTime);
+		astroSkin->Animator->UpdateAnimation(deltaTime);
 		totalTime += deltaTime;
-		// glm::quat q = glm::fromYawPitchRoll(vec3{ totalTime , 0.0f, 0.0f });
-		{
-			SGlCamera& activeCam = renderer->ActiveCamera;
-			glm::vec3 catPos = catgirl->UserTransform.GetPosition();
-			glm::vec3 camPos = activeCam.Position;
-			camPos.y = catPos.y;
-			catgirl->UserTransform.SetRotation(glm::lookAtRotation(catPos, camPos, World::Up));
-		}
-		// catgirl->UserTransform.SetRotation(q);
-		catgirl->Draw(STransform{}, renderer->MainDrawContext);
+		daji->Draw(STransform{}, renderer->MainDrawContext);
+		goku->Draw(STransform{}, renderer->MainDrawContext);
+		astronaut->Draw(STransform{}, renderer->MainDrawContext);
 		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, renderer->MainDrawContext);
 	});
 	engine->MainLoop();
