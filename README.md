@@ -2,8 +2,10 @@
 
 This project is an OpenGL rendering engine written in C++ for learning purposes. 
 
+https://github.com/user-attachments/assets/596eca9c-bac5-4e98-8bf2-cb8e69a2ea8f
+
 All models used for the sample scene are public, downloaded from Sketchfab. 
-Check `Content/GLTF` folder, there's the `license.txt` file for each model with links & credits to each author.
+Check `Content/GLTF` folder, there's the `license.txt` file for each model with links & credits to each author :D 
 
 Stuff I eventually want to get to but I keep procrastinating:
 * ~~ImGui~~ (done) 
@@ -13,7 +15,7 @@ Stuff I eventually want to get to but I keep procrastinating:
     * I miss the simplicity of the diffuse-specular model :(
 * Basic 2D / UI rendering 
 * 2nd mesh "pipeline" with support for multiple UV channels
-* Refactor to make more maintainable/independent/modular/whatever.
+* Refactor to make more usable / extensible, maybe for a mini-game engine or something.
     * Trying to maintain a software design that makes sense while also learning all the underlying 
       algorithms, techniques, best practices & graphics API feels borderline impossible, 
       but eventually it will happen. Just cannot afford to do it currently or I would probably spend 
