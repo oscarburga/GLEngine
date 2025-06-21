@@ -2,19 +2,12 @@
 
 This project is an OpenGL rendering engine written in C++ for learning purposes. 
 
-I have decided to NOT include any screenshots OR any of the sample models I use during 
-development & testing to avoid any licensing concerns for the future since they are not 
-self-made (its mostly random handpicked stuff from sketchfab).
-
-TODO: List all features/scope here.
-
-Coming up next:
-* ~~Fit shadow mapping to camera frustum~~ (done)
-    * ~~CSM still pending~~ (done)
-* ~~Skinning~~(done)
+All models used for the sample scene are public, downloaded from Sketchfab. 
+Check `Content/GLTF` folder, there's the `license.txt` file for each model with links & credits to each author.
 
 Stuff I eventually want to get to but I keep procrastinating:
-* ~~ImGui~~ (done) and maybe cvars to make my development & testing life 10x easier
+* ~~ImGui~~ (done) 
+* Maybe cvars to make my development & testing life 10x easier
 * Point/Spot light support with the new pbr shaders
     * Also actually learn PBR, currently just blackboxing it for the most part.
     * I miss the simplicity of the diffuse-specular model :(
@@ -25,7 +18,6 @@ Stuff I eventually want to get to but I keep procrastinating:
       algorithms, techniques, best practices & graphics API feels borderline impossible, 
       but eventually it will happen. Just cannot afford to do it currently or I would probably spend 
       more time refactoring than actually doing useful stuff. 
-* Figure out license stuff for sample models and screenshots
 
 ## Links, References and Stuff
 
