@@ -2,24 +2,36 @@
 
 This project is an OpenGL rendering engine written in C++ for learning purposes. 
 
+Current interesting features include:
+* Programmable vertex pulling
+* Skinning
+* Cascading shadow maps
+* Frustum culling
+* PBR lightning (kind-of)
+
 https://github.com/user-attachments/assets/596eca9c-bac5-4e98-8bf2-cb8e69a2ea8f
 
 All models used for the sample scene are public, downloaded from Sketchfab. 
 Check `Content/GLTF` folder, there's the `license.txt` file for each model with links & credits to each author :D 
 
-Stuff I eventually want to get to but I keep procrastinating:
+High on the TODO list, but in no specific order: 
+* Refactor renderer & render passes into something more tidy
+* Make stuff more bindless (setup as if for doing GPU-driven rendering)
+    * Look into the bindless texture extension
+* Compute shader stuff:
+    * Compute culling?
+    * Draw indirect?
+
+Other wishlist / TODO:
 * ~~ImGui~~ (done) 
-* Maybe cvars to make my development & testing life 10x easier
 * Point/Spot light support with the new pbr shaders
     * Also actually learn PBR, currently just blackboxing it for the most part.
-    * I miss the simplicity of the diffuse-specular model :(
 * Basic 2D / UI rendering 
-* 2nd mesh "pipeline" with support for multiple UV channels
-* Refactor to make more usable / extensible, maybe for a mini-game engine or something.
-    * Trying to maintain a software design that makes sense while also learning all the underlying 
-      algorithms, techniques, best practices & graphics API feels borderline impossible, 
-      but eventually it will happen. Just cannot afford to do it currently or I would probably spend 
-      more time refactoring than actually doing useful stuff. 
+* Maybe cvars
+* Lua scripting support
+    * Not sure what I'd even use it for right now but I've always wanted to integrate
+      Lua scripting to a project :D 
+* BIG refactor to make more usable / extensible, maybe for a mini-game engine or something.
 
 ## Links, References and Stuff
 
