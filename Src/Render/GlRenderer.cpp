@@ -92,6 +92,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 		std::cout << "Debug callback activated\n";
 	}
+	// Log some useful values
 	{
 		int value;
 		glGetIntegerv(GL_MAX_UNIFORM_LOCATIONS, &value);
@@ -104,6 +105,8 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		std::cout << std::format("Max Uniform Blocks (VERTEX SHADER): {}\n", value);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &value);
 		std::cout << std::format("Max Uniform Blocks (FRAGMENT SHADER): {}\n", value);
+		glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &value);
+		std::cout << std::format("Max Combined Texture Image Units: {}\n", value);
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value);
 		std::cout << std::format("Uniform Block Buffer Offset Alignment: {}\n", value);
 		UBOOffsetAlignment = value;
