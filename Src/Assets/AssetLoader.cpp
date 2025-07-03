@@ -28,6 +28,20 @@ namespace
 		return false;
 	}
 
+	inline GLenum ConvertGltfWrap(fastgltf::Wrap wrap)
+	{
+		const GLenum value = static_cast<GLenum>(wrap);
+#ifndef NDEBUG
+		switch (wrap)
+		{
+			case fastgltf::Wrap::ClampToEdge: assert(value == GL_CLAMP_TO_EDGE); break;
+			case fastgltf::Wrap::MirroredRepeat: assert(value == GL_MIRRORED_REPEAT); break;
+			case fastgltf::Wrap::Repeat: assert(value == GL_REPEAT); break;
+		}
+#endif
+		return value;
+	}
+
 	inline GLenum ConvertGltfFilter(fastgltf::Filter filter)
 	{
 		const GLenum value = static_cast<GLenum>(filter);
@@ -215,10 +229,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		{
 			SGlSamplerId id;
 			glCreateSamplers(1, &*id);
-			glTextureParameteri(*id, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-			glTextureParameteri(*id, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-			GLenum minFilter = ConvertGltfFilter(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
-			GLenum magFilter = ConvertGltfFilter(sampler.magFilter.value_or(fastgltf::Filter::Nearest));
+			const GLenum wrapS = ConvertGltfWrap(sampler.wrapS);
+			const GLenum wrapT = ConvertGltfWrap(sampler.wrapT);
+			glTextureParameteri(*id, GL_TEXTURE_WRAP_S, wrapS);
+			glTextureParameteri(*id, GL_TEXTURE_WRAP_T, wrapT);
+			const GLenum minFilter = ConvertGltfFilter(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
+			const GLenum magFilter = ConvertGltfFilter(sampler.magFilter.value_or(fastgltf::Filter::Nearest));
 			glTextureParameteri(*id, GL_TEXTURE_MIN_FILTER, minFilter);
 			glTextureParameteri(*id, GL_TEXTURE_MAG_FILTER, magFilter);
 			scene.Samplers.emplace_back(id);
