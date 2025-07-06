@@ -9,6 +9,7 @@
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
 int CGlRenderer::UBOOffsetAlignment = 16;
+SGlBufferVector CGlRenderer::MainMeshBuffer {};
 
 namespace
 {
@@ -125,6 +126,12 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
+	// Main mesh buffer 
+	{
+		constexpr GLsizeiptr MainBufferSize = 1 << 30;
+		MainMeshBuffer = SGlBufferVector(MainBufferSize);
+	}
+	 
 	// Simple quad2d
 	{
 		float quadVertices[] = {

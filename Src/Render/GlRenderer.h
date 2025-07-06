@@ -18,6 +18,7 @@ class CGlRenderer : public IImguiObject
 	CGlRenderer(CGlRenderer&&) = delete;
 	~CGlRenderer();
 public:
+	static SGlBufferVector MainMeshBuffer;
 	SGlCamera ActiveCamera {};
 	CGlShadowDepthPass ShadowPass {};
 	SSceneData SceneData {};

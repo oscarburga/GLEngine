@@ -9,6 +9,34 @@
 #include "Utils/GenericConcepts.h"
 #include "Math/EngineMath.h"
 
+struct SGlBufferVector
+{
+	SGlBufferId Id {};
+	size_t Size = 0; // In bytes
+	size_t Head = 0; // In bytes
+
+	// Don't need these two now, but i'll leave this here as a reminder if i ever need it
+	// GLbitfield Flags;
+	// void* PMappedBuffer; 
+
+	SGlBufferVector() = default;
+	SGlBufferVector(size_t size);
+	~SGlBufferVector();
+	// Disable copy
+	SGlBufferVector(const SGlBufferVector& Other) = delete;
+	SGlBufferVector& operator=(const SGlBufferVector& Other) = delete;
+	// Allow move
+	SGlBufferVector(SGlBufferVector&& Other);
+	SGlBufferVector& operator=(SGlBufferVector&& Other);
+
+	// Appends to the vector using glBufferSubData
+	SGlBufferRangeId AppendRaw(size_t numBytes, const void* data, uint32_t elemSize);
+	template<typename T> 
+	SGlBufferRangeId Append(const std::vector<T>& elems) { return AppendRaw(elems.size() * sizeof(T), elems.data(), sizeof(T)); }
+	template<typename T> 
+	SGlBufferRangeId Append(size_t numElems, const T* pElems) { return AppendRaw(numElems * sizeof(T), pElems, sizeof(T)); }
+};
+
 class CGlShader;
 
 struct SSceneData
@@ -137,7 +165,10 @@ struct SMeshAsset
 	std::vector<SGeoSurface> Surfaces;
 	SGlBufferId VertexBuffer;
 	SGlBufferId IndexBuffer;
-	SGlBufferId VertexJointsDataBuffer; // TODO: Bones are in their own buffer. Figure out how to include them into the vertex buffer without making the code horrible
+	// TODO: Bones are in their own buffer. Figure out how to include them into the vertex buffer without making the code horrible
+	// UPDATE: Do we actually WANT them in the vertex buffer? Separate buffer allows using the same shader without wasting extra space on each vertex on non-skinned meshes.
+	SGlBufferId VertexJointsDataBuffer; 
+
 };
 
 struct SRenderObject // TODO: some bCastShadows bool

@@ -1,6 +1,7 @@
 #include "GlShader.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <format>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -207,4 +208,44 @@ void SSkinAsset::InitAnimator()
     assert(AllJoints.size());
     // Animator = std::make_unique<CAnimator>(this, maxJoints);
     Animator = std::unique_ptr<CAnimator>(new CAnimator(this));
+}
+
+SGlBufferVector::SGlBufferVector(size_t size) : Size(size), Head(0)
+{
+    glCreateBuffers(1, &*Id);
+    glNamedBufferStorage(*Id, size, nullptr, GL_DYNAMIC_STORAGE_BIT);
+}
+
+SGlBufferVector::~SGlBufferVector()
+{
+    if (Id)
+		glDeleteBuffers(1, &*Id);
+}
+
+SGlBufferVector::SGlBufferVector(SGlBufferVector&& Other)
+{
+    // Writing it like this to make it EXTRA explicit we're move-assigning this.
+    operator=(std::move(Other));
+}
+
+SGlBufferVector& SGlBufferVector::operator=(SGlBufferVector&& Other)
+{
+    // just copy and memset for simplicity, dirty but will do for now
+    memcpy(this, &Other, sizeof(SGlBufferVector));
+    memset(&Other, 0, sizeof(SGlBufferVector));
+    return *this;
+}
+
+SGlBufferRangeId SGlBufferVector::AppendRaw(size_t numBytes, const void* data, uint32_t elemSize)
+{
+    assert(Id && "Attempting to use AppendRaw on invalid GlBufferVector");
+    if (Head + numBytes > Size)
+    {
+        std::cout << std::format("AppendRaw not enough space remaining for buffer {}!! - Head = {}, Size = {}, numBytes = {}", *Id, Head, Size, numBytes);
+        return SGlBufferRangeId {};
+    }
+    SGlBufferRangeId Out { Id, elemSize, Head, numBytes };
+    glNamedBufferSubData(*Id, Head, numBytes, data);
+    Head += numBytes;
+    return Out;
 }

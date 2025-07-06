@@ -21,8 +21,10 @@ using SGlFramebufferId = TId<uint32_t, struct FramebufferIdTag, 0>;
 
 struct SGlBufferRangeId : public SGlBufferId
 {
-	uint32_t StartIdx = 0;
-	uint32_t Count = 0;
+	uint32_t ElemSize = 0;
+	size_t Head = 0;
+	size_t SizeBytes = 0;
+	size_t GetNumElems() const { return SizeBytes / ElemSize; };
 };
 
 namespace GlBindPoints
