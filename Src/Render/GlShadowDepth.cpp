@@ -155,7 +155,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	ShadowsShader.Use();
 	ImguiData.TotalNum = (uint32_t)DrawContext.Surfaces[EMaterialPass::MainColor].size();
 	ImguiData.CulledNum = 0;
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainMeshBuffer.Id);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{

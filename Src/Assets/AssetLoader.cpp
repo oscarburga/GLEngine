@@ -148,7 +148,7 @@ void CAssetLoader::LoadDefaultAssets()
 			vertices[i + 1].Position[axis % 3] = (i < 6) ? 1.f : -1.f;
 			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
 		}
-		CGlRenderer::Get()->MainMeshBuffer.Append(12, vertices);
+		CGlRenderer::Get()->MainVertexBuffer.Append(12, vertices);
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
 		axisMaterial->bIgnoreLighting = true;
 		axisMaterial->PrimitiveType = GL_LINES;
@@ -515,7 +515,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			// Create and submit vertex buffers
 			{
 				// BufferVector append already returns empty ID if passing in an empty vector - no need to manually check.
-				newMesh.VertexBuffer = CGlRenderer::Get()->MainMeshBuffer.Append(vertices);
+				newMesh.VertexBuffer = CGlRenderer::Get()->MainVertexBuffer.Append(vertices);
 				newMesh.IndexBuffer = CGlRenderer::Get()->MainIndexBuffer.Append(indices);
 				newMesh.VertexJointsDataBuffer = CGlRenderer::Get()->MainBonesBuffer.Append(boneData);
 			}

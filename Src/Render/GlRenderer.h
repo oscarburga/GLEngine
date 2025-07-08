@@ -19,7 +19,7 @@ class CGlRenderer : public IImguiObject
 	~CGlRenderer();
 public:
 	// TODO: move some of these things, shaders and such into a globally accessible storage
-	SGlBufferVector MainMeshBuffer;
+	SGlBufferVector MainVertexBuffer;
 	SGlBufferVector MainIndexBuffer;
 	SGlBufferVector MainBonesBuffer;
 	SGlCamera ActiveCamera {};

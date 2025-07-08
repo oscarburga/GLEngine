@@ -135,7 +135,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	{
 		constexpr GLsizeiptr MainBufferSize = 1 << 30; // 1 GiB (1073 ish MB)
 		constexpr GLsizeiptr BonesBufferSize = 1 << 28; // about 268 MB
-		MainMeshBuffer = SGlBufferVector(MainBufferSize);
+		MainVertexBuffer = SGlBufferVector(MainBufferSize);
 		MainIndexBuffer = SGlBufferVector(MainBufferSize);
 		MainBonesBuffer = SGlBufferVector(BonesBufferSize);
 	}
@@ -235,7 +235,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::DebugCsmTint, ImguiData.bDebugCsmTint);
 
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, MainMeshBuffer.Id);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, MainBonesBuffer.Id);
 
 	ImguiData.CulledNum = ImguiData.TotalNum = 0;
