@@ -9,6 +9,7 @@
 #include "Utils/GenericConcepts.h"
 #include "Math/EngineMath.h"
 
+// TODO: Consider templating buffer vector for type/alignment safety
 struct SGlBufferVector
 {
 	SGlBufferId Id {};
