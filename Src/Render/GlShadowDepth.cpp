@@ -155,6 +155,8 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	ShadowsShader.Use();
 	ImguiData.TotalNum = (uint32_t)DrawContext.Surfaces[EMaterialPass::MainColor].size();
 	ImguiData.CulledNum = 0;
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainMeshBuffer.Id);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{
 		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->bIgnoreLighting)
@@ -171,8 +173,6 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 			assert(boneBufferOffset <= std::numeric_limits<int>::max());
 			ShadowsShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
 		}
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
 
 		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...

@@ -152,6 +152,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 			 1.0f, -1.0f,  1.0f, 0.0f,
 			 1.0f,  1.0f,  1.0f, 1.0f
 		};	
+		// DO NOT put this in the main mesh buffer, its different alignment from SVertex would kapoot the indexing!!
 		glCreateBuffers(1, &*Quad2DBuffer);
 		glNamedBufferStorage(*Quad2DBuffer, sizeof(quadVertices), quadVertices, 0);
 	}
@@ -232,7 +233,11 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::PbrOcclusionTex, GlTexUnits::PbrOcclusion);
 	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 	PvpShader.SetUniform(GlUniformLocs::DebugCsmTint, ImguiData.bDebugCsmTint);
+
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, MainMeshBuffer.Id);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, MainBonesBuffer.Id);
+
 	ImguiData.CulledNum = ImguiData.TotalNum = 0;
 
 	static const auto RenderObject = [&](SRenderObject& surface)
@@ -249,6 +254,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		{
 			// TEMP UNIFORM WORKAROUND
 			// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
+			// Eventually we move this & other per-object data into big buffer(s) to index
 			int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
 			assert(boneBufferOffset <= std::numeric_limits<int>::max());
 			PvpShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
@@ -268,9 +274,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);
-		
 		constexpr int windingOrder[] = { GL_CW, GL_CCW };
 		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
 		// Figure it out at some point

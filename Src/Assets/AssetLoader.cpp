@@ -71,7 +71,6 @@ CAssetLoader::~CAssetLoader()
 		glDeleteBuffers(1, &*WhiteMaterial->DataBuffer);
 	if (AxisMesh)
 	{
-		glDeleteBuffers(1, &*AxisMesh->Mesh->VertexBuffer);
 		glDeleteBuffers(1, &*AxisMesh->Mesh->Surfaces[0].Material->DataBuffer);
 	}
 }
@@ -149,8 +148,7 @@ void CAssetLoader::LoadDefaultAssets()
 			vertices[i + 1].Position[axis % 3] = (i < 6) ? 1.f : -1.f;
 			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
 		}
-		glCreateBuffers(1, &*axisMesh.VertexBuffer);
-		glNamedBufferStorage(axisMesh.VertexBuffer, sizeof(vertices), vertices, 0);
+		CGlRenderer::Get()->MainMeshBuffer.Append(12, vertices);
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
 		axisMaterial->bIgnoreLighting = true;
 		axisMaterial->PrimitiveType = GL_LINES;
