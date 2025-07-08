@@ -236,16 +236,19 @@ SGlBufferVector& SGlBufferVector::operator=(SGlBufferVector&& Other)
     return *this;
 }
 
-SGlBufferRangeId SGlBufferVector::AppendRaw(size_t numBytes, const void* data, uint32_t elemSize)
+SGlBufferRangeId SGlBufferVector::AppendRaw(size_t numBytes, const void* pData, uint32_t elemSize)
 {
     assert(Id && "Attempting to use AppendRaw on invalid GlBufferVector");
-    if (Head + numBytes > Size)
+    const bool bEmptyAppend = (numBytes == 0) || !pData;
+    const bool bNotEnoughSpace = Head + numBytes > Size;
+    if (bEmptyAppend || bNotEnoughSpace)
     {
-        std::cout << std::format("AppendRaw not enough space remaining for buffer {}!! - Head = {}, Size = {}, numBytes = {}", *Id, Head, Size, numBytes);
+        std::cout << std::format("AppendRaw failed - buffer={} - bEmptyAppend={} - NotEnoughSpace={}\n", 
+            *Id, bEmptyAppend, bNotEnoughSpace);
         return SGlBufferRangeId {};
     }
     SGlBufferRangeId Out { Id, elemSize, Head, numBytes };
-    glNamedBufferSubData(*Id, Head, numBytes, data);
+    glNamedBufferSubData(*Id, Head, numBytes, pData);
     Head += numBytes;
     return Out;
 }

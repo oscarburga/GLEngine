@@ -164,10 +164,16 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		}
 		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
 		ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
+		if (surface.VertexJointsDataBuffer)
+		{
+			// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
+			int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
+			assert(boneBufferOffset <= std::numeric_limits<int>::max());
+			ShadowsShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+		}
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, surface.VertexBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, surface.VertexJointsDataBuffer);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, surface.IndexBuffer);
 
 		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
 		// Figure it out at some point
@@ -175,9 +181,24 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		glFrontFace(windingOrder[!surface.bIsCCW]); ;
 
 		if (surface.IndexBuffer)
-			glDrawElements(surface.Material->PrimitiveType, surface.IndexCount, GL_UNSIGNED_INT, (void*)static_cast<uint64_t>(surface.FirstIndex));
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
+			glDrawElementsBaseVertex(
+				surface.Material->PrimitiveType,
+				surface.IndexCount,
+				GL_UNSIGNED_INT,
+				(void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))), // offset is in BYTESSSS not in index type!!
+				(GLuint)surface.VertexBuffer.GetHeadInElems() // add to each index so it goes to the correct slice of the big ssbo
+			);
+		}
 		else
-			glDrawArrays(surface.Material->PrimitiveType, surface.FirstIndex, surface.IndexCount);
+		{
+			glDrawArrays(
+				surface.Material->PrimitiveType,
+				surface.FirstIndex + (uint32_t)surface.VertexBuffer.GetHeadInElems(),
+				surface.IndexCount
+			);
+		}
 	}
 
 	// Restore opengl viewport size to window size

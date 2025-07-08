@@ -30,7 +30,7 @@ struct SGlBufferVector
 	SGlBufferVector& operator=(SGlBufferVector&& Other);
 
 	// Appends to the vector using glBufferSubData
-	SGlBufferRangeId AppendRaw(size_t numBytes, const void* data, uint32_t elemSize);
+	SGlBufferRangeId AppendRaw(size_t numBytes, const void* pData, uint32_t elemSize);
 	template<typename T> 
 	SGlBufferRangeId Append(const std::vector<T>& elems) { return AppendRaw(elems.size() * sizeof(T), elems.data(), sizeof(T)); }
 	template<typename T> 
@@ -161,14 +161,13 @@ struct STextureAsset
 
 struct SMeshAsset
 {
-	std::string Name;
-	std::vector<SGeoSurface> Surfaces;
-	SGlBufferId VertexBuffer;
-	SGlBufferId IndexBuffer;
+	std::string Name {};
+	std::vector<SGeoSurface> Surfaces {};
+	SGlBufferRangeId VertexBuffer {};
+	SGlBufferRangeId IndexBuffer {};
+	SGlBufferRangeId VertexJointsDataBuffer {};
 	// TODO: Bones are in their own buffer. Figure out how to include them into the vertex buffer without making the code horrible
 	// UPDATE: Do we actually WANT them in the vertex buffer? Separate buffer allows using the same shader without wasting extra space on each vertex on non-skinned meshes.
-	SGlBufferId VertexJointsDataBuffer; 
-
 };
 
 struct SRenderObject // TODO: some bCastShadows bool
@@ -176,9 +175,9 @@ struct SRenderObject // TODO: some bCastShadows bool
 	bool bIsCCW = false;
 	uint32_t IndexCount;
 	uint32_t FirstIndex;
-	SGlBufferId VertexBuffer;
-	SGlBufferId IndexBuffer;
-	SGlBufferId VertexJointsDataBuffer;
+	SGlBufferRangeId VertexBuffer;
+	SGlBufferRangeId IndexBuffer;
+	SGlBufferRangeId VertexJointsDataBuffer;
 	SGlBufferId JointMatricesBuffer;
 	SBounds Bounds;
 	glm::mat4 WorldTransform; // For frustum culling

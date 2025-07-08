@@ -18,7 +18,10 @@ class CGlRenderer : public IImguiObject
 	CGlRenderer(CGlRenderer&&) = delete;
 	~CGlRenderer();
 public:
-	static SGlBufferVector MainMeshBuffer;
+	// TODO: move some of these things, shaders and such into a globally accessible storage
+	SGlBufferVector MainMeshBuffer;
+	SGlBufferVector MainIndexBuffer;
+	SGlBufferVector MainBonesBuffer;
 	SGlCamera ActiveCamera {};
 	CGlShadowDepthPass ShadowPass {};
 	SSceneData SceneData {};

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
+#include "Render/GlRenderer.h"
 #include "Utils/Defer.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -513,38 +514,13 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			if (bHasSkin)
 				boneData.resize(vertices.size(), {});
 
-			constexpr bool bNormalsAsColors = false;
-			if constexpr (bNormalsAsColors)
-			{
-				for (auto& vtx : vertices)
-					vtx.Color = glm::vec4(vtx.Normal, 1.f);
-			}
-
 			// Create and submit vertex buffers
 			{
-				GLuint buffers[3] = { 0, 0, 0 }; // vbo, ibo, boneinfo
-				int numBuffers = 1 + int(!indices.empty()) + int(!boneData.empty());
-				glCreateBuffers(numBuffers, buffers);
-
-				// Vertex buffer is always the first one
-				glNamedBufferStorage(buffers[0], vertices.size() * sizeof(SVertex), vertices.data(), 0);
-				int nextBufferIdx = 1;
-				if (!indices.empty())
-				{
-					glNamedBufferStorage(buffers[nextBufferIdx], indices.size() * sizeof(uint32_t), indices.data(), 0);
-					nextBufferIdx += 1;
-				}
-
-				if (!boneData.empty())
-				{
-					glNamedBufferStorage(buffers[nextBufferIdx], boneData.size() * sizeof(SVertexSkinData), boneData.data(), 0);
-				}
-
-				newMesh.VertexBuffer = buffers[0];
-				newMesh.IndexBuffer = buffers[1];
-				newMesh.VertexJointsDataBuffer = buffers[2];
+				// BufferVector append already returns empty ID if passing in an empty vector - no need to manually check.
+				newMesh.VertexBuffer = CGlRenderer::Get()->MainMeshBuffer.Append(vertices);
+				newMesh.IndexBuffer = CGlRenderer::Get()->MainIndexBuffer.Append(indices);
+				newMesh.VertexJointsDataBuffer = CGlRenderer::Get()->MainBonesBuffer.Append(boneData);
 			}
-
 			meshes.emplace_back(newMesh_ptr);
 		}
 	}

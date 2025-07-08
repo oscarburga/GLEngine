@@ -21,10 +21,13 @@ using SGlFramebufferId = TId<uint32_t, struct FramebufferIdTag, 0>;
 
 struct SGlBufferRangeId : public SGlBufferId
 {
-	uint32_t ElemSize = 0;
+	using SGlBufferId::SGlBufferId;
+	SGlBufferRangeId(uint32_t id, uint32_t elemSize, size_t head, size_t sizeBytes) : SGlBufferId(id), ElemSize(elemSize), Head(head), SizeBytes(sizeBytes) {};
+	uint32_t ElemSize = 1; // Default of 1 to avoid division by zero
 	size_t Head = 0;
 	size_t SizeBytes = 0;
-	size_t GetNumElems() const { return SizeBytes / ElemSize; };
+	size_t GetNumElems() const { assert(SizeBytes % ElemSize == 0);  return SizeBytes / ElemSize; };
+	size_t GetHeadInElems() const { assert(Head % ElemSize == 0);  return Head / ElemSize; };
 };
 
 namespace GlBindPoints
@@ -63,19 +66,14 @@ namespace GlUniformLocs
 		ModelMat = 0,
 
 		PbrColorTex = 1,
-		PhongDiffuseTex = 1,
-
 		PbrMetalRoughTex = 2,
-		PhongSpecularTex = 2,
-
 		NormalTex = 3,
-		PhongShininess = 3,
-
-		OcclusionTex = 4,
+		PbrOcclusionTex = 4,
 
 		ShadowDepthTexture = 5,
 
 		HasJoints = 6,
+		BonesIndexOffset = 7,
 
 		Count,
 

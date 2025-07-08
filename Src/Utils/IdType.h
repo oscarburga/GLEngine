@@ -11,7 +11,8 @@ struct TId
 	explicit TId(IntType id) : Id(id) {}
 
 	inline void Reset() { Id = NullId; }
-	inline IntType& operator *() { return Id; }
+	IntType& operator *() { return Id; }
+	const IntType& operator *() const { return Id; } // const version
 	inline bool IsNull() const { return Id == NullId; }
 	inline operator IntType() const { return Id; }
 	inline operator bool() const { return !IsNull(); }
