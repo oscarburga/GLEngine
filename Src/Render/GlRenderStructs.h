@@ -60,23 +60,6 @@ struct SGlTexture
 	SGlSamplerId Sampler {};
 };
 
-struct SSolidMaterial 
-{
-	glm::vec3 Ambient {};
-	glm::vec3 Diffuse {};
-	glm::vec3 Specular {};
-	float Shininess = 32.f;
-};
-
-struct STexturedMaterial 
-{
-	bool bIgnoreLighting = false; 
-	uint32_t PrimitiveType = 4; // GL_TRIANGLES
-	SGlTexture Diffuse = {};
-	SGlTexture Specular = {};
-	float Shininess = 32.f;
-};
-
 namespace EMaterialPass
 {
 	enum Pass : uint8_t

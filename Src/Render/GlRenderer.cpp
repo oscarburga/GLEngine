@@ -111,6 +111,10 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		std::cout << std::format("Max Uniform Blocks (VERTEX SHADER): {}\n", value);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &value);
 		std::cout << std::format("Max Uniform Blocks (FRAGMENT SHADER): {}\n", value);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &value);
+		std::cout << std::format("Max Fragment Texture Image Units: {}\n", value);
+		glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &value);
+		std::cout << std::format("Max Vertex Texture Image Units: {}\n", value);
 		glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &value);
 		std::cout << std::format("Max Combined Texture Image Units: {}\n", value);
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value);
