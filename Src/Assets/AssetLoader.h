@@ -54,6 +54,8 @@ private:
 // Warning: Args are CASE-SENSITIVE!!
 struct SShaderLoadArgs
 {
+	friend class CAssetLoader;
+
 	SShaderLoadArgs() = default;
 
 	template<typename StrLike>
@@ -68,12 +70,20 @@ struct SShaderLoadArgs
 	std::filesystem::path Path; // Shader path
 	std::unordered_map<std::string, std::string> Args; // ShaderArgs
 
-	template<typename StrLike1, typename StrLike2>
+	template<StringLike StrLike1, StringLike StrLike2>
 	SShaderLoadArgs& SetArg(StrLike1&& ArgName, StrLike2&& Value)
 	{
 		Args[ArgName] = Value;
 		return *this;
 	}
 
+	template<StringLike StrLike1, NumericType NumericT>
+	SShaderLoadArgs& SetArg(StrLike1&& ArgName, NumericT Value)
+	{
+		Args[ArgName] = std::to_string(Value);
+		return *this;
+	}
+
+private:
 	std::string ApplyToCode(std::string&& shaderCode) const;
 };

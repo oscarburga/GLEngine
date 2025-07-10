@@ -13,6 +13,11 @@ typedef void (*GlFunctionLoaderFuncType)(const char*);
 
 class CGlRenderer : public IImguiObject
 {
+public:
+	int UBOOffsetAlignment = 0;
+	int UBOMaxBlockSize = 0;
+	int ShaderMaxMaterialSize = 100;
+private:
 	CGlRenderer() { bShowImguiPanel = true; };
 	CGlRenderer(const CGlRenderer&) = delete;
 	CGlRenderer(CGlRenderer&&) = delete;
@@ -54,6 +59,4 @@ private:
 		uint32_t CulledNum = 0;
 		uint32_t TotalNum = 0;
 	} ImguiData;
-public:
-	static int UBOOffsetAlignment;
 };

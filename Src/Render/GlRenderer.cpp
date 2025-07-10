@@ -8,7 +8,6 @@
 #include <imgui.h>
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
-int CGlRenderer::UBOOffsetAlignment = 16;
 
 namespace
 {
@@ -103,10 +102,6 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		std::cout << std::format("Max Uniform Variable Locations : {}\n", value);
 		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &value);
 		std::cout << std::format("Max Uniform Buffer Bindings: {}\n", value);
-		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &value);
-		std::cout << std::format("Max Uniform Block Size: {} bytes ({} Mb)\n", value, float(value) / (1'000'000));
-		glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &value);
-		std::cout << std::format("Max SSBO size: {} bytes ({} Mb)\n", value, value / (1'000'000));
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &value);
 		std::cout << std::format("Max Uniform Blocks (VERTEX SHADER): {}\n", value);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &value);
@@ -120,6 +115,11 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value);
 		std::cout << std::format("Uniform Block Buffer Offset Alignment: {}\n", value);
 		UBOOffsetAlignment = value;
+		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &value);
+		std::cout << std::format("Max Uniform Block Size: {} bytes ({} Mb)\n", value, float(value) / (1'000'000));
+		UBOMaxBlockSize = value;
+		glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &value);
+		std::cout << std::format("Max SSBO size: {} bytes ({} Mb)\n", value, value / (1'000'000));
 	}
 	// Create & bind empty VAO
 	{
@@ -137,11 +137,17 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	}
 	// Main buffers
 	{
+		// TODO: Set all these values from some config file (maybe this is where I can add some 
+		// LUA scripting for funzies? :D 
 		constexpr GLsizeiptr MainBufferSize = 1 << 30; // 1 GiB (1073 ish MB)
 		constexpr GLsizeiptr BonesBufferSize = 1 << 28; // about 268 MB
 		MainVertexBuffer = SGlBufferVector(MainBufferSize);
 		MainIndexBuffer = SGlBufferVector(MainBufferSize);
 		MainBonesBuffer = SGlBufferVector(BonesBufferSize);
+		MainMaterialBuffer = SGlBufferVector(UBOMaxBlockSize);
+		ShaderMaxMaterialSize = UBOMaxBlockSize / sizeof(SPbrMaterial);
+		// TODO: my gpu gives 4mb UBO block size, but spec only guarantees 16kb, which could be only a couple hundred materials.
+		// Add some fallback to use SSBO for materials instead of UBO
 	}
 	 
 	// Simple quad2d
@@ -165,7 +171,10 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 
 	ShadowPass.Init();
 
-	SShaderLoadArgs fsArgs("Shaders/pvpMesh.frag", { { ShadowPass.NumCascadesShaderArgName, std::to_string(ShadowPass.GetNumCascades()) } });
+	SShaderLoadArgs fsArgs("Shaders/pvpMesh.frag");
+	fsArgs
+		.SetArg(ShadowPass.NumCascadesShaderArgName, ShadowPass.GetNumCascades())
+		.SetArg("MAX_MATERIALS", ShaderMaxMaterialSize);
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpMesh.vert", fsArgs))
 		PvpShader = *pvpShader;
 
@@ -239,6 +248,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::DebugCsmTint, ImguiData.bDebugCsmTint);
 
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
+	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, MainMaterialBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, MainBonesBuffer.Id);
 
@@ -251,17 +261,21 @@ void CGlRenderer::RenderScene(float deltaTime)
 			++ImguiData.CulledNum;
 			return;
 		}
-		PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
-		PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
-		PvpShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
-		if (surface.VertexJointsDataBuffer)
+
+		// PER-OBJECT UNIFORMS
+		// Eventually we move this & other per-object data into big buffer(s) with per-object data
 		{
-			// TEMP UNIFORM WORKAROUND
-			// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
-			// Eventually we move this & other per-object data into big buffer(s) to index
-			int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
-			assert(boneBufferOffset <= std::numeric_limits<int>::max());
-			PvpShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
+			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
+			PvpShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
+			if (surface.VertexJointsDataBuffer)
+			{
+				// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
+				int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
+				assert(boneBufferOffset <= std::numeric_limits<int>::max());
+				PvpShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+			}
+			PvpShader.SetUniform(GlUniformLocs::MaterialIndex, (int)surface.Material->DataBuffer.GetHeadInElems());
 		}
 
 		glBindTextureUnit(GlTexUnits::PbrColor, *surface.Material->ColorTex.Texture);
@@ -276,7 +290,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
 		glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
 
-		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, surface.Material->DataBuffer);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
 		constexpr int windingOrder[] = { GL_CW, GL_CCW };
 		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
@@ -286,21 +299,28 @@ void CGlRenderer::RenderScene(float deltaTime)
 		// TODO abstract these draw calls into a function, this code is repeated in shadow depth pass.
 		if (surface.IndexBuffer)
 		{
+			void* offset = (void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))); // offset is in BYTESSSS not in index type!!
+			GLsizei indexCount = surface.IndexCount;
+			GLint baseVertex = (GLint)surface.VertexBuffer.GetHeadInElems();
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
-			glDrawElementsBaseVertex(
+			glMultiDrawElementsBaseVertex(
 				surface.Material->PrimitiveType,
-				surface.IndexCount,
+				&indexCount,
 				GL_UNSIGNED_INT,
-				(void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))), // offset is in BYTESSSS not in index type!!
-				(GLuint)surface.VertexBuffer.GetHeadInElems() // add to each index so it goes to the correct slice of the big ssbo
+				&offset, // offset is in BYTESSSS not in index type!!
+				1,
+				&baseVertex // add to each index so it goes to the correct slice of the big ssbo
 			);
 		}
 		else
 		{
-			glDrawArrays(
+			GLint first = surface.FirstIndex + GLint(surface.VertexBuffer.GetHeadInElems());
+			GLsizei count = surface.IndexCount;
+			glMultiDrawArrays(
 				surface.Material->PrimitiveType,
-				surface.FirstIndex + (uint32_t)surface.VertexBuffer.GetHeadInElems(),
-				surface.IndexCount
+				&first,
+				&count,
+				1
 			);
 		}
 	};

@@ -9,7 +9,8 @@
 #include "Utils/GenericConcepts.h"
 #include "Math/EngineMath.h"
 
-// TODO: Consider templating buffer vector for type/alignment safety
+// TODO: Template this for type/alignment safety, and to enforce std140/430 on appends/inserts. 
+// Should prob move it to its own header aswell.
 struct SGlBufferVector
 {
 	SGlBufferId Id {};
@@ -36,6 +37,13 @@ struct SGlBufferVector
 	SGlBufferRangeId Append(const std::vector<T>& elems) { return AppendRaw(elems.size() * sizeof(T), elems.data(), sizeof(T)); }
 	template<typename T> 
 	SGlBufferRangeId Append(size_t numElems, const T* pElems) { return AppendRaw(numElems * sizeof(T), pElems, sizeof(T)); }
+
+	// Updates vector using glBufferSubData
+	void UpdateRaw(const SGlBufferRangeId& range, size_t numBytes, const void* pData, uint32_t elemSize);
+	template<typename T> 
+	void Update(const SGlBufferRangeId& range, const std::vector<T>& elems) { UpdateRaw(range, elems.size() * sizeof(T), elems.data(), sizeof(T)); }
+	template<typename T> 
+	void Update(const SGlBufferRangeId& range, size_t numElems, const T* pElems) { return UpdateRaw(range, numElems * sizeof(T), pElems, sizeof(T)); }
 };
 
 class CGlShader;
@@ -86,15 +94,7 @@ struct SPbrMaterialUboData
 	uint32_t bMetalRoughBound = false;
 	uint32_t bNormalBound = false;
 	uint32_t bOcclusionBound = false;
-	// bool bNormalBound = false;
-	// bool bOcclusionBound = false;
-	// bool bEmissiveBound = false;
-	// bool bPadding[3] = {};
-	// int ColorTextureUnit = GlBindPoints::Tex::PbrColor;
-	// int MetalRoughTextureUnit = GlBindPoints::Tex::PbrMetalRough;
-	// int NormalTextureUnit = GlBindPoints::Tex::Normal;
-	// int OcclusionTextureUnit = GlBindPoints::Tex::PbrOcclusion;
-	// int EmissiveTextureUnit = GlBindPoints::Tex::PbrOcclusion;
+	uint32_t _padding[3] = {}; // Padding for std140
 };
 
 struct SPbrMaterial
@@ -108,7 +108,7 @@ struct SPbrMaterial
 	SGlTexture NormalTex {};
 	SGlTexture OcclusionTex {};
 	// SGPUTexture EmissiveTex {};
-	SGlBufferId DataBuffer {};
+	SGlBufferRangeId DataBuffer {};
 	SPbrMaterialUboData UboData {};
 };
 

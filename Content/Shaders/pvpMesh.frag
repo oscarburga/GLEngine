@@ -3,6 +3,7 @@
 #define COMPILEARG_BEGIN
 #define NumCascades 3
 #define MAX_CASCADES 16
+#define MAX_MATERIALS 100
 #define COMPILEARG_END
 
 in VS_OUT {
@@ -27,18 +28,25 @@ layout (binding = 0, std140) uniform SceneData {
 	mat4 LightSpaceTransforms[MAX_CASCADES];
 } sceneData;
 
-layout (binding = 1, std140) uniform PbrMaterial {
-	vec4 ColorFactor;
-	float MetalFactor;
+struct SPbrMaterial {
+	vec4 ColorFactor; // 16
+	float MetalFactor; 
 	float RoughFactor;
 	float AlphaCutoff;
-	float NormalScale;
-	float OcclusionStrength;
+	float NormalScale; // 32
+	float OcclusionStrength; 
 	bool bColorBound;
 	bool bMetalRoughBound;
 	bool bNormalBound;
-	bool bOcclusionBound;
-} pbrMaterial;
+	bool bOcclusionBound; // 52
+	int _pad0; // 56
+	int _pad1; // 60
+	int _pad2; // 64
+};
+
+layout (binding = 1, std140) uniform PbrMaterial {
+	SPbrMaterial Materials[MAX_MATERIALS];
+};
 
 layout (location = 1) uniform sampler2D ColorTex;
 layout (location = 2) uniform sampler2D MetalRoughTex;
@@ -46,6 +54,7 @@ layout (location = 3) uniform sampler2D NormalTex;
 layout (location = 4) uniform sampler2D OcclusionTex;
 layout (location = 5) uniform sampler2DArrayShadow ShadowDepthTexArray;
 layout (location = 6) uniform bool bHasJoints;
+layout (location = 8) uniform int MaterialIndex;
 layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
 layout (location = 35) uniform bool bDebugCsmTint;
@@ -62,6 +71,7 @@ float PbrMetalness;
 float PbrRoughness;
 float PbrAmbientOcclusion;
 int CsmLayer;
+SPbrMaterial pbrMaterial;
 
 float DistributionGGX(vec3 N, vec3 H)
 {
@@ -234,6 +244,7 @@ vec3 CalcPbr()
 
 void main()
 {
+	pbrMaterial = Materials[MaterialIndex];
 	vec4 srcColor = pbrMaterial.ColorFactor * fs.Color;
 
 	if (pbrMaterial.bColorBound)

@@ -182,21 +182,28 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 
 		if (surface.IndexBuffer)
 		{
+			void* offset = (void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))); // offset is in BYTESSSS not in index type!!
+			GLsizei indexCount = surface.IndexCount;
+			GLint baseVertex = (GLint)surface.VertexBuffer.GetHeadInElems();
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
-			glDrawElementsBaseVertex(
+			glMultiDrawElementsBaseVertex(
 				surface.Material->PrimitiveType,
-				surface.IndexCount,
+				&indexCount,
 				GL_UNSIGNED_INT,
-				(void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))), // offset is in BYTESSSS not in index type!!
-				(GLuint)surface.VertexBuffer.GetHeadInElems() // add to each index so it goes to the correct slice of the big ssbo
+				&offset, // offset is in BYTESSSS not in index type!!
+				1,
+				&baseVertex // add to each index so it goes to the correct slice of the big ssbo
 			);
 		}
 		else
 		{
-			glDrawArrays(
+			GLint first = surface.FirstIndex + GLint(surface.VertexBuffer.GetHeadInElems());
+			GLsizei count = surface.IndexCount;
+			glMultiDrawArrays(
 				surface.Material->PrimitiveType,
-				surface.FirstIndex + (uint32_t)surface.VertexBuffer.GetHeadInElems(),
-				surface.IndexCount
+				&first,
+				&count,
+				1
 			);
 		}
 	}

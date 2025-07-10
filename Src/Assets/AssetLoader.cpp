@@ -61,18 +61,22 @@ namespace
 #endif
 		return value;
 	}
+
+	inline void UpdateMaterialInMainBuffer(SPbrMaterial& material)
+	{
+		if (!material.DataBuffer)
+		{
+			material.DataBuffer = CGlRenderer::Get()->MainMaterialBuffer.Append(1, &material.UboData);
+		}
+		else
+		{
+			CGlRenderer::Get()->MainMaterialBuffer.Update(material.DataBuffer, 1, &material.UboData);
+		}
+	}
 }
 
 CAssetLoader::~CAssetLoader()
 {
-	if (ErrorMaterial)
-		glDeleteBuffers(1, &*ErrorMaterial->DataBuffer);
-	if (WhiteMaterial)
-		glDeleteBuffers(1, &*WhiteMaterial->DataBuffer);
-	if (AxisMesh)
-	{
-		glDeleteBuffers(1, &*AxisMesh->Mesh->Surfaces[0].Material->DataBuffer);
-	}
 }
 
 void CAssetLoader::Create()
@@ -105,10 +109,7 @@ void CAssetLoader::LoadDefaultAssets()
 		WhiteMaterial->Name = "DefaultWhite";
 		WhiteMaterial->UboData = SPbrMaterialUboData { .bColorBound = true };
 		WhiteMaterial->ColorTex.Texture = WhiteTexture;
-		uint32_t ubo;
-		glCreateBuffers(1, &ubo);
-		glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &WhiteMaterial->UboData, 0);
-		WhiteMaterial->DataBuffer = ubo;
+		UpdateMaterialInMainBuffer(*WhiteMaterial);
 	}
 	// Error checkerboard
 	{
@@ -133,10 +134,7 @@ void CAssetLoader::LoadDefaultAssets()
 		ErrorMaterial->Name = "DefaultChecker";
 		ErrorMaterial->UboData = SPbrMaterialUboData { .bColorBound = true };
 		ErrorMaterial->ColorTex.Texture = ErrorTexture;
-		uint32_t ubo;
-		glCreateBuffers(1, &ubo);
-		glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &ErrorMaterial->UboData, 0);
-		ErrorMaterial->DataBuffer = ubo;
+		UpdateMaterialInMainBuffer(*ErrorMaterial);
 	}
 	{
 		SMeshAsset axisMesh {};
@@ -149,15 +147,11 @@ void CAssetLoader::LoadDefaultAssets()
 			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
 		}
 		CGlRenderer::Get()->MainVertexBuffer.Append(12, vertices);
+
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
 		axisMaterial->bIgnoreLighting = true;
 		axisMaterial->PrimitiveType = GL_LINES;
-		{
-			uint32_t ubo;
-			glCreateBuffers(1, &ubo);
-			glNamedBufferStorage(ubo, sizeof(SPbrMaterialUboData), &axisMaterial->UboData, 0);
-			axisMaterial->DataBuffer = ubo;
-		}
+		UpdateMaterialInMainBuffer(*axisMaterial);
 		SGeoSurface surface { 
 			.Count = 12,
 			.Bounds = {
@@ -167,6 +161,7 @@ void CAssetLoader::LoadDefaultAssets()
 			.Material = axisMaterial
 		};
 		axisMesh.Surfaces.push_back(surface);
+
 		AxisMesh = std::make_shared<SMeshNode>();
 		AxisMesh->LocalTransform.SetScale(glm::vec3{ 100.f });
 		AxisMesh->RefreshTransform(STransform {});
@@ -370,9 +365,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			outMat.UboData.OcclusionStrength = gltfMat.occlusionTexture->strength;
 		// TODO emissive
 
-		// Uniform buffer setup
-		glCreateBuffers(1, &*outMat.DataBuffer);
-		glNamedBufferStorage(*outMat.DataBuffer, sizeof(SPbrMaterialUboData), &outMat.UboData, 0);
+		UpdateMaterialInMainBuffer(outMat);
 	};
 
 	// Load meshes
@@ -464,6 +457,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					{
 						// No tangents found and don't want to implement calculating them, just disable normals on this material.
 						surface.Material->UboData.bNormalBound = false;
+						UpdateMaterialInMainBuffer(*surface.Material);
 						std::cerr << std::format("\tOne of the primitives uses a normal-mapped material, but provides no tangents.\n"
 							"\t\tFallback: setting material {} to not use normal map\n", surface.Material->Name);
 					}
@@ -553,7 +547,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					skin.AllJoints[index].InverseBindMatrix = mat;
 				});
 			}
-			std::cout << std::format("\tLoaded skin {}, has IB matrices = {}\n", skin.Name, gltfSkin.inverseBindMatrices.has_value());
+			std::cout << std::format("\tLoaded skin {} with {} joints, has IB matrices = {}\n", skin.Name, skin.AllJoints.size(), gltfSkin.inverseBindMatrices.has_value());
 		}
 	}
 

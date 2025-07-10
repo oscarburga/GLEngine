@@ -101,6 +101,7 @@ void SLoadedGLTF::RefreshNodeTransforms()
 
 CAnimator::CAnimator(SSkinAsset* ownerSkin) : OwnerSkin(ownerSkin), JointMatrices(ownerSkin->AllJoints.size())
 {
+    // TODO for performance, persistent-mapping these 
     glCreateBuffers(1, &*JointMatricesBuffer);
     glNamedBufferStorage(*JointMatricesBuffer, JointMatrices.size() * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
     UpdateJointMatrices();
@@ -251,4 +252,15 @@ SGlBufferRangeId SGlBufferVector::AppendRaw(size_t numBytes, const void* pData, 
     glNamedBufferSubData(*Id, Head, numBytes, pData);
     Head += numBytes;
     return Out;
+}
+
+void SGlBufferVector::UpdateRaw(const SGlBufferRangeId& range, size_t numBytes, const void* pData, uint32_t elemSize)
+{
+    assert(Id && range && (*Id == *range) && "Attempting to use UpdateRaw on invalid GlBufferVector or with invalid BufferRangeId");
+    assert((range.SizeBytes == numBytes) && (range.GetNumElems() == (numBytes / elemSize)) && "UpdateRaw invalid in data.");
+    const bool bEmptyUpdate = (numBytes == 0) || !pData;
+    if (!bEmptyUpdate)
+    {
+		glNamedBufferSubData(*Id, range.Head, numBytes, pData);
+    }
 }
