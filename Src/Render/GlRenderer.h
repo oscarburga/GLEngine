@@ -28,6 +28,7 @@ public:
 	SGlBufferVector MainIndexBuffer;
 	SGlBufferVector MainBonesBuffer;
 	SGlBufferVector MainMaterialBuffer;
+	SGlBufferVector JointMatricesBuffer;
 	SGlCamera ActiveCamera {};
 	CGlShadowDepthPass ShadowPass {};
 	SSceneData SceneData {};

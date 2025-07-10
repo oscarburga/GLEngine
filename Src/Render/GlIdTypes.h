@@ -75,6 +75,7 @@ namespace GlUniformLocs
 		HasJoints = 6,
 		BonesIndexOffset = 7,
 		MaterialIndex = 8,
+		JointMatricesIndexOffset = 9,
 
 		Count,
 

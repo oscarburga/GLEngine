@@ -162,7 +162,7 @@ struct SRenderObject // TODO: some bCastShadows bool
 	SGlBufferRangeId VertexBuffer;
 	SGlBufferRangeId IndexBuffer;
 	SGlBufferRangeId VertexJointsDataBuffer;
-	SGlBufferId JointMatricesBuffer;
+	SGlBufferRangeId JointMatricesBuffer;
 	SBounds Bounds;
 	glm::mat4 WorldTransform; // For frustum culling
 	glm::mat4 RenderTransform; // For actual rendering
@@ -318,7 +318,7 @@ private:
 	SAnimationAsset* CurrentAnim = nullptr; // Animations are uniquely owned by the owner skin, so no need for smart ptr
 	std::vector<glm::mat4> JointMatrices {};
 	bool bLoopCurrentAnim = false;
-	SGlBufferId JointMatricesBuffer {};
+	SGlBufferRangeId JointMatricesBuffer {};
 
 public:
 	~CAnimator();

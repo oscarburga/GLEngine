@@ -155,6 +155,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	ShadowsShader.Use();
 	ImguiData.TotalNum = (uint32_t)DrawContext.Surfaces[EMaterialPass::MainColor].size();
 	ImguiData.CulledNum = 0;
+	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, CGlRenderer::Get()->JointMatricesBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
@@ -164,16 +165,21 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 			++ImguiData.CulledNum;
 			continue;
 		}
-		ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
-		ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
-		if (surface.VertexJointsDataBuffer)
+
+		// PER-OBJECT UNIFORMS
+		// Eventually we move this & other per-object data into big buffer(s) with per-object data
 		{
-			// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
-			int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
-			assert(boneBufferOffset <= std::numeric_limits<int>::max());
-			ShadowsShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+			ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
+			ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
+			ShadowsShader.SetUniform(GlUniformLocs::JointMatricesIndexOffset, (int)surface.JointMatricesBuffer.GetHeadInElems());
+			if (surface.VertexJointsDataBuffer)
+			{
+				// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
+				int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
+				assert(boneBufferOffset <= std::numeric_limits<int>::max());
+				ShadowsShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+			}
 		}
-		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
 
 		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
 		// Figure it out at some point

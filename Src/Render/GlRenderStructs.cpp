@@ -7,6 +7,7 @@
 #include <iostream>
 #include "GlRenderStructs.h"
 #include <Utils/ForEachIndexed.h>
+#include "GlRenderer.h"
 
 void SNode::RefreshTransform(const STransform& parentTransform)
 {
@@ -41,7 +42,7 @@ void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 		draw.VertexBuffer = Mesh->VertexBuffer;
 		draw.IndexBuffer = Mesh->IndexBuffer;
 		draw.VertexJointsDataBuffer = Mesh->VertexJointsDataBuffer;
-		draw.JointMatricesBuffer = bIsSkinned ? Skin->Animator->JointMatricesBuffer : SGlBufferId {};
+		draw.JointMatricesBuffer = bIsSkinned ? Skin->Animator->JointMatricesBuffer : SGlBufferRangeId {};
 		draw.WorldTransform = nodeMatrix;
 		draw.RenderTransform = bIsSkinned ? topTransform.GetMatrix() : nodeMatrix;
 	}
@@ -101,15 +102,13 @@ void SLoadedGLTF::RefreshNodeTransforms()
 
 CAnimator::CAnimator(SSkinAsset* ownerSkin) : OwnerSkin(ownerSkin), JointMatrices(ownerSkin->AllJoints.size())
 {
-    // TODO for performance, persistent-mapping these 
-    glCreateBuffers(1, &*JointMatricesBuffer);
-    glNamedBufferStorage(*JointMatricesBuffer, JointMatrices.size() * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    // TODO for performance, persistent-map these (or atleast double-buffer it)
+    JointMatricesBuffer = CGlRenderer::Get()->JointMatricesBuffer.Append(JointMatrices);
     UpdateJointMatrices();
 }
 
 CAnimator::~CAnimator()
 {
-    glDeleteBuffers(1, &*JointMatricesBuffer);
 }
 
 void CAnimator::PlayAnimation(const std::string& anim, bool bLoop)
@@ -166,7 +165,7 @@ void CAnimator::UpdateJointMatrices()
 	{
 		JointMatrices[joint.JointId] = joint.Node->WorldTransform.GetMatrix() * joint.InverseBindMatrix;
 	}
-	glNamedBufferSubData(*JointMatricesBuffer, 0, JointMatrices.size() * sizeof(glm::mat4), JointMatrices.data());
+    CGlRenderer::Get()->JointMatricesBuffer.Update(JointMatricesBuffer, JointMatrices);
 }
 
 void CAnimator::StopAnimation()

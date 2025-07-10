@@ -48,13 +48,15 @@ layout (binding = 1, std430) readonly buffer VertexJointDataBuffer {
 layout (location = 0) uniform mat4 Model;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 7) uniform int BoneBufferOffset;
+layout (location = 9) uniform int JointMatricesIndexOffset;
 
 void main()
 {
 	const SVertex vertex = vertices[gl_VertexID];
 	mat4 toWorldTransMat = Model;
 	if (bHasJoints) {
-		const SVertexJointData jointsData = vertexJointData[BoneBufferOffset + int(gl_VertexID)];
+		SVertexJointData jointsData = vertexJointData[BoneBufferOffset + int(gl_VertexID)];
+		jointsData.Joints += uvec4(JointMatricesIndexOffset);
 
 		toWorldTransMat *= 
 			jointsData.Weights.x * jointMatrices[jointsData.Joints.x] +

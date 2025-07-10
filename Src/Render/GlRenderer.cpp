@@ -141,12 +141,14 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		// LUA scripting for funzies? :D 
 		constexpr GLsizeiptr MainBufferSize = 1 << 30; // 1 GiB (1073 ish MB)
 		constexpr GLsizeiptr BonesBufferSize = 1 << 28; // about 268 MB
+		ShaderMaxMaterialSize = UBOMaxBlockSize / sizeof(SPbrMaterial);
+
 		MainVertexBuffer = SGlBufferVector(MainBufferSize);
 		MainIndexBuffer = SGlBufferVector(MainBufferSize);
 		MainBonesBuffer = SGlBufferVector(BonesBufferSize);
 		MainMaterialBuffer = SGlBufferVector(UBOMaxBlockSize);
-		ShaderMaxMaterialSize = UBOMaxBlockSize / sizeof(SPbrMaterial);
-		// TODO: my gpu gives 4mb UBO block size, but spec only guarantees 16kb, which could be only a couple hundred materials.
+		JointMatricesBuffer = SGlBufferVector(UBOMaxBlockSize);
+		// TODO: my gpu allows 4mb UBO block size, but spec only guarantees 16kb, which would only be a couple hundred materials / matrices.
 		// Add some fallback to use SSBO for materials instead of UBO
 	}
 	 
@@ -249,6 +251,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
 	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, MainMaterialBuffer.Id);
+	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, JointMatricesBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, MainBonesBuffer.Id);
 
@@ -268,6 +271,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
 			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
 			PvpShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
+			PvpShader.SetUniform(GlUniformLocs::JointMatricesIndexOffset, (int)surface.JointMatricesBuffer.GetHeadInElems());
 			if (surface.VertexJointsDataBuffer)
 			{
 				// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
@@ -290,7 +294,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBindTextureUnit(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Texture);
 		glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
 
-		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, surface.JointMatricesBuffer);
 		constexpr int windingOrder[] = { GL_CW, GL_CCW };
 		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
 		// Figure it out at some point
