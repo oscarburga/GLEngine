@@ -142,12 +142,14 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		constexpr GLsizeiptr MainBufferSize = 1 << 30; // 1 GiB (1073 ish MB)
 		constexpr GLsizeiptr BonesBufferSize = 1 << 28; // about 268 MB
 		ShaderMaxMaterialSize = UBOMaxBlockSize / sizeof(SPbrMaterial);
+		DrawDataBufferMaxSize = UBOMaxBlockSize / sizeof(SDrawObjectGpuData);
 
 		MainVertexBuffer = SGlBufferVector(MainBufferSize);
 		MainIndexBuffer = SGlBufferVector(MainBufferSize);
 		MainBonesBuffer = SGlBufferVector(BonesBufferSize);
 		MainMaterialBuffer = SGlBufferVector(UBOMaxBlockSize);
 		JointMatricesBuffer = SGlBufferVector(UBOMaxBlockSize);
+		DrawDataBuffer = SGlBufferVector(DrawDataBufferMaxSize * sizeof(SDrawObjectGpuData));
 		// TODO: my gpu allows 4mb UBO block size, but spec only guarantees 16kb, which would only be a couple hundred materials / matrices.
 		// Add some fallback to use SSBO for materials instead of UBO
 	}
@@ -269,9 +271,8 @@ void CGlRenderer::RenderScene(float deltaTime)
 		// Eventually we move this & other per-object data into big buffer(s) with per-object data
 		{
 			PvpShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
-			PvpShader.SetUniform(GlUniformLocs::DebugIgnoreLighting, surface.Material->bIgnoreLighting); // this one will be moved to material UBO soon
 			PvpShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
-			PvpShader.SetUniform(GlUniformLocs::JointMatricesIndexOffset, (int)surface.JointMatricesBuffer.GetHeadInElems());
+			PvpShader.SetUniform(GlUniformLocs::JointMatricesBaseIndex, (int)surface.JointMatricesBuffer.GetHeadInElems());
 			if (surface.VertexJointsDataBuffer)
 			{
 				// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer

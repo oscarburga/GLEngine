@@ -31,6 +31,9 @@ struct SGlBufferVector
 	SGlBufferVector(SGlBufferVector&& Other);
 	SGlBufferVector& operator=(SGlBufferVector&& Other);
 
+	// Resets head to zero, doesn't do anything else.
+	void Reset() { Head = 0; };
+
 	// Appends to the vector using glBufferSubData
 	SGlBufferRangeId AppendRaw(size_t numBytes, const void* pData, uint32_t elemSize);
 	template<typename T> 
@@ -94,12 +97,12 @@ struct SPbrMaterialUboData
 	uint32_t bMetalRoughBound = false;
 	uint32_t bNormalBound = false;
 	uint32_t bOcclusionBound = false;
-	uint32_t _padding[3] = {}; // Padding for std140
+	uint32_t bIgnoreLightning = false;
+	uint32_t _padding[2] = {}; // Padding for std140
 };
 
 struct SPbrMaterial
 {
-	bool bIgnoreLighting = false;
 	EMaterialPass::Pass MaterialPass {};
 	uint32_t PrimitiveType = 4; // GL_TRIANGLES
 	std::string Name {};
@@ -110,6 +113,15 @@ struct SPbrMaterial
 	// SGPUTexture EmissiveTex {};
 	SGlBufferRangeId DataBuffer {};
 	SPbrMaterialUboData UboData {};
+};
+
+struct SDrawObjectGpuData
+{
+	glm::mat4 RenderTransform {};
+	uint32_t HasJoints = false;
+	uint32_t JointMatricesBaseIndex = 0;
+	uint32_t MaterialIndex = 0;
+	int32_t BonesIndexOffset = 0;
 };
 
 struct SBounds

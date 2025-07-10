@@ -160,7 +160,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
 	{
-		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->bIgnoreLighting)
+		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->UboData.bIgnoreLightning)
 		{
 			++ImguiData.CulledNum;
 			continue;
@@ -171,7 +171,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		{
 			ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
 			ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
-			ShadowsShader.SetUniform(GlUniformLocs::JointMatricesIndexOffset, (int)surface.JointMatricesBuffer.GetHeadInElems());
+			ShadowsShader.SetUniform(GlUniformLocs::JointMatricesBaseIndex, (int)surface.JointMatricesBuffer.GetHeadInElems());
 			if (surface.VertexJointsDataBuffer)
 			{
 				// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer

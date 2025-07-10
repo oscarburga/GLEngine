@@ -17,6 +17,7 @@ public:
 	int UBOOffsetAlignment = 0;
 	int UBOMaxBlockSize = 0;
 	int ShaderMaxMaterialSize = 100;
+	int DrawDataBufferMaxSize = 100;
 private:
 	CGlRenderer() { bShowImguiPanel = true; };
 	CGlRenderer(const CGlRenderer&) = delete;
@@ -28,7 +29,8 @@ public:
 	SGlBufferVector MainIndexBuffer;
 	SGlBufferVector MainBonesBuffer;
 	SGlBufferVector MainMaterialBuffer;
-	SGlBufferVector JointMatricesBuffer;
+	SGlBufferVector JointMatricesBuffer; // TODO needs double buffering, potentially persistent mapping
+	SGlBufferVector DrawDataBuffer; // TODO needs double buffering, potentially persistent mapping
 	SGlCamera ActiveCamera {};
 	CGlShadowDepthPass ShadowPass {};
 	SSceneData SceneData {};

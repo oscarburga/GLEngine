@@ -149,7 +149,7 @@ void CAssetLoader::LoadDefaultAssets()
 		CGlRenderer::Get()->MainVertexBuffer.Append(12, vertices);
 
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
-		axisMaterial->bIgnoreLighting = true;
+		axisMaterial->UboData.bIgnoreLightning = true;
 		axisMaterial->PrimitiveType = GL_LINES;
 		UpdateMaterialInMainBuffer(*axisMaterial);
 		SGeoSurface surface { 
