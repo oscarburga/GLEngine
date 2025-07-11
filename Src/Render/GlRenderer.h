@@ -62,4 +62,6 @@ private:
 		uint32_t CulledNum = 0;
 		uint32_t TotalNum = 0;
 	} ImguiData;
+
+	std::vector<uint32_t> BlendIndices {}; 
 };

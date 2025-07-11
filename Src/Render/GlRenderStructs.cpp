@@ -24,29 +24,8 @@ void SNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 
 void SMeshNode::Draw(const STransform& topTransform, SDrawContext& drawCtx)
 {
-	// If we're using animations/skinning, send the model matrix as just the top transform. 
-	// World transforms are already built into the joints.
-	const bool bIsSkinned = Skin && Skin->Animator;
-	STransform nodeTransform = topTransform * WorldTransform;
-	glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
-
-	const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f; 
-	for (auto& surface : Mesh->Surfaces)
-	{
-		SRenderObject& draw = drawCtx.Surfaces[surface.Material->MaterialPass].emplace_back();
-		draw.bIsCCW = bIsCCW;
-		draw.IndexCount = surface.Count;
-		draw.FirstIndex = surface.StartIndex;
-		draw.Bounds = surface.Bounds;
-		draw.Material = surface.Material;
-		draw.VertexBuffer = Mesh->VertexBuffer;
-		draw.IndexBuffer = Mesh->IndexBuffer;
-		draw.VertexJointsDataBuffer = Mesh->VertexJointsDataBuffer;
-		draw.JointMatricesBuffer = bIsSkinned ? Skin->Animator->JointMatricesBuffer : SGlBufferRangeId {};
-		draw.WorldTransform = nodeMatrix;
-		draw.RenderTransform = bIsSkinned ? topTransform.GetMatrix() : nodeMatrix;
-	}
-	SNode::Draw(topTransform, drawCtx);
+    drawCtx.AddRenderObjects(*this, topTransform);
+    SNode::Draw(topTransform, drawCtx);
 }
 
 void SLoadedGLTF::ClearAll()
@@ -261,5 +240,56 @@ void SGlBufferVector::UpdateRaw(const SGlBufferRangeId& range, size_t numBytes, 
     if (!bEmptyUpdate)
     {
 		glNamedBufferSubData(*Id, range.Head, numBytes, pData);
+    }
+}
+
+SRenderObject::SRenderObject(bool bIsCCW, const SGeoSurface& surface, const SMeshNode& meshNode, const STransform& topTransform, const glm::mat4& nodeMatrix)
+    : IndexCount(surface.Count), FirstIndex(surface.StartIndex), Bounds(surface.Bounds), bIsCCW(bIsCCW), WorldTransform(nodeMatrix), Material(surface.Material)
+{
+    const bool bIsSkinned = meshNode.Skin && meshNode.Skin->Animator;
+    const SMeshAsset& asset = *meshNode.Mesh;
+    VertexBuffer = asset.VertexBuffer;
+    IndexBuffer = asset.IndexBuffer;
+    VertexJointsDataBuffer = asset.VertexJointsDataBuffer;
+    JointMatricesBuffer = bIsSkinned ? meshNode.Skin->Animator->GetJointMatricesBuffer() : SGlBufferRangeId {};
+    RenderTransform = bIsSkinned ? topTransform.GetMatrix() : nodeMatrix;
+}
+
+void SRenderObjectContainer::ClearAll()
+{
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            TriangleObjects[i][j].clear();
+        }
+    }
+    OtherObjects.clear();
+    TotalSize = 0;
+}
+
+void SDrawContext::AddRenderObjects(const SMeshNode& meshNode, const STransform& topTransform)
+{
+	STransform nodeTransform = topTransform * meshNode.WorldTransform;
+	glm::mat4 nodeMatrix = nodeTransform.GetMatrix();
+
+    // TODO: I believe this determinant should actually be > 0, not < 0. 
+    // Anyways, it works for now and its not a priority to understand why right now. Revisit later.
+    const bool bIsCCW = glm::determinant(nodeMatrix) < 0.f; 
+    bool bIsIndexedDraw = meshNode.Mesh->IndexBuffer.IsValid();
+    for (SGeoSurface& surface : meshNode.Mesh->Surfaces)
+    {
+        const EMaterialPass::Pass materialPass = surface.Material->MaterialPass;
+        uint32_t primitive = surface.Material->PrimitiveType;
+        SRenderObjectContainer& container = RenderObjects[materialPass];
+        if (primitive == GL_TRIANGLES && materialPass != EMaterialPass::Transparent)
+        {
+            container.TriangleObjects[bIsCCW][bIsIndexedDraw].emplace_back(bIsCCW, surface, meshNode, topTransform, nodeMatrix);
+        }
+        else
+        {
+            container.OtherObjects.emplace_back(bIsCCW, surface, meshNode, topTransform, nodeMatrix);
+        }
+        ++container.TotalSize;
     }
 }

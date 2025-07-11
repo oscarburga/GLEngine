@@ -225,9 +225,9 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		// Clear all
-		std::for_each(MainDrawContext.Surfaces.begin(), MainDrawContext.Surfaces.end(), [&](auto& vec)
+		std::for_each(MainDrawContext.RenderObjects.begin(), MainDrawContext.RenderObjects.end(), [&](auto& vec)
 		{
-			vec.clear();
+			vec.ClearAll();
 		});
 		return;
 	}
@@ -296,9 +296,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		glBindSampler(GlTexUnits::PbrOcclusion, *surface.Material->OcclusionTex.Sampler);
 
 		constexpr int windingOrder[] = { GL_CW, GL_CCW };
-		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
-		// Figure it out at some point
-		glFrontFace(windingOrder[!surface.bIsCCW]);
+		glFrontFace(windingOrder[surface.bIsCCW]);
 
 		// TODO abstract these draw calls into a function, this code is repeated in shadow depth pass.
 		if (surface.IndexBuffer)
@@ -331,37 +329,50 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
-		ImguiData.TotalNum += (uint32_t)MainDrawContext.Surfaces[pass].size();
-		for (auto& surface : MainDrawContext.Surfaces[pass])
-			RenderObject(surface);
+		ImguiData.TotalNum += (uint32_t)MainDrawContext.RenderObjects[pass].TotalSize;
+		SRenderObjectContainer& renderObjects = MainDrawContext.RenderObjects[pass];
+		// TODO batch into calls, but that will have to wait until bindless textures
+		for (int CCW = 0; CCW < 2; CCW++)
+		{
+			for (int indexed = 0; indexed < 2; indexed++)
+			{
+				for (SRenderObject& renderObject : renderObjects.TriangleObjects[CCW][indexed])
+				{
+					RenderObject(renderObject);
+				}
+			}
+		}
 
-		MainDrawContext.Surfaces[pass].clear();
+		MainDrawContext.RenderObjects[pass].ClearAll();
 	}
 
 	// Basic blend, no OIT
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		auto& blendObjects = MainDrawContext.Surfaces[EMaterialPass::Transparent];
-		auto& indices = MainDrawContext.BlendIndices;
-		indices.resize(blendObjects.size());
-		std::iota(indices.begin(), indices.end(), 0); 
-		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](size_t& i, size_t& j)
+		auto& blendObjects = MainDrawContext.RenderObjects[EMaterialPass::Transparent];
+		auto& indices = BlendIndices;
+
+		ImguiData.TotalNum += (uint32_t)blendObjects.TotalSize;
+
+		std::vector<SRenderObject>& renderObjects = blendObjects.OtherObjects;
+		indices.resize(renderObjects.size());
+		std::iota(indices.begin(), indices.end(), 0);
+		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](uint32_t i, uint32_t j)
 		{
-			const glm::vec3& loci = blendObjects[i].RenderTransform[3];
-			const glm::vec3& locj = blendObjects[j].RenderTransform[3];
+			const glm::vec3& loci = renderObjects[i].RenderTransform[3];
+			const glm::vec3& locj = renderObjects[j].RenderTransform[3];
 			const float di = glm::length2(camPos - loci);
 			const float dj = glm::length2(camPos - locj);
 			return di > dj;
 		});
 
-		ImguiData.TotalNum += (uint32_t)MainDrawContext.Surfaces[EMaterialPass::Transparent].size();
-		for (size_t& idx : indices)
+		for (uint32_t idx : indices)
 		{
-			auto& surface = blendObjects[idx];
+			auto& surface = renderObjects[idx];
 			RenderObject(surface);
 		}
-		blendObjects.clear();
+		blendObjects.ClearAll();
 		glDisable(GL_BLEND);
 	}
 

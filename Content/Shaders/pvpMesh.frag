@@ -39,7 +39,7 @@ struct SPbrMaterial {
 	bool bMetalRoughBound;
 	bool bNormalBound;
 	bool bOcclusionBound; // 52
-	int _pad0; // 56
+	bool bIgnoreLighting; // 56
 	int _pad1; // 60
 	int _pad2; // 64
 };
@@ -55,7 +55,6 @@ layout (location = 4) uniform sampler2D OcclusionTex;
 layout (location = 5) uniform sampler2DArrayShadow ShadowDepthTexArray;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 8) uniform int MaterialIndex;
-layout (location = 32) uniform bool bIgnoreLighting;
 layout (location = 33) uniform bool bShowDebugNormals;
 layout (location = 35) uniform bool bDebugCsmTint;
 
@@ -253,7 +252,7 @@ void main()
 	if (srcColor.a < pbrMaterial.AlphaCutoff)
 		discard;
 
-	if (bIgnoreLighting) {
+	if (pbrMaterial.bIgnoreLighting) {
 		FragColor = srcColor;
 		return;
 	}

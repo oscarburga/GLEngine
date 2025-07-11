@@ -153,64 +153,71 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	SFrustum shadowsFrustum;
 	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	ShadowsShader.Use();
-	ImguiData.TotalNum = (uint32_t)DrawContext.Surfaces[EMaterialPass::MainColor].size();
+	ImguiData.TotalNum = (uint32_t)DrawContext.RenderObjects[EMaterialPass::MainColor].TotalSize;
 	ImguiData.CulledNum = 0;
 	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, CGlRenderer::Get()->JointMatricesBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
-	for (auto& surface : DrawContext.Surfaces[EMaterialPass::MainColor])
+
+	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
+	// TODO batch into calls, but that will have to wait until bindless textures
+	for (int CCW = 0; CCW < 2; CCW++)
 	{
-		if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->UboData.bIgnoreLightning)
+		for (int indexed = 0; indexed < 2; indexed++)
 		{
-			++ImguiData.CulledNum;
-			continue;
-		}
-
-		// PER-OBJECT UNIFORMS
-		// Eventually we move this & other per-object data into big buffer(s) with per-object data
-		{
-			ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
-			ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
-			ShadowsShader.SetUniform(GlUniformLocs::JointMatricesBaseIndex, (int)surface.JointMatricesBuffer.GetHeadInElems());
-			if (surface.VertexJointsDataBuffer)
+			for (const SRenderObject& surface : renderObjects.TriangleObjects[CCW][indexed])
 			{
-				// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
-				int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
-				assert(boneBufferOffset <= std::numeric_limits<int>::max());
-				ShadowsShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+				if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->UboData.bIgnoreLighting)
+				{
+					++ImguiData.CulledNum;
+					continue;
+				}
+
+				// PER-OBJECT UNIFORMS
+				// Eventually we move this & other per-object data into big buffer(s) with per-object data
+				{
+					ShadowsShader.SetUniform(GlUniformLocs::ModelMat, surface.RenderTransform);
+					ShadowsShader.SetUniform(GlUniformLocs::HasJoints, surface.VertexJointsDataBuffer && surface.JointMatricesBuffer);
+					ShadowsShader.SetUniform(GlUniformLocs::JointMatricesBaseIndex, (int)surface.JointMatricesBuffer.GetHeadInElems());
+					if (surface.VertexJointsDataBuffer)
+					{
+						// To get the index offset in joints data buffer, we substract the base vertex to bring the idx back to [0:N) and add the joints base index for the bone buffer
+						int64_t boneBufferOffset = int64_t(surface.VertexJointsDataBuffer.GetHeadInElems()) - int64_t(surface.VertexBuffer.GetHeadInElems());
+						assert(boneBufferOffset <= std::numeric_limits<int>::max());
+						ShadowsShader.SetUniform(GlUniformLocs::BonesIndexOffset, (int)boneBufferOffset);
+					}
+				}
+
+				constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
+				glFrontFace(windingOrder[surface.bIsCCW]); ;
+
+				if (surface.IndexBuffer)
+				{
+					void* offset = (void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))); // offset is in BYTESSSS not in index type!!
+					GLsizei indexCount = surface.IndexCount;
+					GLint baseVertex = (GLint)surface.VertexBuffer.GetHeadInElems();
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
+					glMultiDrawElementsBaseVertex(
+						surface.Material->PrimitiveType,
+						&indexCount,
+						GL_UNSIGNED_INT,
+						&offset, // offset is in BYTESSSS not in index type!!
+						1,
+						&baseVertex // add to each index so it goes to the correct slice of the big ssbo
+					);
+				}
+				else
+				{
+					GLint first = surface.FirstIndex + GLint(surface.VertexBuffer.GetHeadInElems());
+					GLsizei count = surface.IndexCount;
+					glMultiDrawArrays(
+						surface.Material->PrimitiveType,
+						&first,
+						&count,
+						1
+					);
+				}
 			}
-		}
-
-		// TODO: there's something wrong somewhere with the face culling / winding order, should not need to invert this...
-		// Figure it out at some point
-		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
-		glFrontFace(windingOrder[!surface.bIsCCW]); ;
-
-		if (surface.IndexBuffer)
-		{
-			void* offset = (void*)(surface.IndexBuffer.Head + (surface.FirstIndex * sizeof(GLuint))); // offset is in BYTESSSS not in index type!!
-			GLsizei indexCount = surface.IndexCount;
-			GLint baseVertex = (GLint)surface.VertexBuffer.GetHeadInElems();
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *surface.IndexBuffer);
-			glMultiDrawElementsBaseVertex(
-				surface.Material->PrimitiveType,
-				&indexCount,
-				GL_UNSIGNED_INT,
-				&offset, // offset is in BYTESSSS not in index type!!
-				1,
-				&baseVertex // add to each index so it goes to the correct slice of the big ssbo
-			);
-		}
-		else
-		{
-			GLint first = surface.FirstIndex + GLint(surface.VertexBuffer.GetHeadInElems());
-			GLsizei count = surface.IndexCount;
-			glMultiDrawArrays(
-				surface.Material->PrimitiveType,
-				&first,
-				&count,
-				1
-			);
 		}
 	}
 

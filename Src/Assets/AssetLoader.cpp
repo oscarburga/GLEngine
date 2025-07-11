@@ -146,10 +146,10 @@ void CAssetLoader::LoadDefaultAssets()
 			vertices[i + 1].Position[axis % 3] = (i < 6) ? 1.f : -1.f;
 			vertices[i].Color = vertices[i + 1].Color = (i < 6) ? colors[axis] : glm::vec4(1.f);
 		}
-		CGlRenderer::Get()->MainVertexBuffer.Append(12, vertices);
+		axisMesh.VertexBuffer = CGlRenderer::Get()->MainVertexBuffer.Append(12, vertices);
 
 		auto axisMaterial = std::make_shared<SPbrMaterial>(*WhiteMaterial); // Copy of the white material, but ignore lighting
-		axisMaterial->UboData.bIgnoreLightning = true;
+		axisMaterial->UboData.bIgnoreLighting = true;
 		axisMaterial->PrimitiveType = GL_LINES;
 		UpdateMaterialInMainBuffer(*axisMaterial);
 		SGeoSurface surface { 

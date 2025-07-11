@@ -14,6 +14,7 @@ struct TId
 	IntType& operator *() { return Id; }
 	const IntType& operator *() const { return Id; } // const version
 	inline bool IsNull() const { return Id == NullId; }
+	inline bool IsValid() const { return Id != NullId; }
 	inline operator IntType() const { return Id; }
 	inline operator bool() const { return !IsNull(); }
 	inline TId& operator =(IntType id) { Id = id; return *this; }
