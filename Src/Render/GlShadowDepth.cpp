@@ -238,7 +238,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 
 		if (IndexedDraws.CommandSpans[CCW].size())
 		{
-			ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
+			// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
 			auto rangeId = MdiBuffer.Append(IndexedDraws.CommandSpans[CCW].size(), IndexedDraws.CommandSpans[CCW].data());
 			glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, rangeId.GetNumElems(), 0);
 			MdiBuffer.Reset();

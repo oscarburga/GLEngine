@@ -14,10 +14,10 @@ typedef void (*GlFunctionLoaderFuncType)(const char*);
 class CGlRenderer : public IImguiObject
 {
 public:
-	inline static int UBOOffsetAlignment = 0;
-	inline static int UBOMaxBlockSize = 0;
-	inline static int ShaderMaxMaterialSize = 100;
-	inline static int DrawDataBufferMaxSize = 100;
+	inline static size_t UBOOffsetAlignment = 0;
+	inline static size_t UBOMaxBlockSize = 0;
+	inline static size_t ShaderMaxMaterialSize = 100;
+	inline static size_t DrawDataBufferMaxSize = 100;
 private:
 	CGlRenderer() { bShowImguiPanel = true; };
 	CGlRenderer(const CGlRenderer&) = delete;

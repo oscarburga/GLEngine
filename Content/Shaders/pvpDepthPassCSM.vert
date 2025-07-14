@@ -62,12 +62,12 @@ layout (location = 0) uniform mat4 Model;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 7) uniform int BoneBufferOffset;
 layout (location = 9) uniform int JointMatricesIndexOffset;
-layout (location = 10) uniform int BaseDrawId;
+// layout (location = 10) uniform int BaseDrawId;
 
 void main()
 {
 	const SVertex vertex = vertices[gl_VertexID];
-	SDrawObjectData drawData = DrawObjectData[BaseDrawId + gl_DrawID];
+	SDrawObjectData drawData = DrawObjectData[gl_BaseInstance];
 	mat4 toWorldTransMat = drawData.RenderTransform;
 	if (drawData.bHasJoints) {
 		SVertexJointData jointsData = vertexJointData[drawData.BonesIndexOffset + gl_VertexID];
