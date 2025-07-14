@@ -1,13 +1,13 @@
 #include "Engine.h"
 
-#include <GLFW/glfw3.h>
-#include <Render/GlRenderer.h>
-#include "Tools/ImguiTools.h"
-
-#include <cassert>
+#include <array>
 #include <iostream>
 #include <format>
-#include <array>
+
+#include "GLFW/glfw3.h"
+#include "Render/GlRenderer.h"
+#include "Render/GlCamera.h"
+#include "Tools/ImguiTools.h"
 
 CEngine* CEngine::Engine = nullptr;
 
@@ -116,7 +116,7 @@ void CEngine::ProcessInput(float deltaTime)
 	if (glfwGetInputMode(Viewport.Window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
 		return;
 
-	CGlRenderer::Get()->ActiveCamera.UpdateCameraFromInput(Viewport.Window, deltax, deltay, deltaTime);
+	CGlRenderer::Get()->ActiveCamera->UpdateCameraFromInput(Viewport.Window, deltax, deltay, deltaTime);
 }
 
 void CEngine::OnWindowResize(GLFWwindow* window, int width, int height)

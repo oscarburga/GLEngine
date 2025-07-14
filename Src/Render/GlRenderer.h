@@ -1,13 +1,18 @@
 #pragma once
 
-#include "GlRenderStructs.h"
+#include <memory>
+
+#include "GlBufferVector.h"
 #include "GlShader.h"
-#include "GlCamera.h"
-#include "GlShadowDepth.h"
 #include "Tools/ImguiTools.h"
 
 class CEngine;
+class CGlShadowDepthPass;
+class SGlCamera;
+
 struct SViewport;
+struct SSceneData;
+struct SDrawContext;
 
 typedef void (*GlFunctionLoaderFuncType)(const char*);
 
@@ -19,7 +24,7 @@ public:
 	inline static size_t ShaderMaxMaterialSize = 100;
 	inline static size_t DrawDataBufferMaxSize = 100;
 private:
-	CGlRenderer() { bShowImguiPanel = true; };
+	CGlRenderer();;
 	CGlRenderer(const CGlRenderer&) = delete;
 	CGlRenderer(CGlRenderer&&) = delete;
 	~CGlRenderer();
@@ -31,9 +36,9 @@ public:
 	SGlBufferVector MainMaterialBuffer;
 	SGlBufferVector JointMatricesBuffer; // TODO needs double buffering, potentially persistent mapping
 	SGlBufferVector DrawDataBuffer; // TODO needs double buffering, potentially persistent mapping
-	SGlCamera ActiveCamera {};
-	CGlShadowDepthPass ShadowPass {};
-	SSceneData SceneData {};
+	std::unique_ptr<SGlCamera> ActiveCamera {};
+	std::unique_ptr<CGlShadowDepthPass> ShadowPass {};
+	std::unique_ptr<SSceneData> SceneData {};
 	inline SGlBufferId GetSceneDataUbo() const { return SceneDataBuffer; }
 	CGlShader PvpShader { 0 };
 	CGlShader QuadShader { 0 };
@@ -47,7 +52,7 @@ public:
 	void OnWindowResize(CEngine* Engine, const SViewport& Viewport);
 
 	virtual void ShowImguiPanel() override;
-	SDrawContext MainDrawContext {};
+	std::unique_ptr<SDrawContext> MainDrawContext {};
 private:
 	SGlVaoId EmptyVao {};
 	SGlBufferId Quad2DBuffer {};

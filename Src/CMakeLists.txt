@@ -9,7 +9,6 @@ set(SOURCE_LIST
 	Math/EngineMath.h
 	Math/EngineMath.cpp
 	Math/Bounds.h
-	Math/Bounds.cpp
 	Math/Frustum.h
 	Math/Frustum.cpp
 	Math/Plane.h

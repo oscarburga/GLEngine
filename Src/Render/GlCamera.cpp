@@ -1,12 +1,10 @@
 #include "GlCamera.h"
 
-#include <GLFW/glfw3.h>
-#include "GlRenderStructs.h"
-#include <iostream>
+#include "GLFW/glfw3.h"
 #include "Engine.h"
 #include "Math/EngineMath.h"
-#include <algorithm>
-#include "FrustumCulling.h"
+#include "Math/Frustum.h"
+#include "SceneData.h"
 
 void SGlCamera::CalcViewMatrix(glm::mat4& outMat) const
 {
@@ -93,10 +91,10 @@ void SGlCamera::CalcFrustum(SFrustum* outFrustum, std::array<vec3, 8>* outCorner
 			outFrustum->Right = { glm::cross(up, frontFar + (right * perspFrustumSizes[1].x)), Position};
 			outFrustum->Bottom = { glm::cross(right, frontFar - (up * perspFrustumSizes[1].y)), Position};
 			outFrustum->Top = { glm::cross(frontFar + (up * perspFrustumSizes[1].y), right), Position};
-			std::for_each(outFrustum->Planes.begin(), outFrustum->Planes.end(), [&](auto& p) 
-			{ 
-				p.Normal = glm::normalize(p.Normal); 
-			});
+			for (SPlane& plane : outFrustum->Planes)
+			{
+				plane.Normal = glm::normalize(plane.Normal);
+			}
 		}
 		else
 		{

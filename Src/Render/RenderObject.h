@@ -9,7 +9,6 @@
 #include "Math/EngineMath.h"
 #include "Utils/GenericConcepts.h"
 
-
 struct SGeoSurface;
 struct SMeshNode;
 struct SPbrMaterial;
@@ -50,6 +49,10 @@ struct SRenderObjectContainer
 	void ClearAll();
 };
 
+// TODO: maybe have SDrawContext inherit from array<SRenderObjectContainer, MaterialPass::Count> 
+// instead of having it as a class member for seamless access?
+// Also, it would be sweet to have a custom iterator over the render objects that also provides
+// the pipeline state of the object it's iterating over (i.e. it->bIsCCW, it->bIsIndexed, it->bIsTriangle);
 struct SDrawContext
 {
 	std::array<SRenderObjectContainer, EMaterialPass::Count> RenderObjects;

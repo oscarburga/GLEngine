@@ -1,12 +1,10 @@
 #include "RenderObject.h"
 
-SDrawObjectGpuData::SDrawObjectGpuData(const SRenderObject& render) :
-	RenderTransform(render.RenderTransform),
-	HasJoints(render.JointMatricesBuffer && render.VertexJointsDataBuffer),
-	JointMatricesBaseIndex((uint32_t)render.JointMatricesBuffer.GetHeadInElems()),
-	MaterialIndex((uint32_t)render.Material->DataBuffer.GetHeadInElems()),
-	BonesIndexOffset(int32_t(render.VertexJointsDataBuffer.GetHeadInElems<int64_t>() - render.VertexBuffer.GetHeadInElems<int64_t>()))
-{};
+#include "glad/glad.h"
+#include "GeoSurface.h"
+#include "Materials.h"
+#include "SceneGraph.h"
+#include "Skinning.h"
 
 SRenderObject::SRenderObject(bool bIsCCW, const SGeoSurface& surface, const SMeshNode& meshNode, const STransform& topTransform, const glm::mat4& nodeMatrix)
     : IndexCount(surface.Count), FirstIndex(surface.StartIndex), Bounds(surface.Bounds), bIsCCW(bIsCCW), WorldTransform(nodeMatrix), Material(surface.Material)

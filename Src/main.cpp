@@ -1,14 +1,16 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
 
 #include <iostream>
 #include <format>
 
-#include "Utils/RefIgnore.h"
-#include "Engine.h"
 #include "Assets/AssetLoader.h"
-#include <Render/GlRenderer.h>
+#include "Engine.h"
 #include "Math/EngineMath.h"
+#include <Render/GlRenderer.h>
+#include "Render/SceneGraph.h"
+#include "Render/Skinning.h"
+#include "Utils/RefIgnore.h"
 
 int main(int argc, char** argv)
 {
@@ -54,15 +56,15 @@ int main(int argc, char** argv)
 	CGlRenderer* renderer = CGlRenderer::Get();
 	engine->PreRenderFuncs.emplace_back([&, totalTime = 0.f](float deltaTime) mutable
 	{
-		gltf->Draw(STransform {}, renderer->MainDrawContext);
+		gltf->Draw(STransform {}, *renderer->MainDrawContext);
 		dajiSkin->Animator->UpdateAnimation(deltaTime);
 		gokuSkin->Animator->UpdateAnimation(deltaTime);
 		astroSkin->Animator->UpdateAnimation(deltaTime);
 		totalTime += deltaTime;
-		daji->Draw(STransform{}, renderer->MainDrawContext);
-		goku->Draw(STransform{}, renderer->MainDrawContext);
-		astronaut->Draw(STransform{}, renderer->MainDrawContext);
-		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, renderer->MainDrawContext);
+		daji->Draw(STransform{}, *renderer->MainDrawContext);
+		goku->Draw(STransform{}, *renderer->MainDrawContext);
+		astronaut->Draw(STransform{}, *renderer->MainDrawContext);
+		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, *renderer->MainDrawContext);
 	});
 	engine->MainLoop();
 

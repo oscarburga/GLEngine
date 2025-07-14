@@ -1,9 +1,14 @@
 #pragma once
 
-#include "GlRenderStructs.h"
+#include <span>
+
+#include "GlBufferVector.h"
 #include "GlShader.h"
 #include "GlCamera.h"
-#include <span>
+#include "GlDrawCommands.h"
+
+struct SSceneData;
+struct SDrawContext;
 
 class CGlShadowDepthPass
 {

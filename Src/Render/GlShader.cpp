@@ -1,9 +1,7 @@
 #include "GlShader.h"
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <fstream>
-#include <sstream>
-#include <iostream>
+
+#include "glad/glad.h"
+#include "glm/glm.hpp"
 
 void CGlShader::Use()
 {

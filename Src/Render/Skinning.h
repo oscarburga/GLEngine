@@ -1,15 +1,16 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "GlIdTypes.h"
 #include "Utils/GenericConcepts.h"
 #include "Math/EngineMath.h"
 
+class CAnimator;
 struct SNode;
 struct SSkinAsset;
-namespace std { class string; }
 
 template<typename ValueType>
 struct SKeyFrame
@@ -85,11 +86,30 @@ struct SAnimationAsset
 	std::weak_ptr<struct SSkinAsset> OwnerSkin {};
 };
 
+struct SJoint
+{
+	uint32_t JointId = 0;
+	std::shared_ptr<SNode> Node {};
+	glm::mat4 InverseBindMatrix { 1.f };
+};
+
+struct SSkinAsset
+{
+	std::string Name;
+	std::vector<SJoint> AllJoints;
+	std::shared_ptr<SNode> SkeletonRoot;
+	std::unordered_map<std::string, SAnimationAsset> Animations;
+	std::unique_ptr<CAnimator> Animator = nullptr;
+	
+	void InitAnimator();
+
+};
+
 /*
-* BIG TODO: Figure out a better design for separating objects from instances. 
+* BIG TODO: Figure out a better design for separating skinned objects from instances. 
 * Currently just trying to get the features I want done asap, but current design doesn't 
 * really allow for nicely having multiple instances of the same objects (specially animations, 
-* currently using & modifying the actual SAnimationAsset data in-plcae for animations).
+* currently using & modifying the actual SAnimationAsset data in-place for animations).
 */
 
 class CAnimator
@@ -114,11 +134,4 @@ public:
 	void UpdateJointMatrices();
 	void StopAnimation();
 	inline const SGlBufferRangeId& GetJointMatricesBuffer() { return JointMatricesBuffer; }
-};
-
-struct SJoint
-{
-	uint32_t JointId = 0;
-	std::shared_ptr<SNode> Node {};
-	glm::mat4 InverseBindMatrix { 1.f };
 };

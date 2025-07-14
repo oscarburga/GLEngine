@@ -1,10 +1,17 @@
-#include <glad/glad.h>
-#include "Engine.h"
-#include "Math/EngineMath.h"
 #include "GlShadowDepth.h"
-#include "Assets/AssetLoader.h"
-#include "GlRenderer.h"
+
+#include "glad/glad.h"
+
 #include <iostream>
+
+#include "Assets/AssetLoader.h"
+#include "Engine.h"
+#include "GlRenderer.h"
+#include "Math/EngineMath.h"
+#include "Math/Frustum.h"
+#include "Materials.h"
+#include "RenderObject.h"
+#include "SceneData.h"
 
 CGlShadowDepthPass::~CGlShadowDepthPass()
 {

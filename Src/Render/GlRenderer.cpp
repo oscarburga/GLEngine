@@ -1,11 +1,20 @@
-#include <glad/glad.h>
 #include "GlRenderer.h"
+
 #include <iostream>
 #include <format>
+
+#include "glad/glad.h"
+#include "imgui.h"
+
+#include "Assets/AssetLoader.h"
 #include "Engine.h"
+#include "GlDrawCommands.h"
+#include "GlShadowDepth.h"
+#include "Materials.h"
 #include "Math/EngineMath.h"
-#include <Assets/AssetLoader.h>
-#include <imgui.h>
+#include "Math/Frustum.h"
+#include "RenderObject.h"
+#include "SceneData.h"
 
 CGlRenderer* CGlRenderer::Renderer = nullptr;
 
@@ -56,6 +65,8 @@ namespace
 		std::cerr << '\n';
 	}
 }
+
+CGlRenderer::CGlRenderer() { bShowImguiPanel = true; }
 
 CGlRenderer::~CGlRenderer()
 {
@@ -129,10 +140,11 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	// Scene data uniform buffer
 	{
 		glCreateBuffers(1, &*SceneDataBuffer);
-		SceneData.SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 2.f);
-		SceneData.SunlightColor = glm::vec4(1.f);
-		ImguiData.SunlightDirection = SceneData.SunlightDirection;
-		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), &SceneData, GL_DYNAMIC_STORAGE_BIT);
+		SceneData = std::make_unique<SSceneData>();
+		SceneData->SunlightDirection = glm::vec4(glm::normalize(glm::vec3(-0.2f, -1.f, -0.3f)), 2.f);
+		SceneData->SunlightColor = glm::vec4(1.f);
+		ImguiData.SunlightDirection = SceneData->SunlightDirection;
+		glNamedBufferStorage(*SceneDataBuffer, sizeof(SSceneData), SceneData.get(), GL_DYNAMIC_STORAGE_BIT);
 		glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::SceneData, *SceneDataBuffer);
 	}
 	// Main buffers
@@ -173,11 +185,12 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 
 	CAssetLoader::Create();
 
-	ShadowPass.Init();
+	ShadowPass = std::make_unique<CGlShadowDepthPass>();
+	ShadowPass->Init();
 
 	SShaderLoadArgs fsArgs("Shaders/pvpMesh.frag");
 	fsArgs
-		.SetArg(ShadowPass.NumCascadesShaderArgName, ShadowPass.GetNumCascades())
+		.SetArg(ShadowPass->NumCascadesShaderArgName, ShadowPass->GetNumCascades())
 		.SetArg("MAX_MATERIALS", ShaderMaxMaterialSize);
 	if (auto pvpShader = CAssetLoader::LoadShaderProgram("Shaders/pvpMesh.vert", fsArgs))
 		PvpShader = *pvpShader;
@@ -187,6 +200,9 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		QuadShader = *quadShader;
 
 	assert(PvpShader.Id && QuadShader.Id);
+
+	MainDrawContext = std::make_unique<SDrawContext>();
+	ActiveCamera = std::make_unique<SGlCamera>();
 }
 
 void CGlRenderer::Destroy()
@@ -201,11 +217,11 @@ void CGlRenderer::Destroy()
 void CGlRenderer::RenderScene(float deltaTime)
 {
 	// Refresh SceneData
-	SceneData.SunlightDirection = vec4(glm::normalize(vec3(ImguiData.SunlightDirection)), ImguiData.SunlightDirection.w);
-	ActiveCamera.UpdateSceneData(SceneData);
-	ShadowPass.UpdateSceneData(SceneData, ActiveCamera);
-	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), &SceneData);
-	ShadowPass.RenderShadowDepth(SceneData, MainDrawContext);
+	SceneData->SunlightDirection = vec4(glm::normalize(vec3(ImguiData.SunlightDirection)), ImguiData.SunlightDirection.w);
+	ActiveCamera->UpdateSceneData(*SceneData);
+	ShadowPass->UpdateSceneData(*SceneData, *ActiveCamera);
+	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), SceneData.get());
+	ShadowPass->RenderShadowDepth(*SceneData, *MainDrawContext);
 
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -219,13 +235,13 @@ void CGlRenderer::RenderScene(float deltaTime)
 	{
 		// render shadow depth onto quad to screen
 		QuadShader.Use();
-		glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
+		glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass->ShadowsTexArray);
 		QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 		QuadShader.SetUniform(GlUniformLocs::DebugShadowDepthMapIndex, ImguiData.ShadowDepthMapIndex);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		// Clear all
-		std::for_each(MainDrawContext.RenderObjects.begin(), MainDrawContext.RenderObjects.end(), [&](auto& vec)
+		std::for_each(MainDrawContext->RenderObjects.begin(), MainDrawContext->RenderObjects.end(), [&](auto& vec)
 		{
 			vec.ClearAll();
 		});
@@ -234,7 +250,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	// Culling... lots of room for optimization here
 	SFrustum mainCameraFrustum; 
-	ActiveCamera.CalcFrustum(&mainCameraFrustum, nullptr);
+	ActiveCamera->CalcFrustum(&mainCameraFrustum, nullptr);
 	// Draw main color & masked objects
 	// PvpShader.SetUniform(GlUniformLocs::ShowDebugNormals, true);
 
@@ -251,7 +267,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 	PvpShader.SetUniform(GlUniformLocs::DebugCsmTint, ImguiData.bDebugCsmTint);
 
-	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass.ShadowsTexArray);
+	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass->ShadowsTexArray);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, MainIndexBuffer.Id);
 	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, MainMaterialBuffer.Id);
 	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, JointMatricesBuffer.Id);
@@ -329,8 +345,8 @@ void CGlRenderer::RenderScene(float deltaTime)
 
 	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; pass++)
 	{
-		ImguiData.TotalNum += (uint32_t)MainDrawContext.RenderObjects[pass].TotalSize;
-		SRenderObjectContainer& renderObjects = MainDrawContext.RenderObjects[pass];
+		ImguiData.TotalNum += (uint32_t)MainDrawContext->RenderObjects[pass].TotalSize;
+		SRenderObjectContainer& renderObjects = MainDrawContext->RenderObjects[pass];
 		// TODO batch into calls, but that will have to wait until bindless textures
 		for (int CCW = 0; CCW < 2; CCW++)
 		{
@@ -343,14 +359,14 @@ void CGlRenderer::RenderScene(float deltaTime)
 			}
 		}
 
-		MainDrawContext.RenderObjects[pass].ClearAll();
+		MainDrawContext->RenderObjects[pass].ClearAll();
 	}
 
 	// Basic blend, no OIT
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		auto& blendObjects = MainDrawContext.RenderObjects[EMaterialPass::Transparent];
+		auto& blendObjects = MainDrawContext->RenderObjects[EMaterialPass::Transparent];
 		auto& indices = BlendIndices;
 
 		ImguiData.TotalNum += (uint32_t)blendObjects.TotalSize;
@@ -358,7 +374,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 		std::vector<SRenderObject>& renderObjects = blendObjects.OtherObjects;
 		indices.resize(renderObjects.size());
 		std::iota(indices.begin(), indices.end(), 0);
-		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData.CameraPos)](uint32_t i, uint32_t j)
+		std::sort(indices.begin(), indices.end(), [&, camPos = glm::vec3(SceneData->CameraPos)](uint32_t i, uint32_t j)
 		{
 			const glm::vec3& loci = renderObjects[i].RenderTransform[3];
 			const glm::vec3& locj = renderObjects[j].RenderTransform[3];
@@ -389,7 +405,7 @@ void CGlRenderer::ShowImguiPanel()
 {
 	if (ImGui::Begin("Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::Text("Shadows culling %u/%u", ShadowPass.ImguiData.CulledNum, ShadowPass.ImguiData.TotalNum);
+		ImGui::Text("Shadows culling %u/%u", ShadowPass->ImguiData.CulledNum, ShadowPass->ImguiData.TotalNum);
 		ImGui::Text("Color pass culling %u/%u", ImguiData.CulledNum, ImguiData.TotalNum);
 
 		if (ImGui::CollapsingHeader("Debug"))
@@ -401,11 +417,11 @@ void CGlRenderer::ShowImguiPanel()
 
 		if (ImGui::CollapsingHeader("Scene settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::InputFloat("Camera FOV", &ActiveCamera.PerspectiveFOV);
+			ImGui::InputFloat("Camera FOV", &ActiveCamera->PerspectiveFOV);
 			ImGui::InputFloat4("Sunlight dir (w is intensity)", &ImguiData.SunlightDirection.x);
-			ImGui::ColorEdit3("Sunlight color", &SceneData.SunlightColor.x);
-			ImGui::InputFloat2("Shadows ortho size scale", &ShadowPass.ImguiData.OrthoSizeScale.x);
-			ImGui::InputFloat2("Shadows ortho size pad", &ShadowPass.ImguiData.OrthoSizePadding.x);
+			ImGui::ColorEdit3("Sunlight color", &SceneData->SunlightColor.x);
+			ImGui::InputFloat2("Shadows ortho size scale", &ShadowPass->ImguiData.OrthoSizeScale.x);
+			ImGui::InputFloat2("Shadows ortho size pad", &ShadowPass->ImguiData.OrthoSizePadding.x);
 		}
 	}
 	ImGui::End();

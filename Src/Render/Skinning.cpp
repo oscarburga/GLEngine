@@ -1,13 +1,7 @@
-#include "GlShader.h"
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <format>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include "GlRenderStructs.h"
-#include <Utils/ForEachIndexed.h>
+#include "Skinning.h"
+
 #include "GlRenderer.h"
+#include "SceneGraph.h"
 
 CAnimator::CAnimator(SSkinAsset* ownerSkin) : OwnerSkin(ownerSkin), JointMatrices(ownerSkin->AllJoints.size())
 {
@@ -110,4 +104,11 @@ void SJointAnimData::StepToTime(float animTime)
     glm::vec3 scale = Scales.StepToTime(animTime, jointOriginalTransform.GetScale());
     glm::quat rot = Rotations.StepToTime(animTime, jointOriginalTransform.GetRotation());
     JointNode->LocalTransform = STransform { pos, rot, scale };
+}
+
+void SSkinAsset::InitAnimator()
+{
+    assert(AllJoints.size());
+    // Animator = std::make_unique<CAnimator>(this, maxJoints);
+    Animator = std::unique_ptr<CAnimator>(new CAnimator(this));
 }
