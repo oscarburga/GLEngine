@@ -32,6 +32,18 @@ struct SGlBufferRangeId : public SGlBufferId
 	T GetHeadInElems() const { assert(Head % ElemSize == 0);  return T(Head / ElemSize); };
 };
 
+namespace EMaterialPass
+{
+	enum Pass : uint8_t
+	{
+		First,
+		MainColor = First,
+		MainColorMasked,
+		Transparent,
+		Count
+	};
+}
+
 namespace GlBindPoints
 {
 	namespace Ubo

@@ -10,8 +10,14 @@ set(SOURCE_LIST
 	Math/EngineMath.cpp
 	
 	# RENDERING
+	Render/FrustumCulling.h
+	Render/FrustumCulling.cpp
+	Render/GlBufferVector.h
+	Render/GlBufferVector.cpp
 	Render/GlCamera.h
 	Render/GlCamera.cpp
+	Render/GlDrawCommands.h
+	Render/GlDrawCommands.cpp
 	Render/GlIdTypes.h
 	Render/GlRenderStructs.h
 	Render/GlRenderStructs.cpp
@@ -21,6 +27,12 @@ set(SOURCE_LIST
 	Render/GlShader.cpp
 	Render/GlShadowDepth.cpp
 	Render/GlShadowDepth.h
+	Render/Materials.h
+	Render/Materials.cpp
+	Render/SceneGraph.h
+	Render/SceneGraph.cpp
+	Render/Skinning.h
+	Render/Skinning.cpp
 
 	# UTILS
 	Utils/GenericConcepts.h
