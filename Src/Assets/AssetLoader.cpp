@@ -64,6 +64,7 @@ namespace
 
 	inline void UpdateMaterialInMainBuffer(SPbrMaterial& material)
 	{
+		material.UpdateTextureHandles();
 		if (!material.DataBuffer)
 		{
 			material.DataBuffer = CGlRenderer::Get()->MainMaterialBuffer.Append(1, &material.UboData);
@@ -457,6 +458,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					{
 						// No tangents found and don't want to implement calculating them, just disable normals on this material.
 						surface.Material->UboData.bNormalBound = false;
+						surface.Material->NormalTex = SGlTexture {};
 						UpdateMaterialInMainBuffer(*surface.Material);
 						std::cerr << std::format("\tOne of the primitives uses a normal-mapped material, but provides no tangents.\n"
 							"\t\tFallback: setting material {} to not use normal map\n", surface.Material->Name);

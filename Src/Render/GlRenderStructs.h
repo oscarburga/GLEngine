@@ -74,6 +74,7 @@ struct SGlTexture
 {
 	SGlTextureId Texture {};
 	SGlSamplerId Sampler {};
+	uint64_t GetTextureHandle() const;
 };
 
 namespace EMaterialPass
@@ -104,6 +105,10 @@ struct SPbrMaterialUboData
 	uint32_t bOcclusionBound = false;
 	uint32_t bIgnoreLighting = false;
 	uint32_t _padding[2] = {}; // Padding for std140
+	uint64_t ColorTexHandle = 0;
+	uint64_t MetalRoughTexHandle = 0;
+	uint64_t NormalTexHandle = 0;
+	uint64_t OcclusionTexHandle = 0;
 };
 
 struct SPbrMaterial
@@ -118,6 +123,10 @@ struct SPbrMaterial
 	// SGPUTexture EmissiveTex {};
 	SGlBufferRangeId DataBuffer {};
 	SPbrMaterialUboData UboData {};
+
+	void UpdateTextureHandles();
+	void MakeTextureHandlesResident() const;
+	void MakeTextureHandlesNonResident() const;
 };
 
 struct SBounds
@@ -198,14 +207,44 @@ struct SRenderObjectContainer
 	void ClearAll();
 };
 
+// TODO: maybe have SDrawContext inherit from array<SRenderObjectContainer, MaterialPass::Count> 
+// instead of having it as a class member for seamless access?
+// Also, it would be sweet to have a custom iterator over the render objects that also provides
+// the pipeline state of the object it's iterating over (i.e. it->bIsCCW, it->bIsIndexed, it->bIsTriangle);
 struct SDrawContext
 {
 	std::array<SRenderObjectContainer, EMaterialPass::Count> RenderObjects;
 	void AddRenderObjects(const SMeshNode& meshNode, const STransform& topTransform);
 };
 
+struct SDrawArraysCommand
+{
+	GLuint Count;
+	GLuint InstanceCount;
+	GLuint FirstIndex;
+	GLuint BaseInstance;
+};
+
+struct SDrawElementsCommand
+{
+	GLuint Count;
+	GLuint InstanceCount;
+	GLuint FirstIndex;
+	GLint BaseVertex;
+	GLuint BaseInstance;
+};
+
 struct SDrawObjectGpuData
 {
+	SDrawObjectGpuData() = default;
+	SDrawObjectGpuData(const SRenderObject& render) :
+		RenderTransform(render.RenderTransform),
+		HasJoints(render.JointMatricesBuffer && render.VertexJointsDataBuffer),
+		JointMatricesBaseIndex((uint32_t)render.JointMatricesBuffer.GetHeadInElems()),
+		MaterialIndex((uint32_t)render.Material->DataBuffer.GetHeadInElems()),
+		BonesIndexOffset(int32_t(render.VertexJointsDataBuffer.GetHeadInElems<int64_t>() - render.VertexBuffer.GetHeadInElems<int64_t>()))
+	{};
+
 	glm::mat4 RenderTransform {};
 	uint32_t HasJoints = false;
 	uint32_t JointMatricesBaseIndex = 0;

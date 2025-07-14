@@ -4,6 +4,7 @@
 #define NumCascades 3
 #define MAX_CASCADES 16
 #define MAX_MATERIALS 100
+#define MAX_DRAWS 100
 #define COMPILEARG_END
 
 in VS_OUT {
@@ -42,10 +43,24 @@ struct SPbrMaterial {
 	bool bIgnoreLighting; // 56
 	int _pad1; // 60
 	int _pad2; // 64
+	ivec4 _pad3; //80
+	ivec4 _pad4; // 96
 };
 
 layout (binding = 1, std140) uniform PbrMaterial {
 	SPbrMaterial Materials[MAX_MATERIALS];
+};
+
+struct SDrawObjectData {
+	mat4 RenderTransform;
+	uint bHasJoints;
+	uint JointMatricesBaseIndex;
+	uint MaterialIndex;
+	int BonesIndexOffset;
+};
+
+layout (binding = 3, std140) uniform DrawDataUBO {
+	SDrawObjectData DrawObjectData[MAX_DRAWS];
 };
 
 layout (location = 1) uniform sampler2D ColorTex;

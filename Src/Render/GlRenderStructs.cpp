@@ -275,7 +275,7 @@ void SDrawContext::AddRenderObjects(const SMeshNode& meshNode, const STransform&
 
     // TODO: I believe this determinant should actually be > 0, not < 0. 
     // Anyways, it works for now and its not a priority to understand why right now. Revisit later.
-    const bool bIsCCW = glm::determinant(nodeMatrix) < 0.f; 
+    const bool bIsCCW = glm::determinant(nodeMatrix) > 0.f; 
     bool bIsIndexedDraw = meshNode.Mesh->IndexBuffer.IsValid();
     for (SGeoSurface& surface : meshNode.Mesh->Surfaces)
     {
@@ -292,4 +292,47 @@ void SDrawContext::AddRenderObjects(const SMeshNode& meshNode, const STransform&
         }
         ++container.TotalSize;
     }
+}
+
+void SPbrMaterial::UpdateTextureHandles()
+{
+    UboData.ColorTexHandle = ColorTex.GetTextureHandle();
+    UboData.MetalRoughTexHandle = MetalRoughTex.GetTextureHandle();
+    UboData.NormalTexHandle = NormalTex.GetTextureHandle();
+    UboData.OcclusionTexHandle = OcclusionTex.GetTextureHandle();
+}
+
+#define TexHandleOp(tex, residentOp) \
+	if (uint64_t handle = tex.GetTextureHandle()) \
+		glMakeTextureHandle##residentOp##ARB(handle)
+#define MakeResident(tex) TexHandleOp(tex, Resident)
+#define MakeNonResident(tex) TexHandleOp(tex, NonResident)
+
+void SPbrMaterial::MakeTextureHandlesResident() const
+{
+    MakeResident(ColorTex);
+    MakeResident(MetalRoughTex);
+    MakeResident(NormalTex);
+    MakeResident(OcclusionTex);
+}
+
+void SPbrMaterial::MakeTextureHandlesNonResident() const
+{
+    MakeNonResident(ColorTex);
+    MakeNonResident(MetalRoughTex);
+    MakeNonResident(NormalTex);
+    MakeNonResident(OcclusionTex);
+}
+
+uint64_t SGlTexture::GetTextureHandle() const
+{
+    // leaving commented for now so renderdoc doesn't kapoot
+    // if (Texture)
+    // {
+    //     if (Sampler)
+    //         return glGetTextureSamplerHandleARB(*Texture, *Sampler);
+
+    //     return glGetTextureHandleARB(*Texture);
+    // }
+    return 0;
 }

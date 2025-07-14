@@ -4,6 +4,7 @@
 #define NumCascades 3
 #define MAX_CASCADES 16
 #define MAX_JOINTS 200
+#define MAX_DRAWS 200
 #define COMPILEARG_END
 
 struct SVertex {
@@ -36,6 +37,18 @@ layout (binding = 2, std140) uniform JointMatsUBO {
 	mat4 jointMatrices[MAX_JOINTS];
 };
 
+struct SDrawObjectData {
+	mat4 RenderTransform;
+	bool bHasJoints;
+	int JointMatricesBaseIndex;
+	int MaterialIndex;
+	int BonesIndexOffset;
+};
+
+layout (binding = 3, std140) uniform DrawDataUBO {
+	SDrawObjectData DrawObjectData[MAX_DRAWS];
+};
+
 // SSBO
 layout (binding = 0, std430) readonly buffer VertexBuffer {
 	SVertex vertices[];
@@ -49,14 +62,16 @@ layout (location = 0) uniform mat4 Model;
 layout (location = 6) uniform bool bHasJoints;
 layout (location = 7) uniform int BoneBufferOffset;
 layout (location = 9) uniform int JointMatricesIndexOffset;
+layout (location = 10) uniform int BaseDrawId;
 
 void main()
 {
 	const SVertex vertex = vertices[gl_VertexID];
-	mat4 toWorldTransMat = Model;
-	if (bHasJoints) {
-		SVertexJointData jointsData = vertexJointData[BoneBufferOffset + int(gl_VertexID)];
-		jointsData.Joints += uvec4(JointMatricesIndexOffset);
+	SDrawObjectData drawData = DrawObjectData[BaseDrawId + gl_DrawID];
+	mat4 toWorldTransMat = drawData.RenderTransform;
+	if (drawData.bHasJoints) {
+		SVertexJointData jointsData = vertexJointData[drawData.BonesIndexOffset + gl_VertexID];
+		jointsData.Joints += uvec4(drawData.JointMatricesBaseIndex);
 
 		toWorldTransMat *= 
 			jointsData.Weights.x * jointMatrices[jointsData.Joints.x] +

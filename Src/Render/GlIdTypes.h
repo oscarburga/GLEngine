@@ -28,6 +28,8 @@ struct SGlBufferRangeId : public SGlBufferId
 	size_t SizeBytes = 0;
 	size_t GetNumElems() const { assert(SizeBytes % ElemSize == 0);  return SizeBytes / ElemSize; };
 	size_t GetHeadInElems() const { assert(Head % ElemSize == 0);  return Head / ElemSize; };
+	template<typename T>
+	T GetHeadInElems() const { assert(Head % ElemSize == 0);  return T(Head / ElemSize); };
 };
 
 namespace GlBindPoints
@@ -39,6 +41,7 @@ namespace GlBindPoints
 			SceneData = 0,
 			PbrMaterial = 1,
 			JointMatrices = 2,
+			DrawData = 3,
 			Count
 		};
 	}
@@ -76,6 +79,7 @@ namespace GlUniformLocs
 		BonesIndexOffset = 7,
 		MaterialIndex = 8,
 		JointMatricesBaseIndex = 9,
+		BaseDrawId = 10,
 
 		Count,
 
