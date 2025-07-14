@@ -1,11 +1,14 @@
 #pragma once
 
-#include "glad/glad.h"
-#include <filesystem>
-#include "glm/glm.hpp"
+#include "Render/GlIdTypes.h"
 #include "Render/GlShader.h"
-#include "Render/GlRenderStructs.h"
+#include "Utils/GenericConcepts.h"
 
+#include <filesystem>
+
+struct SLoadedGLTF;
+struct SMeshNode;
+struct SPbrMaterial;
 struct SShaderLoadArgs;
 
 /*

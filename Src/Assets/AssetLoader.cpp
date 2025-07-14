@@ -1,14 +1,23 @@
 #include "AssetLoader.h"
-#include <iostream>
-#include <fastgltf/glm_element_traits.hpp>
-#include <fastgltf/core.hpp>
+
+#include "fastgltf/glm_element_traits.hpp"
+#include "fastgltf/core.hpp"
+
+#include "glad/glad.h"
+
+#include "Math/Bounds.h"
+#include "Math/EngineMath.h"
 #include "Render/GlRenderer.h"
+#include "Render/Materials.h"
 #include "Utils/Defer.h"
+#include "Utils/ForEachIndexed.h"
+#include "Utils/RefIgnore.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include <Utils/ForEachIndexed.h>
-#include <Utils/RefIgnore.h>
 #undef STB_IMAGE_IMPLEMENTATION
+
+#include <iostream>
 
 std::filesystem::path CAssetLoader::ContentRoot = "C:\\Users\\51956\\Documents\\OpenGLProjects\\GLEngine\\Content";
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
+
 #include "GlIdTypes.h"
 #include "Utils/GenericConcepts.h"
 #include "Math/EngineMath.h"
@@ -66,12 +67,6 @@ public:
 	void ResetAnimState() { LastIndex = 0; LastTime = 0.0f; }
 };
 
-struct SVertexSkinData 
-{
-	glm::uvec4 Joints {};
-	glm::vec4 Weights {};
-};
-
 struct SJointAnimData
 {
 	SNode* JointNode = nullptr;
@@ -87,7 +82,7 @@ struct SAnimationAsset
 {
 	float AnimationLength = 0.0f;
 	std::vector<SJointAnimData> JointKeyFrames {};
-	std::weak_ptr<SSkinAsset> OwnerSkin {};
+	std::weak_ptr<struct SSkinAsset> OwnerSkin {};
 };
 
 /*
@@ -105,7 +100,7 @@ class CAnimator
 
 private:
 	CAnimator(SSkinAsset* ownerSkin);
-	struct SSkinAsset* OwnerSkin = nullptr; // Animator is uniquely owned by a skin, so no need for smart ptr
+	SSkinAsset* OwnerSkin = nullptr; // Animator is uniquely owned by a skin, so no need for smart ptr
 	SAnimationAsset* CurrentAnim = nullptr; // Animations are uniquely owned by the owner skin, so no need for smart ptr
 	std::vector<glm::mat4> JointMatrices {};
 	bool bLoopCurrentAnim = false;
