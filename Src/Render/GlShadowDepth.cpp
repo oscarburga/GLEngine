@@ -62,10 +62,7 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 	assert(glCheckNamedFramebufferStatus(*ShadowsFbo, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
-	DrawDataBuffer = SGlBufferVector(CGlRenderer::DrawDataBufferMaxSize * sizeof(SDrawObjectGpuData));
-	MdiBuffer = SGlBufferVector(CGlRenderer::DrawDataBufferMaxSize * sizeof(SDrawElementsCommand));
-	IndexedDraws.Commands.reserve(CGlRenderer::DrawDataBufferMaxSize);
-	ArrayDraws.Commands.reserve(CGlRenderer::DrawDataBufferMaxSize);
+	DrawCommands = std::make_unique<SDrawCommands>(CGlRenderer::DrawDataBufferMaxSize);
 	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
 	vsArgs.SetArg("MAX_DRAWS", CGlRenderer::DrawDataBufferMaxSize);
 	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
@@ -157,64 +154,13 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 
 void CGlShadowDepthPass::PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext)
 {
-	IndexedDraws.Commands.clear();
-	IndexedDraws.CommandSpans[0] = IndexedDraws.CommandSpans[1] = {};
-
-	ArrayDraws.Commands.clear();
-	ArrayDraws.CommandSpans[0] = ArrayDraws.CommandSpans[1] = {};
-
-	DrawData.clear();
-	DrawDataBuffer.Reset();
-
 	ImguiData.TotalNum = (uint32_t)DrawContext.RenderObjects[EMaterialPass::MainColor].TotalSize;
 	ImguiData.CulledNum = 0;
+
 	SFrustum shadowsFrustum;
 	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
-
-	uint32_t DrawId = 0;
-	uint32_t IdxDrawsBeginIdx = 0;
-	uint32_t ArrayDrawsBeginIdx = 0;
-	for (int indexed = 0; indexed < 2; indexed++)
-	{
-		for (int CCW = 0; CCW < 2; CCW++)
-		{
-			for (const SRenderObject& surface : renderObjects.TriangleObjects[CCW][indexed])
-			{
-				if (!shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform) || surface.Material->UboData.bIgnoreLighting)
-				{
-					++ImguiData.CulledNum;
-					continue;
-				}
-				if (indexed)
-				{
-					GLuint firstIndex = surface.FirstIndex + (GLuint)surface.IndexBuffer.GetHeadInElems();
-					GLint baseVertex = (GLint)surface.VertexBuffer.GetHeadInElems();
-					// SDrawElementsCommand
-					IndexedDraws.Commands.emplace_back(surface.IndexCount, 1, firstIndex, baseVertex, DrawId);
-				}
-				else
-				{
-					// SDrawArraysCommand
-					ArrayDraws.Commands.emplace_back(surface.IndexCount, 1, (GLuint)surface.VertexBuffer.GetHeadInElems(), DrawId);
-				}
-				// GPU draw data will construct from the SRenderObject
-				DrawData.emplace_back(surface);
-				++DrawId;
-			}
-			if (indexed)
-			{
-				IndexedDraws.CommandSpans[CCW] = { IndexedDraws.Commands.begin() + IdxDrawsBeginIdx, IndexedDraws.Commands.end() };
-				IdxDrawsBeginIdx = (uint32_t)IndexedDraws.Commands.size();
-			}
-			else
-			{
-				ArrayDraws.CommandSpans[CCW] = { ArrayDraws.Commands.begin() + ArrayDrawsBeginIdx, ArrayDraws.Commands.end() };
-				ArrayDrawsBeginIdx = (uint32_t)ArrayDraws.Commands.size();
-			}
-		}
-	}
-	DrawDataBuffer.Append(DrawData);
+	ImguiData.CulledNum += DrawCommands->PopulateBuffers(renderObjects, &shadowsFrustum);
 }
 
 void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
@@ -231,9 +177,9 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	ShadowsShader.Use();
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, CGlRenderer::Get()->MainIndexBuffer.Id);
-	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, MdiBuffer.Id);
+	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, DrawCommands->MdiBuffer.Id);
+	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::DrawData, DrawCommands->DrawDataBuffer.Id);
 	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, CGlRenderer::Get()->JointMatricesBuffer.Id);
-	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::DrawData, DrawDataBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 
@@ -243,17 +189,16 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
 		glFrontFace(windingOrder[CCW ^ 1]); // culling backface, so also need to flip this
 
-		if (IndexedDraws.CommandSpans[CCW].size())
+		for (int indexed = 0; indexed < 2; indexed++)
 		{
-			// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-			auto rangeId = MdiBuffer.Append(IndexedDraws.CommandSpans[CCW].size(), IndexedDraws.CommandSpans[CCW].data());
-			glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, rangeId.GetNumElems(), 0);
-			MdiBuffer.Reset();
-		}
-
-		if (ArrayDraws.CommandSpans[CCW].size())
-		{
-			glMultiDrawArraysIndirect(GL_TRIANGLES, ArrayDraws.CommandSpans[CCW].data(), ArrayDraws.CommandSpans[CCW].size(), 0);
+			if (const SGlBufferRangeId& rangeId = DrawCommands->GetMdiBufferRange(CCW, indexed); rangeId)
+			{
+				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
+				if (indexed)
+					glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+				else
+					glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+			}
 		}
 	}
 

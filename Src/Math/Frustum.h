@@ -25,7 +25,7 @@ struct SFrustum
 		};
 		std::array<SPlane, 6> Planes {};
 	};
-	bool IsSphereInFrustum(const SBounds& bounds, const glm::mat4& transform);
+	bool IsSphereInFrustum(const SBounds& bounds, const glm::mat4& transform) const;
 };
 
 namespace EFrustumCorners

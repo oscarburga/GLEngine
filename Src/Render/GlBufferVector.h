@@ -12,7 +12,8 @@
 #include "GlShader.h"
 
 // TODO: Template this for type/alignment safety, and to enforce std140/430 on appends/inserts. 
-// Should prob move it to its own header aswell.
+// UPDATE: Actually... in some cases it can be convenient to not enforce type safety 
+// (i.e. DrawArrays and DrawElements commands in the same buffer), but it wouldn't be safe to use GetHeadInElems
 struct SGlBufferVector
 {
 	SGlBufferId Id {};
