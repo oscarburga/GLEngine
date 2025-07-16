@@ -160,7 +160,10 @@ void CGlShadowDepthPass::PrepassDrawDataBuffer(const SSceneData& SceneData, cons
 	SFrustum shadowsFrustum;
 	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
 	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
-	ImguiData.CulledNum += DrawCommands->PopulateBuffers(renderObjects, &shadowsFrustum);
+	ImguiData.CulledNum += DrawCommands->PopulateBuffers(renderObjects, true, [&](const SRenderObject& surface) -> bool
+	{
+		return surface.Material->UboData.bIgnoreLighting || !shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform);
+	});
 }
 
 void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
@@ -191,13 +194,16 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 
 		for (int indexed = 0; indexed < 2; indexed++)
 		{
-			if (const SGlBufferRangeId& rangeId = DrawCommands->GetMdiBufferRange(CCW, indexed); rangeId)
+			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
 			{
 				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-				if (indexed)
-					glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-				else
-					glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+				for (const SGlBufferRangeId& rangeId : rangeIds)
+				{
+					if (indexed)
+						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+					else
+						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+				}
 			}
 		}
 	}

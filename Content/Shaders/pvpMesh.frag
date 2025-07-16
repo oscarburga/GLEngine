@@ -264,6 +264,9 @@ void main()
 	if (pbrMaterial.bColorBound)
 		srcColor *= texture(ColorTex, fs.TexCoords);
 
+	// TODO: gate this behind a macro so we compile 2 different versions of this shader:
+	// 1 without alphaCutoff (for color pass), and 1 with alphaCutoff for colorMasked pass.
+	// This way early depth tests can be enabled for the non-masked color pass.
 	if (srcColor.a < pbrMaterial.AlphaCutoff)
 		discard;
 
