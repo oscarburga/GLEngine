@@ -84,7 +84,7 @@ void main()
 			jointsData.Weights.w * jointMatrices[jointsData.Joints.w];
 	}
 	gl_Position = sceneData.ViewProj * toWorldTransMat * vec4(vertex.Position, 1.0);
-	fs.MaterialIndex = DrawId;
+	fs.MaterialIndex = drawData.MaterialIndex;
 	fs.FragPos = (toWorldTransMat * vec4(vertex.Position, 1.0)).xyz;
 	// Inneficient, ideally pass this as a uniform.
 	fs.Normal = mat3(transpose(inverse(toWorldTransMat))) * vertex.Normal;

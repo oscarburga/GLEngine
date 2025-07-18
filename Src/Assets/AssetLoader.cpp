@@ -113,19 +113,6 @@ void CAssetLoader::Destroy()
 
 void CAssetLoader::LoadDefaultAssets()
 {
-	// White texture
-	{
-		{
-			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
-			WhiteTexture = RegisterTexture2D(&white, 1, 1, 4);
-		}
-		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { WhiteTexture });
-		WhiteMaterial = std::make_shared<SPbrMaterial>();
-		WhiteMaterial->Name = "DefaultWhite";
-		WhiteMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
-		WhiteMaterial->ColorTex.Texture = WhiteTexture;
-		UpdateMaterialInMainBuffer(*WhiteMaterial);
-	}
 	// Error checkerboard
 	{
 		{
@@ -148,6 +135,19 @@ void CAssetLoader::LoadDefaultAssets()
 		ErrorMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
 		ErrorMaterial->ColorTex.Texture = ErrorTexture;
 		UpdateMaterialInMainBuffer(*ErrorMaterial);
+	}
+	// White texture
+	{
+		{
+			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
+			WhiteTexture = RegisterTexture2D(&white, 1, 1, 4);
+		}
+		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { WhiteTexture });
+		WhiteMaterial = std::make_shared<SPbrMaterial>();
+		WhiteMaterial->Name = "DefaultWhite";
+		WhiteMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
+		WhiteMaterial->ColorTex.Texture = WhiteTexture;
+		UpdateMaterialInMainBuffer(*WhiteMaterial);
 	}
 	{
 		SMeshAsset axisMesh {};

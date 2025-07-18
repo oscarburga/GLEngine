@@ -1,7 +1,6 @@
 #version 460 core
 
 #extension GL_ARB_bindless_texture : require
-#extension GL_EXT_nonuniform_qualifier : enable
 
 #define COMPILEARG_BEGIN
 #define NumCascades 3
@@ -16,7 +15,7 @@ in VS_OUT {
 	vec2 TexCoords;
 	vec4 Color;
 	mat3 TBN;
-	int MaterialIndex;
+	flat int MaterialIndex;
 } fs;
 
 out vec4 FragColor;
@@ -58,7 +57,7 @@ layout (binding = 1, std140) uniform PbrMaterial {
 };
 
 layout (binding = 2, std430) readonly buffer Textures {
-	layout(bindless_sampler) sampler2D TexSamplers[];
+	sampler2D TexSamplers[];
 };
 
 layout (location = 5) uniform sampler2DArrayShadow ShadowDepthTexArray;
@@ -251,13 +250,10 @@ vec3 CalcPbr()
 void main()
 {
 	pbrMaterial = Materials[fs.MaterialIndex];
-	vec4 srcColor;
-	FragColor = vec4(1.0f, 0.0f, 0.0f, 1.f);
+	vec4 srcColor = pbrMaterial.ColorFactor * fs.Color;
 
 	if (pbrMaterial.ColorTexIndex >= 0)
-		// srcColor *= texture(pbrMaterial.ColorTex, fs.TexCoords);
-		FragColor = texture(TexSamplers[nonuniformEXT(pbrMaterial.ColorTexIndex)], fs.TexCoords);
-	return;
+		srcColor *= texture(TexSamplers[pbrMaterial.ColorTexIndex], fs.TexCoords);
 
 	// TODO: gate this behind a macro so we compile 2 different versions of this shader:
 	// 1 without alphaCutoff (for color pass), and 1 with alphaCutoff for colorMasked pass.
@@ -288,5 +284,4 @@ void main()
 		}
 		FragColor *= cascadeTint;
 	}
-	FragColor = vec4(1.0, 0, 0, 1);
 }

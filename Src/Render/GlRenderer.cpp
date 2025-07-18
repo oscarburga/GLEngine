@@ -382,7 +382,7 @@ void CGlRenderer::RenderScene(float deltaTime)
 	for (int CCW = 0; CCW < 2; CCW++)
 	{
 		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
-		glFrontFace(windingOrder[CCW ^ 1]); // culling backface, so also need to flip this
+		glFrontFace(windingOrder[CCW]); // culling backface, so also need to flip this
 
 		for (int indexed = 0; indexed < 2; indexed++)
 		{
