@@ -57,5 +57,6 @@ struct SDrawContext
 {
 	std::array<SRenderObjectContainer, EMaterialPass::Count> RenderObjects;
 	void AddRenderObjects(const SMeshNode& meshNode, const STransform& topTransform);
+	void Reset();
 };
 

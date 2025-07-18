@@ -76,9 +76,8 @@ namespace
 		return value;
 	}
 
-	inline void UpdateMaterialInMainBuffer(SPbrMaterial& material)
+	void UpdateMaterialInMainBuffer(SPbrMaterial& material)
 	{
-		material.UpdateTextureHandles();
 		if (!material.DataBuffer)
 		{
 			material.DataBuffer = CGlRenderer::Get()->MainMaterialBuffer.Append(1, &material.UboData);
@@ -120,9 +119,10 @@ void CAssetLoader::LoadDefaultAssets()
 			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
 			WhiteTexture = RegisterTexture2D(&white, 1, 1, 4);
 		}
+		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { WhiteTexture });
 		WhiteMaterial = std::make_shared<SPbrMaterial>();
 		WhiteMaterial->Name = "DefaultWhite";
-		WhiteMaterial->UboData = SPbrMaterialUboData { .bColorBound = true };
+		WhiteMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
 		WhiteMaterial->ColorTex.Texture = WhiteTexture;
 		UpdateMaterialInMainBuffer(*WhiteMaterial);
 	}
@@ -142,12 +142,10 @@ void CAssetLoader::LoadDefaultAssets()
 			}
 			ErrorTexture = RegisterTexture2D(pixels.data(), 16, 16, 4);
 		}
-		// glCreateTextures(GL_TEXTURE_2D, 1, &*ErrorTexture);
-		// glTextureStorage2D(*ErrorTexture, 1, GL_RGBA8, 16, 16);
-		// glTextureSubImage2D(*ErrorTexture, 0, 0, 0, 16, 16, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { ErrorTexture });
 		ErrorMaterial = std::make_shared<SPbrMaterial>();
 		ErrorMaterial->Name = "DefaultChecker";
-		ErrorMaterial->UboData = SPbrMaterialUboData { .bColorBound = true };
+		ErrorMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
 		ErrorMaterial->ColorTex.Texture = ErrorTexture;
 		UpdateMaterialInMainBuffer(*ErrorMaterial);
 	}
@@ -240,12 +238,12 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 			glCreateSamplers(1, &*id);
 			const GLenum wrapS = ConvertGltfWrap(sampler.wrapS);
 			const GLenum wrapT = ConvertGltfWrap(sampler.wrapT);
-			glTextureParameteri(*id, GL_TEXTURE_WRAP_S, wrapS);
-			glTextureParameteri(*id, GL_TEXTURE_WRAP_T, wrapT);
+			glSamplerParameteri(*id, GL_TEXTURE_WRAP_S, wrapS);
+			glSamplerParameteri(*id, GL_TEXTURE_WRAP_T, wrapT);
 			const GLenum minFilter = ConvertGltfFilter(sampler.minFilter.value_or(fastgltf::Filter::Nearest));
 			const GLenum magFilter = ConvertGltfFilter(sampler.magFilter.value_or(fastgltf::Filter::Nearest));
-			glTextureParameteri(*id, GL_TEXTURE_MIN_FILTER, minFilter);
-			glTextureParameteri(*id, GL_TEXTURE_MAG_FILTER, magFilter);
+			glSamplerParameteri(*id, GL_TEXTURE_MIN_FILTER, minFilter);
+			glSamplerParameteri(*id, GL_TEXTURE_MAG_FILTER, magFilter);
 			scene.Samplers.emplace_back(id);
 		}
 	}
@@ -353,7 +351,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		outMat.MetalRoughTex.Texture = WhiteTexture;
 
 		// Textures
-		auto SetTexture = [&](auto& gltfTexture, SGlTexture& outTex, const char* texType = "") -> bool
+		auto SetTexture = [&](auto& gltfTexture, SGlTexture& outTex, const char* texType = "") -> int32_t
 		{
 			if (gltfTexture)
 			{
@@ -362,21 +360,23 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 				outTex.Texture = scene.Textures[texIndex];
 				outTex.Sampler = scene.Samplers[samplerIndex];
-				return true;
+				return CGlRenderer::Get()->RegisterTexture(outTex);
 			}
 			const std::string alphaMode = gltfMat.alphaMode == fastgltf::AlphaMode::Opaque ? "Opaque" : 
 				(gltfMat.alphaMode == fastgltf::AlphaMode::Mask ? "Masked" : "Transparent");
 			std::cerr << std::format("\tMaterial {} has no {} texture (alpha mode is {})\n", gltfMat.name, texType, alphaMode);
-			return false;
+			return -1;
 		};
 
-		outMat.UboData.bColorBound = SetTexture(gltfMat.pbrData.baseColorTexture, outMat.ColorTex, "color");
-		outMat.UboData.bMetalRoughBound = SetTexture(gltfMat.pbrData.metallicRoughnessTexture, outMat.MetalRoughTex, "metalRough");
+		outMat.UboData.ColorTexIndex = SetTexture(gltfMat.pbrData.baseColorTexture, outMat.ColorTex, "color");
+		outMat.UboData.MetalRoughTexIndex = SetTexture(gltfMat.pbrData.metallicRoughnessTexture, outMat.MetalRoughTex, "metalRough");
 
-		if (outMat.UboData.bNormalBound = SetTexture(gltfMat.normalTexture, outMat.NormalTex, "normal"))
+		outMat.UboData.NormalTexIndex = SetTexture(gltfMat.normalTexture, outMat.NormalTex, "normal");
+		if (outMat.UboData.NormalTexIndex >= 0)
 			outMat.UboData.NormalScale = gltfMat.normalTexture->scale;
 
-		if (outMat.UboData.bOcclusionBound = SetTexture(gltfMat.occlusionTexture, outMat.OcclusionTex, "occlusion"))
+		outMat.UboData.OcclusionTexIndex = SetTexture(gltfMat.occlusionTexture, outMat.OcclusionTex, "occlusion");
+		if (outMat.UboData.OcclusionTexIndex >= 0)
 			outMat.UboData.OcclusionStrength = gltfMat.occlusionTexture->strength;
 		// TODO emissive
 
@@ -459,7 +459,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 				}
 
 				// Load vertex tangents
-				if (surface.Material->UboData.bNormalBound)
+				if (surface.Material->UboData.NormalTexIndex >= 0)
 				{
 					if (fastgltf::Attribute* tangents = primitive.findAttribute("TANGENT"); tangents != primitive.attributes.end())
 					{
@@ -471,7 +471,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 					else
 					{
 						// No tangents found and don't want to implement calculating them, just disable normals on this material.
-						surface.Material->UboData.bNormalBound = false;
+						surface.Material->UboData.NormalTexIndex = -1;
 						surface.Material->NormalTex = SGlTexture {};
 						UpdateMaterialInMainBuffer(*surface.Material);
 						std::cerr << std::format("\tOne of the primitives uses a normal-mapped material, but provides no tangents.\n"
@@ -885,8 +885,8 @@ SGlTextureId CAssetLoader::RegisterTexture2D(void* stbiTexData, int width, int h
 	const int numLevels = 1 + (int)std::floor(std::log2(std::max(width, height)));
 	glTextureParameteri(Id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTextureParameteri(Id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	// float texBorderColor[] = { 0.0f, 1.1f, 0.08f, 1.0f };
-	// glTextureParameterfv(gpuTex.Texture, GL_TEXTURE_BORDER_COLOR, texBorderColor);
+	float texBorderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	glTextureParameterfv(Id, GL_TEXTURE_BORDER_COLOR, texBorderColor);
 	glTextureParameteri(Id, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 	glTextureParameteri(Id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTextureStorage2D(Id, numLevels, storageFormat, width, height);

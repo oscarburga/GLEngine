@@ -1,45 +1,49 @@
 #include "Materials.h"
 #include "glad/glad.h"
+#include "set"
 
-void SPbrMaterial::UpdateTextureHandles()
-{
-    UboData.ColorTexHandle = ColorTex.GetTextureHandle();
-    UboData.MetalRoughTexHandle = MetalRoughTex.GetTextureHandle();
-    UboData.NormalTexHandle = NormalTex.GetTextureHandle();
-    UboData.OcclusionTexHandle = OcclusionTex.GetTextureHandle();
-}
+std::set<uint64_t> AllHandles;
 
-#define TexHandleOp(tex, residentOp) \
-	if (uint64_t handle = tex.GetTextureHandle()) \
-		glMakeTextureHandle##residentOp##ARB(handle)
+#define TexHandleOp(handle, residentOp) \
+	if (handle != 0 && !glIsTextureHandleResidentARB(handle)) {\
+		glMakeTextureHandle##residentOp##ARB(handle);\
+        AllHandles.insert(handle);\
+	}
 #define MakeResident(tex) TexHandleOp(tex, Resident)
 #define MakeNonResident(tex) TexHandleOp(tex, NonResident)
 
-void SPbrMaterial::MakeTextureHandlesResident() const
-{
-    MakeResident(ColorTex);
-    MakeResident(MetalRoughTex);
-    MakeResident(NormalTex);
-    MakeResident(OcclusionTex);
-}
-
-void SPbrMaterial::MakeTextureHandlesNonResident() const
-{
-    MakeNonResident(ColorTex);
-    MakeNonResident(MetalRoughTex);
-    MakeNonResident(NormalTex);
-    MakeNonResident(OcclusionTex);
-}
+// void SPbrMaterial::UpdateTextureHandles()
+// {
+//     UboData.bColorBound = (UboData.ColorTexHandle = ColorTex.GetTextureHandle()) != 0;
+//     UboData.bMetalRoughBound = (UboData.MetalRoughTexHandle = MetalRoughTex.GetTextureHandle()) != 0;
+//     UboData.bNormalBound = (UboData.NormalTexHandle = NormalTex.GetTextureHandle()) != 0;
+//     UboData.bOcclusionBound = (UboData.OcclusionTexHandle = OcclusionTex.GetTextureHandle()) != 0;
+// }
+// 
+// void SPbrMaterial::MakeTextureHandlesResident() const
+// {
+//     MakeResident(UboData.ColorTexHandle);
+//     MakeResident(UboData.MetalRoughTexHandle);
+//     MakeResident(UboData.NormalTexHandle);
+//     MakeResident(UboData.OcclusionTexHandle);
+// }
+// 
+// void SPbrMaterial::MakeTextureHandlesNonResident() const
+// {
+//     MakeNonResident(UboData.ColorTexHandle);
+//     MakeNonResident(UboData.MetalRoughTexHandle);
+//     MakeNonResident(UboData.NormalTexHandle);
+//     MakeNonResident(UboData.OcclusionTexHandle);
+// }
 
 uint64_t SGlTexture::GetTextureHandle() const
 {
-    // leaving commented for now so renderdoc doesn't kapoot
-    // if (Texture)
-    // {
-    //     if (Sampler)
-    //         return glGetTextureSamplerHandleARB(*Texture, *Sampler);
+    if (Texture)
+    {
+        if (Sampler)
+            return glGetTextureSamplerHandleARB(*Texture, *Sampler);
 
-    //     return glGetTextureHandleARB(*Texture);
-    // }
+        return glGetTextureHandleARB(*Texture);
+    }
     return 0;
 }

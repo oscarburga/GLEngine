@@ -56,3 +56,11 @@ void SDrawContext::AddRenderObjects(const SMeshNode& meshNode, const STransform&
         ++container.TotalSize;
     }
 }
+
+void SDrawContext::Reset()
+{
+    for (SRenderObjectContainer& renderObjects : RenderObjects)
+    {
+        renderObjects.ClearAll();
+    }
+}

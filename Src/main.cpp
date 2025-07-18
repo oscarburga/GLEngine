@@ -58,13 +58,13 @@ int main(int argc, char** argv)
 	{
 		gltf->Draw(STransform {}, *renderer->MainDrawContext);
 		dajiSkin->Animator->UpdateAnimation(deltaTime);
-		gokuSkin->Animator->UpdateAnimation(deltaTime);
-		astroSkin->Animator->UpdateAnimation(deltaTime);
-		totalTime += deltaTime;
+		// gokuSkin->Animator->UpdateAnimation(deltaTime);
+		// astroSkin->Animator->UpdateAnimation(deltaTime);
 		daji->Draw(STransform{}, *renderer->MainDrawContext);
-		goku->Draw(STransform{}, *renderer->MainDrawContext);
-		astronaut->Draw(STransform{}, *renderer->MainDrawContext);
-		CAssetLoader::Get()->AxisMesh->Draw(STransform {}, *renderer->MainDrawContext);
+		//goku->Draw(STransform{}, *renderer->MainDrawContext);
+		//astronaut->Draw(STransform{}, *renderer->MainDrawContext);
+		// CAssetLoader::Get()->AxisMesh->Draw(STransform {}, *renderer->MainDrawContext);
+		totalTime += deltaTime;
 	});
 	engine->MainLoop();
 

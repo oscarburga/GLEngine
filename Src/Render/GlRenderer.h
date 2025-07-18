@@ -10,15 +10,19 @@ class CEngine;
 class CGlShadowDepthPass;
 class SGlCamera;
 
-struct SViewport;
-struct SSceneData;
+struct SDrawCommands;
 struct SDrawContext;
+struct SGlTexture;
+struct SSceneData;
+struct SViewport;
 
 typedef void (*GlFunctionLoaderFuncType)(const char*);
 
 class CGlRenderer : public IImguiObject
 {
 public:
+	// TODO: rename, "size" is ambigous (unclear if number of elems or size in bytes)
+	// should use something like "Num" for number of elements, and "Bytes" for raw size
 	inline static size_t UBOOffsetAlignment = 0;
 	inline static size_t UBOMaxBlockSize = 0;
 	inline static size_t ShaderMaxMaterialSize = 100;
@@ -35,10 +39,11 @@ public:
 	SGlBufferVector MainBonesBuffer;
 	SGlBufferVector MainMaterialBuffer;
 	SGlBufferVector JointMatricesBuffer; // TODO needs double buffering, potentially persistent mapping
-	SGlBufferVector DrawDataBuffer; // TODO needs double buffering, potentially persistent mapping
+	SGlBufferVector TexturesSsbo; // TODO needs double buffering, potentially persistent mapping
 	std::unique_ptr<SGlCamera> ActiveCamera {};
 	std::unique_ptr<CGlShadowDepthPass> ShadowPass {};
 	std::unique_ptr<SSceneData> SceneData {};
+	std::unique_ptr<SDrawCommands> DrawCommands {};
 	inline SGlBufferId GetSceneDataUbo() const { return SceneDataBuffer; }
 	CGlShader PvpShader { 0 };
 	CGlShader QuadShader { 0 };
@@ -47,12 +52,19 @@ public:
 	static void Destroy();
 	static inline CGlRenderer* Get() { return Renderer; };
 
+	void PrepassDrawDataBuffer();
 	void RenderScene(float deltaTime);
 
 	void OnWindowResize(CEngine* Engine, const SViewport& Viewport);
 
 	virtual void ShowImguiPanel() override;
 	std::unique_ptr<SDrawContext> MainDrawContext {};
+
+	int32_t RegisterTexture(const SGlTexture& texture);
+
+	std::vector<uint64_t> TextureHandlesVector;
+	SGlBufferVector TextureHandlesBuffer;
+
 private:
 	SGlVaoId EmptyVao {};
 	SGlBufferId Quad2DBuffer {};

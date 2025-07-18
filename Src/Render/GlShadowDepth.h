@@ -37,6 +37,7 @@ public:
 		uint32_t TotalNum = 0;
 	} ImguiData;
 
+	// TODO remove init, just use the constructor
 	void Init(uint32_t width = 2048, uint32_t height = 2048);
 	void UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera);
 	void PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext);

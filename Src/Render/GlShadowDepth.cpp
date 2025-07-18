@@ -63,6 +63,7 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 	assert(glCheckNamedFramebufferStatus(*ShadowsFbo, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
 	DrawCommands = std::make_unique<SDrawCommands>(CGlRenderer::DrawDataBufferMaxSize);
+
 	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
 	vsArgs.SetArg("MAX_DRAWS", CGlRenderer::DrawDataBufferMaxSize);
 	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
@@ -199,6 +200,7 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
 				for (const SGlBufferRangeId& rangeId : rangeIds)
 				{
+					ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
 					if (indexed)
 						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
 					else

@@ -64,6 +64,7 @@ namespace GlBindPoints
 		{
 			VertexBuffer = 0,
 			VertexJointBuffer = 1,
+			TextureBuffers = 2,
 			Count
 		};
 	}
