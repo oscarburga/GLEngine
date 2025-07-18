@@ -311,6 +311,29 @@ void CGlRenderer::RenderScene(float deltaTime)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, MainBonesBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::TextureBuffers, TextureHandlesBuffer.Id);
 
+	// Draw indirect color passes
+	for (int CCW = 0; CCW < 2; CCW++)
+	{
+		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
+		glFrontFace(windingOrder[CCW]); // culling backface, so also need to flip this
+
+		for (int indexed = 0; indexed < 2; indexed++)
+		{
+			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
+			{
+				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
+				for (const SGlBufferRangeId& rangeId : rangeIds)
+				{
+					PvpShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
+					if (indexed)
+						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+					else
+						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
+				}
+			}
+		}
+	}
+
 	static const auto RenderObject = [&](SRenderObject& surface)
 	{
 		// if (!mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform))
@@ -377,30 +400,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 			);
 		}
 	};
-
-	// Draw indirect color passes
-	for (int CCW = 0; CCW < 2; CCW++)
-	{
-		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
-		glFrontFace(windingOrder[CCW]); // culling backface, so also need to flip this
-
-		for (int indexed = 0; indexed < 2; indexed++)
-		{
-			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
-			{
-				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-				for (const SGlBufferRangeId& rangeId : rangeIds)
-				{
-					PvpShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
-					if (indexed)
-						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-					else
-						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-				}
-			}
-		}
-	}
-
 	goto skipBlend; // skip for now, need mdi working first
 	// Basic blend, no OIT
 	{
