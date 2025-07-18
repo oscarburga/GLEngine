@@ -3,7 +3,7 @@
 This project is an OpenGL rendering engine written in C++ for learning purposes. 
 
 Current interesting features include:
-* Programmable vertex pulling
+* Multi-draw indirect and bindless textures :D (in `bindless-textures` branch)
 * Skinning
 * Cascading shadow maps
 * Frustum culling
