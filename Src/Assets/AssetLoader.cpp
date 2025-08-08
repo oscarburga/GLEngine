@@ -206,7 +206,8 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		return nullptr;
 
 	// Don't use fastgltf's DecomposeNodeMatrices. Use GLM's gtx_matrix_decompose instead. fastgltf's decomposition doesn't handle negative scales.
-	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::DecomposeNodeMatrices;
+	// Also add generate mesh indices. Supporting array draws with multidraw adds too much pain for minimal reward.
+	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers | fastgltf::Options::GenerateMeshIndices; // | fastgltf::Options::DecomposeNodeMatrices;
 	fastgltf::Parser parser {};
 	Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
 	if (HasGltfError(gltf, filePath))

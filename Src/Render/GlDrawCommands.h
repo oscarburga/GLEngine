@@ -12,14 +12,6 @@ struct SFrustum;
 struct SRenderObject;
 struct SRenderObjectContainer;
 
-struct SDrawArraysCommand
-{
-	uint32_t Count;
-	uint32_t InstanceCount;
-	uint32_t FirstIndex;
-	uint32_t BaseInstance;
-};
-
 struct SDrawElementsCommand
 {
 	uint32_t Count;
@@ -47,11 +39,10 @@ struct SDrawCommands
 	SDrawCommands() = default;
 	SDrawCommands(size_t MaxDrawDataSize);
 
-	template<typename T>
-	struct TDrawCommandSpans
+	struct SDrawCommandSpans
 	{
 		std::vector<SGlBufferRangeId> MdiRanges[2] {};
-		std::vector<T> Commands[2] {};
+		std::vector<SDrawElementsCommand> Commands[2] {};
 		void Reset() 
 		{ 
 			MdiRanges[0].clear();
@@ -61,15 +52,13 @@ struct SDrawCommands
 		}
 	};
 
-	TDrawCommandSpans<SDrawElementsCommand> IndexedDraws {};
-	TDrawCommandSpans<SDrawArraysCommand> ArrayDraws {};
+	SDrawCommandSpans IndexedDraws {};
 	std::vector<SDrawObjectGpuData> DrawData {};
 	SGlBufferVector DrawDataBuffer {};
 	SGlBufferVector MdiBuffer {};
 
-
 	void ResetBuffers();
-	const std::vector<SGlBufferRangeId>& GetMdiBufferRanges(bool bCCW, bool bIndexed) const;
+	const std::vector<SGlBufferRangeId>& GetMdiBufferRanges(bool bCCW) const;
 
 	// TODO: template this culling func or worst case scenario use an enum-and-switch for it. 
 	// Type-erased funcs are slowwww for repeat calls.

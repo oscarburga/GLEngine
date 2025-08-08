@@ -35,15 +35,10 @@ public:
 
 struct SRenderObjectContainer
 {
-	// TODO: a more robust, generic & flexible solution.
-	// This also doesn't allow proper sorting for blended-objects (I need them rendered in order
-	// of distance, I don't implement OIT). Current workaround is just toss all blendable objects 
-	// into OtherObjects unbatched rendering.  
-
 	// For now, 4 vectors will work since the only pipeline state we change is glFrontFace.
-	// TriangleObjects[bIsCCW][bIsIndexedDraw]
-	std::vector<SRenderObject> TriangleObjects[2][2]; // Batch multidraws for GL_TRIANGLE surfaces
-	std::vector<SRenderObject> OtherObjects; // Single-draws for non GL_TRIANGLE surfaces (and all blendable objects, for now)
+	// TriangleObjects[bIsCCW]
+	std::vector<SRenderObject> TriangleObjects[2]; // Batch multidraws for GL_TRIANGLE surfaces
+	std::vector<SRenderObject> OtherObjects; // Single-draws GL_TRIANGLE surfaces 
 
 	size_t TotalSize = 0;
 	void ClearAll();

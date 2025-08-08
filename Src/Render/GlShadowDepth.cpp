@@ -191,21 +191,13 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	for (int CCW = 0; CCW < 2; CCW++)
 	{
 		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
-		glFrontFace(windingOrder[CCW ^ 1]); // culling backface, so also need to flip this
-
-		for (int indexed = 0; indexed < 2; indexed++)
+		glFrontFace(windingOrder[CCW ^ 1]); // culling backface, so need to flip this
+		if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW); !rangeIds.empty())
 		{
-			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
+			for (const SGlBufferRangeId& rangeId : rangeIds)
 			{
-				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-				for (const SGlBufferRangeId& rangeId : rangeIds)
-				{
-					ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
-					if (indexed)
-						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-					else
-						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-				}
+				ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
+				glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
 			}
 		}
 	}

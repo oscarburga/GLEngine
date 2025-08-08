@@ -317,19 +317,12 @@ void CGlRenderer::RenderScene(float deltaTime)
 		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
 		glFrontFace(windingOrder[CCW]); // culling backface, so also need to flip this
 
-		for (int indexed = 0; indexed < 2; indexed++)
+		if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW); !rangeIds.empty())
 		{
-			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
+			for (const SGlBufferRangeId& rangeId : rangeIds)
 			{
-				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-				for (const SGlBufferRangeId& rangeId : rangeIds)
-				{
-					PvpShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
-					if (indexed)
-						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-					else
-						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-				}
+				PvpShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
+				glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
 			}
 		}
 	}
