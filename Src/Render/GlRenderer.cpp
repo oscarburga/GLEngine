@@ -9,14 +9,12 @@
 #include "Assets/AssetLoader.h"
 #include "Engine.h"
 #include "GlDrawCommands.h"
-#include "GlShadowDepth.h"
 #include "Materials.h"
 #include "Math/EngineMath.h"
 #include "Math/Frustum.h"
+#include "Pipelines/CsmPipeline.h"
 #include "RenderObject.h"
 #include "SceneData.h"
-
-CGlRenderer* CGlRenderer::Renderer = nullptr;
 
 namespace
 {
@@ -188,7 +186,7 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 
 	CAssetLoader::Create();
 
-	ShadowPass = std::make_unique<CGlShadowDepthPass>();
+	ShadowPass = std::make_unique<CCsmPipeline>();
 	ShadowPass->Init();
 
 	SShaderLoadArgs vsArgs("Shaders/pvpMeshMdi.vert");

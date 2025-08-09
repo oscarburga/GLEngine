@@ -1,20 +1,20 @@
 #pragma once
 
-#include <span>
+#include "Render/GlBufferVector.h"
+#include "Render/GlCamera.h"
+#include "Render/GlDrawCommands.h"
+#include "Render/GlShader.h"
 
-#include "GlBufferVector.h"
-#include "GlShader.h"
-#include "GlCamera.h"
-#include "GlDrawCommands.h"
+#include <memory>
 
 struct SSceneData;
 struct SDrawCommands;
 struct SDrawContext;
 
-class CGlShadowDepthPass
+class CCsmPipeline
 {
 public:
-	~CGlShadowDepthPass();
+	~CCsmPipeline();
 	static inline std::string NumCascadesShaderArgName { "NumCascades" };
 	uint32_t Width = 2048; 
 	uint32_t Height = 2048;

@@ -27,8 +27,6 @@ set(SOURCE_LIST
 	Render/GlRenderer.cpp
 	Render/GlShader.h
 	Render/GlShader.cpp
-	Render/GlShadowDepth.cpp
-	Render/GlShadowDepth.h
 	Render/Materials.h
 	Render/Materials.cpp
 	Render/RenderObject.h
@@ -39,6 +37,11 @@ set(SOURCE_LIST
 	Render/Skinning.h
 	Render/Skinning.cpp
 	Render/VertexStructs.h
+
+	Render/Pipelines/CsmPipeline.h
+	Render/Pipelines/CsmPipeline.cpp
+	Render/Pipelines/MeshPipeline.h
+	Render/Pipelines/MeshPipeline.cpp
 
 	# UTILS
 	Utils/GenericConcepts.h

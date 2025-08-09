@@ -1,19 +1,19 @@
-#include "GlShadowDepth.h"
+#include "CsmPipeline.h"
 
 #include "glad/glad.h"
 
-#include <iostream>
-
 #include "Assets/AssetLoader.h"
 #include "Engine.h"
-#include "GlRenderer.h"
 #include "Math/EngineMath.h"
 #include "Math/Frustum.h"
-#include "Materials.h"
-#include "RenderObject.h"
-#include "SceneData.h"
+#include "Render/GlRenderer.h"
+#include "Render/Materials.h"
+#include "Render/RenderObject.h"
+#include "Render/SceneData.h"
 
-CGlShadowDepthPass::~CGlShadowDepthPass()
+#include <iostream>
+
+CCsmPipeline::~CCsmPipeline()
 {
 	if (ShadowsFbo)
 		glDeleteFramebuffers(1, &*ShadowsFbo);
@@ -23,7 +23,7 @@ CGlShadowDepthPass::~CGlShadowDepthPass()
 		glDeleteProgram(ShadowsShader.Id);
 }
 
-void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
+void CCsmPipeline::Init(uint32_t width, uint32_t height)
 {
 	FullShadowCamera.bIsPerspective = false;
 	Width = width;
@@ -74,7 +74,7 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 }
 
-void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
+void CCsmPipeline::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(nullptr, &frustumCorners);
@@ -153,7 +153,7 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	}
 }
 
-void CGlShadowDepthPass::PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext)
+void CCsmPipeline::PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext)
 {
 	ImguiData.TotalNum = (uint32_t)DrawContext.RenderObjects[EMaterialPass::MainColor].TotalSize;
 	ImguiData.CulledNum = 0;
@@ -167,7 +167,7 @@ void CGlShadowDepthPass::PrepassDrawDataBuffer(const SSceneData& SceneData, cons
 	});
 }
 
-void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
+void CCsmPipeline::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
 {
 	PrepassDrawDataBuffer(SceneData, DrawContext);
 	glEnable(GL_DEPTH_TEST);

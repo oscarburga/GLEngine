@@ -39,7 +39,7 @@ void SDrawContext::AddRenderObjects(const SMeshNode& meshNode, const STransform&
         const EMaterialPass::Pass materialPass = surface.Material->MaterialPass;
         uint32_t primitive = surface.Material->PrimitiveType;
         SRenderObjectContainer& container = RenderObjects[materialPass];
-        if (primitive == GL_TRIANGLES && materialPass != EMaterialPass::Transparent)
+        if (primitive == GL_TRIANGLES)
         {
             container.TriangleObjects[bIsCCW].emplace_back(bIsCCW, surface, meshNode, topTransform, nodeMatrix);
         }

@@ -7,7 +7,7 @@
 #include "Tools/ImguiTools.h"
 
 class CEngine;
-class CGlShadowDepthPass;
+class CCsmPipeline;
 class SGlCamera;
 
 struct SDrawCommands;
@@ -16,7 +16,7 @@ struct SGlTexture;
 struct SSceneData;
 struct SViewport;
 
-typedef void (*GlFunctionLoaderFuncType)(const char*);
+using GlFunctionLoaderFuncType =  void (*)(const char*);
 
 class CGlRenderer : public IImguiObject
 {
@@ -41,7 +41,7 @@ public:
 	SGlBufferVector JointMatricesBuffer; // TODO needs double buffering, potentially persistent mapping
 	SGlBufferVector TexturesSsbo; // TODO needs double buffering, potentially persistent mapping
 	std::unique_ptr<SGlCamera> ActiveCamera {};
-	std::unique_ptr<CGlShadowDepthPass> ShadowPass {};
+	std::unique_ptr<CCsmPipeline> ShadowPass {};
 	std::unique_ptr<SSceneData> SceneData {};
 	std::unique_ptr<SDrawCommands> DrawCommands {};
 	inline SGlBufferId GetSceneDataUbo() const { return SceneDataBuffer; }
@@ -69,7 +69,7 @@ private:
 	SGlVaoId EmptyVao {};
 	SGlBufferId Quad2DBuffer {};
 	SGlBufferId SceneDataBuffer;
-	static CGlRenderer* Renderer;
+	static inline CGlRenderer* Renderer = nullptr;
 	struct
 	{
 		bool bShowShadowDepthMap = false;
