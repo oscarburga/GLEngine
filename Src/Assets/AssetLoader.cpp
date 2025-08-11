@@ -129,7 +129,7 @@ void CAssetLoader::LoadDefaultAssets()
 			}
 			ErrorTexture = RegisterTexture2D(pixels.data(), 16, 16, 4);
 		}
-		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { ErrorTexture });
+		int32_t texIndex = CGlRenderer::Get()->RegisterBindlessTexture(SGlTexture { ErrorTexture });
 		ErrorMaterial = std::make_shared<SPbrMaterial>();
 		ErrorMaterial->Name = "DefaultChecker";
 		ErrorMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
@@ -142,7 +142,7 @@ void CAssetLoader::LoadDefaultAssets()
 			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
 			WhiteTexture = RegisterTexture2D(&white, 1, 1, 4);
 		}
-		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { WhiteTexture });
+		int32_t texIndex = CGlRenderer::Get()->RegisterBindlessTexture(SGlTexture { WhiteTexture });
 		WhiteMaterial = std::make_shared<SPbrMaterial>();
 		WhiteMaterial->Name = "DefaultWhite";
 		WhiteMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
@@ -206,7 +206,8 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 		return nullptr;
 
 	// Don't use fastgltf's DecomposeNodeMatrices. Use GLM's gtx_matrix_decompose instead. fastgltf's decomposition doesn't handle negative scales.
-	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers; // | fastgltf::Options::DecomposeNodeMatrices;
+	// Also add generate mesh indices. Supporting array draws with multidraw adds too much pain for minimal reward.
+	constexpr auto gltfOptions = fastgltf::Options::LoadExternalBuffers | fastgltf::Options::GenerateMeshIndices; // | fastgltf::Options::DecomposeNodeMatrices;
 	fastgltf::Parser parser {};
 	Expected<fastgltf::Asset> gltf = parser.loadGltf(data.get(), filePath.parent_path(), gltfOptions);
 	if (HasGltfError(gltf, filePath))
@@ -360,7 +361,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 				outTex.Texture = scene.Textures[texIndex];
 				outTex.Sampler = scene.Samplers[samplerIndex];
-				return CGlRenderer::Get()->RegisterTexture(outTex);
+				return CGlRenderer::Get()->RegisterBindlessTexture(outTex);
 			}
 			const std::string alphaMode = gltfMat.alphaMode == fastgltf::AlphaMode::Opaque ? "Opaque" : 
 				(gltfMat.alphaMode == fastgltf::AlphaMode::Mask ? "Masked" : "Transparent");

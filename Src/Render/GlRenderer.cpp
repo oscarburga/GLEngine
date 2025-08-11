@@ -9,14 +9,13 @@
 #include "Assets/AssetLoader.h"
 #include "Engine.h"
 #include "GlDrawCommands.h"
-#include "GlShadowDepth.h"
 #include "Materials.h"
 #include "Math/EngineMath.h"
 #include "Math/Frustum.h"
+#include "Pipelines/CsmPipeline.h"
+#include "Pipelines/MeshPipeline.h"
 #include "RenderObject.h"
 #include "SceneData.h"
-
-CGlRenderer* CGlRenderer::Renderer = nullptr;
 
 namespace
 {
@@ -151,10 +150,10 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 	{
 		// TODO: Set all these values from some config file (maybe this is where I can add some 
 		// LUA scripting for funzies? :D 
-		constexpr GLsizeiptr MainBufferSize = 1 << 30; // 1 GiB (1073 ish MB)
-		constexpr GLsizeiptr BonesBufferSize = 1 << 28; // about 268 MB
+		constexpr GLsizeiptr MainBufferSize = 1 << 30; // 1 GiB 
+		constexpr GLsizeiptr BonesBufferSize = 1 << 28; // about 256 MiB
 		constexpr GLsizeiptr MaxTextures = 1<<15; // 32k
-		ShaderMaxMaterialSize = UBOMaxBlockSize / sizeof(SPbrMaterial);
+		ShaderMaxMaterialSize = UBOMaxBlockSize / sizeof(SPbrMaterialUboData);
 		DrawDataBufferMaxSize = UBOMaxBlockSize / sizeof(SDrawObjectGpuData);
 
 		MainVertexBuffer = SGlBufferVector(MainBufferSize);
@@ -163,8 +162,6 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 		MainMaterialBuffer = SGlBufferVector(UBOMaxBlockSize);
 		JointMatricesBuffer = SGlBufferVector(UBOMaxBlockSize);
 		TextureHandlesBuffer = SGlBufferVector(MaxTextures * sizeof(int64_t));
-		TexturesSsbo = SGlBufferVector(DrawDataBufferMaxSize * sizeof(uint64_t));
-		DrawCommands = std::make_unique<SDrawCommands>(DrawDataBufferMaxSize);
 		// TODO: my gpu allows 4mb UBO block size, but spec only guarantees 16kb, which would only be a couple hundred materials / matrices.
 		// Add some fallback to use SSBO for materials instead of UBO
 	}
@@ -188,29 +185,17 @@ void CGlRenderer::Init(GlFunctionLoaderFuncType func)
 
 	CAssetLoader::Create();
 
-	ShadowPass = std::make_unique<CGlShadowDepthPass>();
-	ShadowPass->Init();
+	CsmPipeline = std::make_unique<CCsmPipeline>();
+	CsmPipeline->Init();
 
-	SShaderLoadArgs vsArgs("Shaders/pvpMeshMdi.vert");
-	vsArgs
-		.SetArg(ShadowPass->NumCascadesShaderArgName, ShadowPass->GetNumCascades())
-		.SetArg("MAX_DRAWS", DrawDataBufferMaxSize)
-		.SetArg("MAX_MATERIALS", ShaderMaxMaterialSize);
-
-	SShaderLoadArgs fsArgs("Shaders/pvpMeshMdi.frag");
-	fsArgs
-		.SetArg(ShadowPass->NumCascadesShaderArgName, ShadowPass->GetNumCascades())
-		.SetArg("MAX_DRAWS", DrawDataBufferMaxSize)
-		.SetArg("MAX_MATERIALS", ShaderMaxMaterialSize);
-
-	if (auto pvpShader = CAssetLoader::LoadShaderProgram(vsArgs, fsArgs))
-		PvpShader = *pvpShader;
+	MeshPipeline = std::make_unique<CMeshPipeline>();
+	MeshPipeline->Init();
 
 	// TODO: separate simplequad.frag from the shadow depth debug shader.
 	if (auto quadShader = CAssetLoader::LoadShaderProgram("Shaders/simplequad.vert", "Shaders/simplequad.frag"))
 		QuadShader = *quadShader;
 
-	assert(PvpShader.Id && QuadShader.Id);
+	assert(QuadShader.Id);
 
 	MainDrawContext = std::make_unique<SDrawContext>();
 	ActiveCamera = std::make_unique<SGlCamera>();
@@ -226,22 +211,14 @@ void CGlRenderer::Destroy()
 	}
 }
 
-void CGlRenderer::PrepassDrawDataBuffer()
+void CGlRenderer::PrepassDrawDataBuffers()
 {
-	ImguiData.TotalNum = (uint32_t)MainDrawContext->RenderObjects[EMaterialPass::MainColor].TotalSize;
+	ImguiData.TotalNum = 0;
 	ImguiData.CulledNum = 0;
 
-	SFrustum mainCameraFrustum; 
-	ActiveCamera->CalcFrustum(&mainCameraFrustum, nullptr);
-	DrawCommands->ResetBuffers();
-	for (uint8_t pass = EMaterialPass::MainColor; pass <= EMaterialPass::MainColorMasked; ++pass)
-	{
-		const SRenderObjectContainer& renderObjects = MainDrawContext->RenderObjects[pass];
-		ImguiData.CulledNum += DrawCommands->PopulateBuffers(renderObjects, false, [&](const SRenderObject& surface) -> bool
-		{
-			return !mainCameraFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform);
-		});
-	}
+	CsmPipeline->PrepassDrawDataBuffer(*this);
+	MeshPipeline->PrepassDrawDataBuffer(*this);
+
 	size_t curSizeInGpu = TextureHandlesBuffer.Head / sizeof(int64_t);
 	if (TextureHandlesVector.size() > curSizeInGpu)
 	{
@@ -253,63 +230,32 @@ void CGlRenderer::RenderScene(float deltaTime)
 {
 	// Refresh SceneData
 	SceneData->SunlightDirection = vec4(glm::normalize(vec3(ImguiData.SunlightDirection)), ImguiData.SunlightDirection.w);
+
 	ActiveCamera->UpdateSceneData(*SceneData);
-	ShadowPass->UpdateSceneData(*SceneData, *ActiveCamera);
+	MeshPipeline->UpdateSceneData(*SceneData, *ActiveCamera);
+	CsmPipeline->UpdateSceneData(*SceneData, *ActiveCamera);
+
 	glNamedBufferSubData(*SceneDataBuffer, 0, sizeof(SSceneData), SceneData.get());
-	ShadowPass->PrepassDrawDataBuffer(*SceneData, *MainDrawContext);
-	PrepassDrawDataBuffer();
-	ShadowPass->RenderShadowDepth(*SceneData, *MainDrawContext);
+	PrepassDrawDataBuffers();
 
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	// TODO: figure out negative determinants for flipping the front face
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	CsmPipeline->Render(*this);
 
-	// TEMP: will need to fix the debug view of the shadows texture with csm
+	// Debug: Show shadow depth map
 	if (ImguiData.bShowShadowDepthMap)
 	{
 		// render shadow depth onto quad to screen
 		glFrontFace(GL_CCW);
 		QuadShader.Use();
-		glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass->ShadowsTexArray);
+		glBindTextureUnit(GlTexUnits::ShadowMap, *CsmPipeline->ShadowsTexArray);
 		QuadShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
 		QuadShader.SetUniform(GlUniformLocs::DebugShadowDepthMapIndex, ImguiData.ShadowDepthMapIndex);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, Quad2DBuffer);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		// Clear all
-		std::for_each(MainDrawContext->RenderObjects.begin(), MainDrawContext->RenderObjects.end(), [&](auto& vec)
-		{
-			vec.ClearAll();
-		});
+		MainDrawContext->Reset();
 		return;
 	}
 
-	// Draw main color & masked objects
-
-	// Draw to main framebuffer now, and simply toss multisampling on.
-	// IF WE EVER CHANGE THE COLOR PASS TO RENDER TO ANOTHER FRAMEBUFFER, ADDITIONAL
-	// WORK WILLL NEED TO BE MADE
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glEnable(GL_MULTISAMPLE); 
-	PvpShader.Use();
-	// PvpShader.SetUniform(GlUniformLocs::PbrColorTex, GlTexUnits::PbrColor);
-	// PvpShader.SetUniform(GlUniformLocs::PbrMetalRoughTex, GlTexUnits::PbrMetalRough);
-	// PvpShader.SetUniform(GlUniformLocs::NormalTex, GlTexUnits::Normal);
-	// PvpShader.SetUniform(GlUniformLocs::PbrOcclusionTex, GlTexUnits::PbrOcclusion);
-	PvpShader.SetUniform(GlUniformLocs::ShadowDepthTexture, GlTexUnits::ShadowMap);
-	PvpShader.SetUniform(GlUniformLocs::DebugCsmTint, ImguiData.bDebugCsmTint);
-
-	glBindTextureUnit(GlTexUnits::ShadowMap, *ShadowPass->ShadowsTexArray);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, MainIndexBuffer.Id);
-	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, DrawCommands->MdiBuffer.Id);
-	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::JointMatrices, JointMatricesBuffer.Id);
-	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::DrawData, DrawCommands->DrawDataBuffer.Id);
-	glBindBufferBase(GL_UNIFORM_BUFFER, GlBindPoints::Ubo::PbrMaterial, MainMaterialBuffer.Id);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, MainVertexBuffer.Id);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, MainBonesBuffer.Id);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::TextureBuffers, TextureHandlesBuffer.Id);
+	MeshPipeline->Render(*this);
 
 	static const auto RenderObject = [&](SRenderObject& surface)
 	{
@@ -377,30 +323,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 			);
 		}
 	};
-
-	// Draw indirect color passes
-	for (int CCW = 0; CCW < 2; CCW++)
-	{
-		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
-		glFrontFace(windingOrder[CCW]); // culling backface, so also need to flip this
-
-		for (int indexed = 0; indexed < 2; indexed++)
-		{
-			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
-			{
-				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-				for (const SGlBufferRangeId& rangeId : rangeIds)
-				{
-					PvpShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
-					if (indexed)
-						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-					else
-						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-				}
-			}
-		}
-	}
-
 	goto skipBlend; // skip for now, need mdi working first
 	// Basic blend, no OIT
 	{
@@ -434,7 +356,6 @@ void CGlRenderer::RenderScene(float deltaTime)
 	skipBlend: 
 
 	MainDrawContext->Reset();
-	glDisable(GL_MULTISAMPLE);
 	// std::cout << std::format("Culled objects {} / {}\n", culledObjects, totalObjects);
 }
 
@@ -447,7 +368,7 @@ void CGlRenderer::ShowImguiPanel()
 {
 	if (ImGui::Begin("Renderer", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::Text("Shadows culling %u/%u", ShadowPass->ImguiData.CulledNum, ShadowPass->ImguiData.TotalNum);
+		ImGui::Text("Shadows culling %u/%u", CsmPipeline->ImguiData.CulledNum, CsmPipeline->ImguiData.TotalNum);
 		ImGui::Text("Color pass culling %u/%u", ImguiData.CulledNum, ImguiData.TotalNum);
 
 		if (ImGui::CollapsingHeader("Debug"))
@@ -462,14 +383,14 @@ void CGlRenderer::ShowImguiPanel()
 			ImGui::InputFloat("Camera FOV", &ActiveCamera->PerspectiveFOV);
 			ImGui::InputFloat4("Sunlight dir (w is intensity)", &ImguiData.SunlightDirection.x);
 			ImGui::ColorEdit3("Sunlight color", &SceneData->SunlightColor.x);
-			ImGui::InputFloat2("Shadows ortho size scale", &ShadowPass->ImguiData.OrthoSizeScale.x);
-			ImGui::InputFloat2("Shadows ortho size pad", &ShadowPass->ImguiData.OrthoSizePadding.x);
+			ImGui::InputFloat2("Shadows ortho size scale", &CsmPipeline->ImguiData.OrthoSizeScale.x);
+			ImGui::InputFloat2("Shadows ortho size pad", &CsmPipeline->ImguiData.OrthoSizePadding.x);
 		}
 	}
 	ImGui::End();
 }
 
-int32_t CGlRenderer::RegisterTexture(const SGlTexture& texture)
+int32_t CGlRenderer::RegisterBindlessTexture(const SGlTexture& texture)
 {
 	// TODO prevent duplicates
 	if (uint64_t handle = texture.GetTextureHandle(); handle != 0)

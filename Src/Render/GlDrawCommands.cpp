@@ -21,15 +21,14 @@ SDrawCommands::SDrawCommands(size_t MaxDrawDataSize)
 void SDrawCommands::ResetBuffers()
 {
 	IndexedDraws.Reset();
-	ArrayDraws.Reset();
 	DrawDataBuffer.Reset();
 	MdiBuffer.Reset();
 	DrawData.clear();
 }
 
-const std::vector<SGlBufferRangeId>& SDrawCommands::GetMdiBufferRanges(bool bCCW, bool bIndexed) const
+const std::vector<SGlBufferRangeId>& SDrawCommands::GetMdiBufferRanges(bool bCCW) const
 {
-	return bIndexed ? IndexedDraws.MdiRanges[bCCW] : ArrayDraws.MdiRanges[bCCW];
+	return IndexedDraws.MdiRanges[bCCW];
 }
 
 uint32_t SDrawCommands::PopulateBuffers(const SRenderObjectContainer& renderObjects, bool bReset, const SCullingFunc& cullingFunc)
@@ -40,49 +39,31 @@ uint32_t SDrawCommands::PopulateBuffers(const SRenderObjectContainer& renderObje
 	}
 	uint32_t culledNum = 0;
 	size_t beginDrawDataSize = DrawData.size();
-	// will first populate all DrawArrays commands, then all DrawElements.
-	for (int indexed = 0; indexed < 2; indexed++)
+	for (int CCW = 0; CCW < 2; CCW++)
 	{
-		for (int CCW = 0; CCW < 2; CCW++)
+		size_t startSz = IndexedDraws.Commands[CCW].size();
+		for (const SRenderObject& surface : renderObjects.TriangleObjects[CCW])
 		{
-			size_t startSz = indexed ? IndexedDraws.Commands[CCW].size() : ArrayDraws.Commands[CCW].size();
-			for (const SRenderObject& surface : renderObjects.TriangleObjects[CCW][indexed])
+			if (cullingFunc(surface))
 			{
-				if (cullingFunc(surface))
-				{
-					++culledNum; 
-					continue;
-				}
-				if (indexed)
-				{
-					const uint32_t firstIndex = surface.FirstIndex + (uint32_t)surface.IndexBuffer.GetHeadInElems();
-					const int32_t baseVertex = (int32_t)surface.VertexBuffer.GetHeadInElems();
-					// SDrawElementsCommand
-					IndexedDraws.Commands[CCW].emplace_back(surface.IndexCount, 1, firstIndex, baseVertex, 0);
-				}
-				else
-				{
-					// SDrawArraysCommand
-					assert(false); // temp while figuring out why bindless textures dont work
-					ArrayDraws.Commands[CCW].emplace_back(surface.IndexCount, 1, (uint32_t)surface.VertexBuffer.GetHeadInElems(), 0);
-				}
-				// GPU draw data will construct from the SRenderObject
-				DrawData.emplace_back(surface);
+				++culledNum; 
+				continue;
 			}
-			if (indexed && startSz < IndexedDraws.Commands[CCW].size())
-			{
-				const size_t numNewElems = IndexedDraws.Commands[CCW].size() - startSz;
-				SGlBufferRangeId rangeId = MdiBuffer.Append(numNewElems, IndexedDraws.Commands[CCW].data() + startSz);
-				IndexedDraws.MdiRanges[CCW].emplace_back(rangeId);
-			}
-			else if (!indexed && startSz < ArrayDraws.Commands[CCW].size())
-			{
-				const size_t numNewElems = ArrayDraws.Commands[CCW].size() - startSz;
-				SGlBufferRangeId rangeId = MdiBuffer.Append(numNewElems, ArrayDraws.Commands[CCW].data() + startSz);
-				ArrayDraws.MdiRanges[CCW].emplace_back(rangeId);
-			}
+			const uint32_t firstIndex = surface.FirstIndex + (uint32_t)surface.IndexBuffer.GetHeadInElems();
+			const int32_t baseVertex = (int32_t)surface.VertexBuffer.GetHeadInElems();
+			// SDrawElementsCommand
+			IndexedDraws.Commands[CCW].emplace_back(surface.IndexCount, 1, firstIndex, baseVertex, 0);
+			// GPU draw data will construct from the SRenderObject
+			DrawData.emplace_back(surface);
+		}
+		if (startSz < IndexedDraws.Commands[CCW].size())
+		{
+			const size_t numNewElems = IndexedDraws.Commands[CCW].size() - startSz;
+			SGlBufferRangeId rangeId = MdiBuffer.Append(numNewElems, IndexedDraws.Commands[CCW].data() + startSz);
+			IndexedDraws.MdiRanges[CCW].emplace_back(rangeId);
 		}
 	}
+
 	if (beginDrawDataSize < DrawData.size())
 	{
 		const size_t numNewElems = DrawData.size() - beginDrawDataSize;

@@ -1,19 +1,19 @@
-#include "GlShadowDepth.h"
+#include "CsmPipeline.h"
 
 #include "glad/glad.h"
 
-#include <iostream>
-
 #include "Assets/AssetLoader.h"
 #include "Engine.h"
-#include "GlRenderer.h"
 #include "Math/EngineMath.h"
 #include "Math/Frustum.h"
-#include "Materials.h"
-#include "RenderObject.h"
-#include "SceneData.h"
+#include "Render/GlRenderer.h"
+#include "Render/Materials.h"
+#include "Render/RenderObject.h"
+#include "Render/SceneData.h"
 
-CGlShadowDepthPass::~CGlShadowDepthPass()
+#include <iostream>
+
+CCsmPipeline::~CCsmPipeline()
 {
 	if (ShadowsFbo)
 		glDeleteFramebuffers(1, &*ShadowsFbo);
@@ -23,13 +23,14 @@ CGlShadowDepthPass::~CGlShadowDepthPass()
 		glDeleteProgram(ShadowsShader.Id);
 }
 
-void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
+void CCsmPipeline::Init(uint32_t width, uint32_t height)
 {
 	FullShadowCamera.bIsPerspective = false;
 	Width = width;
 	Height = height;
 
 	const int numCascades = GetNumCascades();
+	assert(numCascades == CGlRenderer::NumCascades && "Cascade split points doesn't match configured number of cascades");
 
 	// Shadow map array for CSM
 	CascadeCameras.resize(numCascades);
@@ -64,9 +65,9 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 	DrawCommands = std::make_unique<SDrawCommands>(CGlRenderer::DrawDataBufferMaxSize);
 
-	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { CGlRenderer::NumCascadesShaderArgName, std::to_string(numCascades) } });
 	vsArgs.SetArg("MAX_DRAWS", CGlRenderer::DrawDataBufferMaxSize);
-	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { CGlRenderer::NumCascadesShaderArgName, std::to_string(numCascades) } });
 	auto shader = CAssetLoader::LoadShaderProgram(vsArgs, gsArgs, "Shaders/empty.frag");
 	assert(shader);
 
@@ -74,7 +75,7 @@ void CGlShadowDepthPass::Init(uint32_t width, uint32_t height)
 
 }
 
-void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
+void CCsmPipeline::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera)
 {
 	std::array<vec3, 8> frustumCorners;
 	Camera.CalcFrustum(nullptr, &frustumCorners);
@@ -153,23 +154,21 @@ void CGlShadowDepthPass::UpdateSceneData(SSceneData& SceneData, const SGlCamera&
 	}
 }
 
-void CGlShadowDepthPass::PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext)
+void CCsmPipeline::PrepassDrawDataBuffer(CGlRenderer& renderer)
 {
-	ImguiData.TotalNum = (uint32_t)DrawContext.RenderObjects[EMaterialPass::MainColor].TotalSize;
-	ImguiData.CulledNum = 0;
-
 	SFrustum shadowsFrustum;
 	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
-	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
-	ImguiData.CulledNum += DrawCommands->PopulateBuffers(renderObjects, true, [&](const SRenderObject& surface) -> bool
+	const SRenderObjectContainer& renderObjects = renderer.MainDrawContext->RenderObjects[EMaterialPass::MainColor];
+
+	ImguiData.TotalNum = (uint32_t)renderer.MainDrawContext->RenderObjects[EMaterialPass::MainColor].TotalSize;
+	ImguiData.CulledNum = DrawCommands->PopulateBuffers(renderObjects, true, [&](const SRenderObject& surface) -> bool
 	{
 		return surface.Material->UboData.bIgnoreLighting || !shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform);
 	});
 }
 
-void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
+void CCsmPipeline::Render(const CGlRenderer& renderer)
 {
-	PrepassDrawDataBuffer(SceneData, DrawContext);
 	glEnable(GL_DEPTH_TEST);
 	glViewport(0, 0, Width, Height);
 	glBindFramebuffer(GL_FRAMEBUFFER, *ShadowsFbo);
@@ -187,25 +186,17 @@ void CGlShadowDepthPass::RenderShadowDepth(const SSceneData& SceneData, const SD
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 
-	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
+	const SRenderObjectContainer& renderObjects = renderer.MainDrawContext->RenderObjects[EMaterialPass::MainColor];
 	for (int CCW = 0; CCW < 2; CCW++)
 	{
 		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 
-		glFrontFace(windingOrder[CCW ^ 1]); // culling backface, so also need to flip this
-
-		for (int indexed = 0; indexed < 2; indexed++)
+		glFrontFace(windingOrder[CCW ^ 1]); // culling backface, so need to flip this
+		if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW); !rangeIds.empty())
 		{
-			if (const std::vector<SGlBufferRangeId>& rangeIds = DrawCommands->GetMdiBufferRanges(CCW, indexed); !rangeIds.empty())
+			for (const SGlBufferRangeId& rangeId : rangeIds)
 			{
-				// ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)IndexedDraws.CommandSpans[CCW].front().BaseInstance);
-				for (const SGlBufferRangeId& rangeId : rangeIds)
-				{
-					ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
-					if (indexed)
-						glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-					else
-						glMultiDrawArraysIndirect(GL_TRIANGLES, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
-				}
+				ShadowsShader.SetUniform(GlUniformLocs::BaseDrawId, (int)rangeId.GetHeadInElems());
+				glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (void*)rangeId.Head, (GLsizei)rangeId.GetNumElems(), 0);
 			}
 		}
 	}

@@ -14,6 +14,7 @@ struct SSceneData;
 // 	Ortho2D
 // };
 
+// This should be CGlCamera?
 class SGlCamera 
 {
 public:
