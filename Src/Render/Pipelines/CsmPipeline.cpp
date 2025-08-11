@@ -30,6 +30,7 @@ void CCsmPipeline::Init(uint32_t width, uint32_t height)
 	Height = height;
 
 	const int numCascades = GetNumCascades();
+	assert(numCascades == CGlRenderer::NumCascades && "Cascade split points doesn't match configured number of cascades");
 
 	// Shadow map array for CSM
 	CascadeCameras.resize(numCascades);
@@ -64,9 +65,9 @@ void CCsmPipeline::Init(uint32_t width, uint32_t height)
 
 	DrawCommands = std::make_unique<SDrawCommands>(CGlRenderer::DrawDataBufferMaxSize);
 
-	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs vsArgs("Shaders/pvpDepthPassCSM.vert", { { CGlRenderer::NumCascadesShaderArgName, std::to_string(numCascades) } });
 	vsArgs.SetArg("MAX_DRAWS", CGlRenderer::DrawDataBufferMaxSize);
-	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { NumCascadesShaderArgName, std::to_string(numCascades) } });
+	SShaderLoadArgs gsArgs("Shaders/pvpDepthPassCSM.geom", { { CGlRenderer::NumCascadesShaderArgName, std::to_string(numCascades) } });
 	auto shader = CAssetLoader::LoadShaderProgram(vsArgs, gsArgs, "Shaders/empty.frag");
 	assert(shader);
 
@@ -153,23 +154,21 @@ void CCsmPipeline::UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camer
 	}
 }
 
-void CCsmPipeline::PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext)
+void CCsmPipeline::PrepassDrawDataBuffer(CGlRenderer& renderer)
 {
-	ImguiData.TotalNum = (uint32_t)DrawContext.RenderObjects[EMaterialPass::MainColor].TotalSize;
-	ImguiData.CulledNum = 0;
-
 	SFrustum shadowsFrustum;
 	FullShadowCamera.CalcFrustum(&shadowsFrustum, nullptr);
-	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
-	ImguiData.CulledNum += DrawCommands->PopulateBuffers(renderObjects, true, [&](const SRenderObject& surface) -> bool
+	const SRenderObjectContainer& renderObjects = renderer.MainDrawContext->RenderObjects[EMaterialPass::MainColor];
+
+	ImguiData.TotalNum = (uint32_t)renderer.MainDrawContext->RenderObjects[EMaterialPass::MainColor].TotalSize;
+	ImguiData.CulledNum = DrawCommands->PopulateBuffers(renderObjects, true, [&](const SRenderObject& surface) -> bool
 	{
 		return surface.Material->UboData.bIgnoreLighting || !shadowsFrustum.IsSphereInFrustum(surface.Bounds, surface.WorldTransform);
 	});
 }
 
-void CCsmPipeline::RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext)
+void CCsmPipeline::Render(const CGlRenderer& renderer)
 {
-	PrepassDrawDataBuffer(SceneData, DrawContext);
 	glEnable(GL_DEPTH_TEST);
 	glViewport(0, 0, Width, Height);
 	glBindFramebuffer(GL_FRAMEBUFFER, *ShadowsFbo);
@@ -187,7 +186,7 @@ void CCsmPipeline::RenderShadowDepth(const SSceneData& SceneData, const SDrawCon
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexBuffer, CGlRenderer::Get()->MainVertexBuffer.Id);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, GlBindPoints::Ssbo::VertexJointBuffer, CGlRenderer::Get()->MainBonesBuffer.Id);
 
-	const SRenderObjectContainer& renderObjects = DrawContext.RenderObjects[EMaterialPass::MainColor];
+	const SRenderObjectContainer& renderObjects = renderer.MainDrawContext->RenderObjects[EMaterialPass::MainColor];
 	for (int CCW = 0; CCW < 2; CCW++)
 	{
 		constexpr int windingOrder[] = { GL_CW, GL_CCW }; 

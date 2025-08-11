@@ -129,7 +129,7 @@ void CAssetLoader::LoadDefaultAssets()
 			}
 			ErrorTexture = RegisterTexture2D(pixels.data(), 16, 16, 4);
 		}
-		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { ErrorTexture });
+		int32_t texIndex = CGlRenderer::Get()->RegisterBindlessTexture(SGlTexture { ErrorTexture });
 		ErrorMaterial = std::make_shared<SPbrMaterial>();
 		ErrorMaterial->Name = "DefaultChecker";
 		ErrorMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
@@ -142,7 +142,7 @@ void CAssetLoader::LoadDefaultAssets()
 			uint32_t white = glm::packUnorm4x8(glm::vec4(1));
 			WhiteTexture = RegisterTexture2D(&white, 1, 1, 4);
 		}
-		int32_t texIndex = CGlRenderer::Get()->RegisterTexture(SGlTexture { WhiteTexture });
+		int32_t texIndex = CGlRenderer::Get()->RegisterBindlessTexture(SGlTexture { WhiteTexture });
 		WhiteMaterial = std::make_shared<SPbrMaterial>();
 		WhiteMaterial->Name = "DefaultWhite";
 		WhiteMaterial->UboData = SPbrMaterialUboData { .ColorTexIndex = texIndex };
@@ -361,7 +361,7 @@ std::shared_ptr<SLoadedGLTF> CAssetLoader::LoadGLTFScene(const std::filesystem::
 
 				outTex.Texture = scene.Textures[texIndex];
 				outTex.Sampler = scene.Samplers[samplerIndex];
-				return CGlRenderer::Get()->RegisterTexture(outTex);
+				return CGlRenderer::Get()->RegisterBindlessTexture(outTex);
 			}
 			const std::string alphaMode = gltfMat.alphaMode == fastgltf::AlphaMode::Opaque ? "Opaque" : 
 				(gltfMat.alphaMode == fastgltf::AlphaMode::Mask ? "Masked" : "Transparent");

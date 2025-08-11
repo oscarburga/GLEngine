@@ -7,6 +7,8 @@
 
 #include <memory>
 
+class CGlRenderer;
+
 struct SSceneData;
 struct SDrawCommands;
 struct SDrawContext;
@@ -15,15 +17,14 @@ class CCsmPipeline
 {
 public:
 	~CCsmPipeline();
-	static inline std::string NumCascadesShaderArgName { "NumCascades" };
 	uint32_t Width = 2048; 
 	uint32_t Height = 2048;
 	SGlFramebufferId ShadowsFbo {};
 	SGlTexArrayId ShadowsTexArray {};
 	CGlShader ShadowsShader { 0 };
+
 	SGlCamera FullShadowCamera {};
 	std::vector<SGlCamera> CascadeCameras;
-	glm::mat4 LightSpaceMatrix;
 	// Split points: first and last points have to be 0.0 and 1.0
 	std::vector<float> CascadeSplitPoints = { 0.f, 0.1f, 0.2f, 0.4f, 1.0f }; // TODO set these configurable on imgui
 	std::unique_ptr<SDrawCommands> DrawCommands;
@@ -40,6 +41,6 @@ public:
 	// TODO remove init, just use the constructor
 	void Init(uint32_t width = 2048, uint32_t height = 2048);
 	void UpdateSceneData(SSceneData& SceneData, const SGlCamera& Camera);
-	void PrepassDrawDataBuffer(const SSceneData& SceneData, const SDrawContext& DrawContext);
-	void RenderShadowDepth(const SSceneData& SceneData, const SDrawContext& DrawContext);
+	void PrepassDrawDataBuffer(CGlRenderer& renderer);
+	void Render(const CGlRenderer& renderer);
 };

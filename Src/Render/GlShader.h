@@ -1,9 +1,10 @@
 #pragma once
 
-#include <string>
-// Figure out if we can forward declare the vec structs somehow to skip this include
-#include <glm/glm.hpp>
+#include "glm/glm.hpp"
+
 #include "GlIdTypes.h"
+
+#include <string>
 
 class CGlShader
 {
